@@ -1,0 +1,27 @@
+## Interface: 30000
+
+## Title: Inline Aura
+## Notes: Display aura information inside action buttons 
+## Author: Adirelle
+## Version: @project-version@ 
+## X-Date: @project-date-iso@
+## X-Category: Buff
+## X-License: GPL v2
+## X-eMail: adirelle@tagada-team.net
+
+## SavedVariables: InlineAuraDB
+## OptDeps: Ace3, ButtonFacade, Bartender4, Dominos, OmniCC
+
+#@no-lib-strip@
+libs\LibStub\LibStub.lua
+libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+libs\AceGUI-3.0\AceGUI-3.0.xml
+libs\AceConfig-3.0\AceConfig-3.0.xml
+libs\AceDB-3.0\AceDB-3.0.xml
+libs\AceDBOptions-3.0\AceDBOptions-3.0.xml
+#@end-no-lib-strip@
+
+Localization.lua
+Core.lua
+Options.lua
+

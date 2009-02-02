@@ -262,6 +262,8 @@ local function TimerFrame_Update(self)
 		return
 	end
 
+	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
+
 	local countdownText = self.countdownText
 	local timeLeft = data.expirationTime - GetTime()
 	if db.profile.hideCountdown then
@@ -279,8 +281,6 @@ local function TimerFrame_Update(self)
 			displayTime = tostring(math.ceil(timeLeft))
 			self.delay = math.max(timeLeft % 1, UPDATE_PERIOD)
 		end
-
-		local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
 
 		if bigCountdown then
 			countdownText:SetFont(font, db.profile.largeFontSize, FONT_FLAGS)

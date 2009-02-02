@@ -32,7 +32,7 @@ function handler:Set(info, ...)
 	else
 		InlineAura.db.profile[info.arg] = ...
 	end
-	InlineAura:RequireUpdate()
+	InlineAura:RequireUpdate(true)
 end
 
 function handler:Get(info)

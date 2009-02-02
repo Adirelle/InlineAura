@@ -212,20 +212,37 @@ do
 
 	local _, class = UnitClass('player')
 	if class == 'HUNTER' then
-		AddAliases(60192, 60210) -- Freezing Arrow: look for "Freezing Arrow Effect"
-		AddAliases( 1499,  3355) -- Freezing Trap: look for "Freezing Trap Effect"
-		AddAliases(13795, 13797) -- Immolation Trap: look for "Immolation Trap Effect"
-		AddAliases(13813, 13812) -- Explosive Trap: look for "Explosive Trap Effect"
+		AddAliases(60192, 60210) -- Freezing Arrow => Freezing Arrow Effect
+		AddAliases( 1499,  3355) -- Freezing Trap => Freezing Trap Effect
+		AddAliases(13795, 13797) -- Immolation Trap => Immolation Trap Effect
+		AddAliases(13813, 13812) -- Explosive Trap => Explosive Trap Effect
 	elseif class == 'WARLOCK' then
-		AddAliases(686, 17794) -- Shadow Bolt: look for "Shadow Mastery"
+		AddAliases(686, 17794) -- Shadow Bolt => Shadow Mastery
+	elseif class == 'DEATHKNIGHT' then
+		AddAliases(45462, 55078) -- Plague Strike => Blood Plague
+		AddAliases(45477, 55095) -- Icy Touch => Frost Fever
 	end
 end
 
 ------------------------------------------------------------------------------
--- Timer InlineAura handling
+-- Timer frame handling
 ------------------------------------------------------------------------------
 
 local TimerFrame_OnUpdate
+
+local function TimerFrame_Skin(self)
+	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
+	
+	local countdownText = self.countdownText
+	countdownText.fontName = font
+	countdownText.baseFontSize = db.profile[bigCountdown and "largeFontSize" or "smallFontSize"]
+	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
+	countdownText:SetTextColor(unpack(db.profile.colorCountdown))		
+	
+	local stackText = self.stackText	
+	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
+	stackText:SetTextColor(unpack(db.profile.colorStack))
+end
 
 local function CreateTimerFrame(button)
 	local timer = CreateFrame("Frame", nil, button)
@@ -233,23 +250,23 @@ local function CreateTimerFrame(button)
 	timer:SetFrameLevel(cooldown:GetFrameLevel() + 5)
 	timer:SetAllPoints(cooldown)
 	timer:SetToplevel(true)
+	timer.delay = 0
 	timer:SetScript('OnUpdate', TimerFrame_OnUpdate)
 
 	timerFrames[button] = timer
 
 	local countdownText = timer:CreateFontString(nil, "OVERLAY")
 	countdownText:SetAllPoints(timer)
-	countdownText:SetFont(FONT_NAME, FONT_SIZE_LARGE, FONT_FLAGS)
-	countdownText:Show()
+	countdownText:SetJustifyV(bigCountdown and 'MIDDLE' or 'BOTTOM')
 	timer.countdownText = countdownText
 
 	local stackText = timer:CreateFontString(nil, "OVERLAY")
 	stackText:SetAllPoints(timer)
 	stackText:SetJustifyH("RIGHT")
-	stackText:SetJustifyV("BOTTOM")
-	stackText:SetFont(FONT_NAME, FONT_SIZE_SMALL, FONT_FLAGS)
-	stackText:Show()
+	stackText:SetJustifyV("BOTTOM")	
 	timer.stackText = stackText
+	
+	TimerFrame_Skin(timer)
 
 	return timer
 end
@@ -261,9 +278,20 @@ local function TimerFrame_Update(self)
 		self:Hide()
 		return
 	end
+	
+	local countdownJustfiyH = 'CENTER'
 
-	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
-
+	local stackText = self.stackText
+	if not db.profile.hideStack and data.count and data.count > 0 then
+		stackText:SetText(data.count)
+		if not bigCountdown then
+			countdownJustfiyH = 'LEFT'
+		end
+		stackText:Show()
+	else
+		stackText:Hide()
+	end
+	
 	local countdownText = self.countdownText
 	local timeLeft = data.expirationTime - GetTime()
 	if db.profile.hideCountdown then
@@ -282,43 +310,23 @@ local function TimerFrame_Update(self)
 			self.delay = math.max(timeLeft % 1, UPDATE_PERIOD)
 		end
 
-		if bigCountdown then
-			countdownText:SetFont(font, db.profile.largeFontSize, FONT_FLAGS)
-			countdownText:SetJustifyH('CENTER')
-			countdownText:SetJustifyV('MIDDLE')
-		else
-			countdownText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
-			countdownText:SetJustifyH('CENTER')
-			countdownText:SetJustifyV('BOTTOM')
-		end
+		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)		
+		countdownText:SetJustifyH(countdownJustfiyH)		
 		countdownText:SetText(displayTime)
-		countdownText:SetTextColor(unpack(db.profile.colorCountdown))
 		countdownText:Show()
 
 		if bigCountdown then
 			local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
 			if sizeRatio > 1 then
-				countdownText:SetFont(font, db.profile.largeFontSize / sizeRatio, FONT_FLAGS)
+				countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
 			end
 		end
 	end
 
-	local stackText = self.stackText
-	if not db.profile.hideStack and data.count and data.count > 0 then
-		stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
-		stackText:SetText(data.count)
-		stackText:SetTextColor(unpack(db.profile.colorStack))
-		if not bigCountdown then
-			countdownText:SetJustifyH('LEFT')
-		end
-		stackText:Show()
-	else
-		stackText:Hide()
-	end
 end
 
 function TimerFrame_OnUpdate(self, elapsed)
-	self.delay = (self.delay or 0) - elapsed
+	self.delay = self.delay - elapsed
 	if self.delay <= 0 then
 		TimerFrame_Update(self)
 	end
@@ -412,6 +420,12 @@ InlineAura.buttons = {}
 
 InlineAura:SetScript('OnUpdate', function(self, elapsed)
 	if self.needUpdate then
+		if self.configUpdated then
+			for button, timerFrame in pairs(timerFrames) do
+				TimerFrame_Skin(timerFrame)
+			end
+			self.configUpdated = false
+		end
 		for button in pairs(self.buttons) do
 			if button:IsVisible() and HasAction(button.action) then
 				ActionButton_UpdateState(button)
@@ -421,7 +435,8 @@ InlineAura:SetScript('OnUpdate', function(self, elapsed)
 	end
 end)
 
-function InlineAura:RequireUpdate()
+function InlineAura:RequireUpdate(configUpdated)
+	self.configUpdated = configUpdated
 	self.needUpdate = true
 end
 

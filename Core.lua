@@ -30,7 +30,7 @@ local InlineAura = InlineAura
 -- Use a loose table until the string list get stable
 local InlineAura_L = _G.InlineAura_L
 InlineAura.L = setmetatable({}, {__index = function(self, key)
-	local value = InlineAura_L[key] or key	
+	local value = InlineAura_L[key] or key
 	self[key] = value
 	return value
 end})
@@ -57,7 +57,10 @@ local UPDATE_PERIOD = 0.25
 
 local bigCountdown = true
 
-local FONT_NAME = [[Fonts\FRIZQT__.TTF]]
+local LSM = LibStub('LibSharedMedia-3.0')
+local FONTMEDIA = LSM.MediaType.FONT
+
+local FONT_NAME = LSM:GetDefault(FONTMEDIA)
 local FONT_FLAGS = "OUTLINE"
 local FONT_SIZE_SMALL = 13
 local FONT_SIZE_LARGE = 20
@@ -68,10 +71,15 @@ local DEFAULT_OPTIONS = {
 		onlyMyDebuffs = false,
 		hideCountdown = false,
 		hideStack = false,
-		colorBuffMine = { 0, 1, 0 },
-		colorBuffOthers = { 0, 1, 1 }, 
-		colorDebuffMine = { 1, 0, 0 },
-		colorDebuffOthers = { 1, 1, 0 },
+		fontName = FONT_NAME,
+		smallFontSize = FONT_SIZE_SMALL,
+		largeFontSize = FONT_SIZE_LARGE,
+		colorBuffMine = { 0.0, 1.0, 0.0, 1.0 },
+		colorBuffOthers = { 0.0, 1.0, 1.0, 1.0 },
+		colorDebuffMine = { 1.0, 0.0, 0.0, 1.0 },
+		colorDebuffOthers = { 1.0, 1.0, 0.0, 1.0 },
+		colorCountdown = { 1.0, 1.0, 1.0, 1.0 },
+		colorStack = { 1.0, 1.0, 1.0, 1.0 },
 	},
 }
 
@@ -180,7 +188,7 @@ local FindAura
 
 do
 	local aliases = {}
-	
+
 	function FindAura(auras, name)
 		local aura = auras[name]
 		if not aura and aliases[name] then
@@ -226,28 +234,28 @@ local function CreateTimerFrame(button)
 	timer:SetAllPoints(cooldown)
 	timer:SetToplevel(true)
 	timer:SetScript('OnUpdate', TimerFrame_OnUpdate)
-	
+
 	timerFrames[button] = timer
-			
+
 	local countdownText = timer:CreateFontString(nil, "OVERLAY")
 	countdownText:SetAllPoints(timer)
-	countdownText:SetFont(FONT_NAME, FONT_SIZE_LARGE, FONT_FLAGS)	
+	countdownText:SetFont(FONT_NAME, FONT_SIZE_LARGE, FONT_FLAGS)
 	countdownText:Show()
 	timer.countdownText = countdownText
-	
+
 	local stackText = timer:CreateFontString(nil, "OVERLAY")
 	stackText:SetAllPoints(timer)
 	stackText:SetJustifyH("RIGHT")
 	stackText:SetJustifyV("BOTTOM")
-	stackText:SetFont(FONT_NAME, FONT_SIZE_SMALL, FONT_FLAGS)	
+	stackText:SetFont(FONT_NAME, FONT_SIZE_SMALL, FONT_FLAGS)
 	stackText:Show()
 	timer.stackText = stackText
-	
+
 	return timer
 end
 
 local function TimerFrame_Update(self)
-	local data = self.data	
+	local data = self.data
 	if not data or not data.expirationTime or data.expirationTime <= GetTime() or (db.profile.hideCountdown and db.profile.hideStack) then
 		self.data = nil
 		self:Hide()
@@ -261,7 +269,7 @@ local function TimerFrame_Update(self)
 		self.delay = timeLeft
 	else
 		local displayTime
-		if timeLeft > 3600 then		
+		if timeLeft > 3600 then
 			displayTime = math.ceil(timeLeft/3600) .. 'h'
 			self.delay = timeLeft % 3600
 		elseif timeLeft > 60 then
@@ -271,30 +279,35 @@ local function TimerFrame_Update(self)
 			displayTime = tostring(math.ceil(timeLeft))
 			self.delay = math.max(timeLeft % 1, UPDATE_PERIOD)
 		end
-	
+
+		local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
+
 		if bigCountdown then
-			countdownText:SetFont(FONT_NAME, FONT_SIZE_LARGE, FONT_FLAGS)	
+			countdownText:SetFont(font, db.profile.largeFontSize, FONT_FLAGS)
 			countdownText:SetJustifyH('CENTER')
 			countdownText:SetJustifyV('MIDDLE')
 		else
-			countdownText:SetFont(FONT_NAME, FONT_SIZE_SMALL, FONT_FLAGS)	
+			countdownText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
 			countdownText:SetJustifyH('CENTER')
 			countdownText:SetJustifyV('BOTTOM')
 		end
-		countdownText:SetText(displayTime)	
+		countdownText:SetText(displayTime)
+		countdownText:SetTextColor(unpack(db.profile.colorCountdown))
 		countdownText:Show()
-		
+
 		if bigCountdown then
 			local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
 			if sizeRatio > 1 then
-				countdownText:SetFont(FONT_NAME, FONT_SIZE_LARGE / sizeRatio, FONT_FLAGS)	
+				countdownText:SetFont(font, db.profile.largeFontSize / sizeRatio, FONT_FLAGS)
 			end
 		end
 	end
-	
+
 	local stackText = self.stackText
 	if not db.profile.hideStack and data.count and data.count > 0 then
+		stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
 		stackText:SetText(data.count)
+		stackText:SetTextColor(unpack(db.profile.colorStack))
 		if not bigCountdown then
 			countdownText:SetJustifyH('LEFT')
 		end
@@ -354,7 +367,7 @@ local function ActionButton_UpdateBorder(self, spell)
 			return true
 		end
 	end
-	
+
 	ActionButton_UpdateTimer(self, nil)
 	self:GetCheckedTexture():SetVertexColor(1, 1, 1)
 end
@@ -413,14 +426,14 @@ function InlineAura:RequireUpdate()
 end
 
 function InlineAura:RegisterButtons(prefix, count)
-	for id = 1, count do 
+	for id = 1, count do
 		local button = _G[prefix .. id]
 		if button then
 			self.buttons[button] = true
 		end
 	end
 end
-		
+
 ------------------------------------------------------------------------------
 -- Event handling
 ------------------------------------------------------------------------------
@@ -430,7 +443,7 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 		return
 	end
 	self:UnregisterEvent('ADDON_LOADED')
-	
+
 	-- Saved variables setup
 	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
 	db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
@@ -474,7 +487,7 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 	self:RegisterButtons("MultiBarBottomRightButton", 12)
 	self:RegisterButtons("MultiBarBottomLeftButton", 12)
 
-	-- Hooks	
+	-- Hooks
 	hooksecurefunc('ActionButton_UpdateState', function(self)
 		InlineAura.buttons[self] = true
 		self:SetChecked(ActionButton_IsSpellInUse(self) or self:GetChecked())

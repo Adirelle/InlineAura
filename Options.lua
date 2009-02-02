@@ -28,7 +28,7 @@ local handler = {}
 function handler:Set(info, ...)
 	if info.type == 'color' then
 		local color = InlineAura.db.profile[info.arg]
-		color[1], color[2], color[3] = ...
+		color[1], color[2], color[3], color[4] = ...
 	else
 		InlineAura.db.profile[info.arg] = ...
 	end
@@ -49,14 +49,14 @@ local options = {
 	set = 'Set',
 	get = 'Get',
 	args = {
-		onlyMyBuffs = {		
+		onlyMyBuffs = {
 			name = L['Only my buffs'],
 			desc = L['Check to ignore buffs cast by other characters.'],
 			type = 'toggle',
 			arg = 'onlyMyBuffs',
 			order = 10,
 		},
-		onlyMyDebuffs = {		
+		onlyMyDebuffs = {
 			name = L['Only my debuffs'],
 			desc = L['Check to ignore debuffs cast by other characters.'],
 			type = 'toggle',
@@ -82,7 +82,7 @@ local options = {
 			desc = L['Select the colors used to highlight the action button. There are selected based on aura type and caster.'],
 			type = 'group',
 			inline = true,
-			order = 50,		
+			order = 50,
 			args = {
 				buffMine = {
 					name = L['My buffs'],
@@ -115,7 +115,55 @@ local options = {
 					order = 40,
 				},
 			},
-		}
+		},
+		text = {
+			name = L['Text appearance'],
+			type = 'group',
+			inline = true,
+			order = 60,
+			args = {
+				fontName = {
+					name = L['Font name'],
+					type = 'select',
+					dialogControl = 'LSM30_Font',
+					values = AceGUIWidgetLSMlists.font,
+					arg = 'fontName',
+					order = 10,
+				},
+				smallFontSize = {
+					name = L['Size of small text'],
+					type = 'range',
+					min = 5,
+					max = 30,
+					step = 1,
+					arg = 'smallFontSize',
+					order = 20,
+				},
+				largeFontSize = {
+					name = L['Size of large text'],
+					type = 'range',
+					min = 5,
+					max = 30,
+					step = 1,
+					arg = 'largeFontSize',
+					order = 30,
+				},
+				colorCountdown = {
+					name = L['Countdown text color'],
+					type = 'color',
+					arg = 'colorCountdown',
+					hasAlpha = true,
+					order = 40,
+				},
+				colorStack = {
+					name = L['Application text color'],
+					type = 'color',
+					arg = 'colorStack',
+					hasAlpha = true,
+					order = 50,
+				},
+			},
+		},
 	},
 }
 
@@ -124,19 +172,19 @@ function InlineAura:SetupConfig()
 	local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
 	-- Register main options
-	AceConfig:RegisterOptionsTable('InlineAura-main', options)	
+	AceConfig:RegisterOptionsTable('InlineAura-main', options)
 
 	-- Register profile options
-	AceConfig:RegisterOptionsTable('InlineAura-profiles', LibStub('AceDBOptions-3.0'):GetOptionsTable(self.db)	)	
-	
+	AceConfig:RegisterOptionsTable('InlineAura-profiles', LibStub('AceDBOptions-3.0'):GetOptionsTable(self.db)	)
+
 	-- Create Blizzard AddOn option frames
 	local mainPanel = AceConfigDialog:AddToBlizOptions('InlineAura-main', 'Inline Aura')
 	AceConfigDialog:AddToBlizOptions('InlineAura-profiles', 'Profiles', mainPanel)
-	
+
 	-- Chat command line
 	SLASH_INLINEAURA1 = "/inlineaura"
 	function SlashCmdList.INLINEAURA()
-		InterfaceOptionsFrame_OpenToCategory(mainPanel) 
+		InterfaceOptionsFrame_OpenToCategory(mainPanel)
 	end
 end
 

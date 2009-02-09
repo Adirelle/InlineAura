@@ -124,6 +124,7 @@ local options = {
 			args = {
 				fontName = {
 					name = L['Font name'],
+					desc = L['Select the font to be used to display both countdown and application count.'],
 					type = 'select',
 					dialogControl = 'LSM30_Font',
 					values = AceGUIWidgetLSMlists.font,
@@ -132,6 +133,7 @@ local options = {
 				},
 				smallFontSize = {
 					name = L['Size of small text'],
+					desc = L['The small font is used to display aura application count and also countdown when OmniCC is loaded.'],
 					type = 'range',
 					min = 5,
 					max = 30,
@@ -141,6 +143,7 @@ local options = {
 				},
 				largeFontSize = {
 					name = L['Size of large text'],
+					desc = L['The large font is used to display aura countdowns unless OmniCC is loaded.'],
 					type = 'range',
 					min = 5,
 					max = 30,
@@ -179,7 +182,7 @@ function InlineAura:SetupConfig()
 
 	-- Create Blizzard AddOn option frames
 	local mainPanel = AceConfigDialog:AddToBlizOptions('InlineAura-main', 'Inline Aura')
-	AceConfigDialog:AddToBlizOptions('InlineAura-profiles', 'Profiles', mainPanel)
+	AceConfigDialog:AddToBlizOptions('InlineAura-profiles', 'Profiles', 'Inline Aura')
 
 	-- Chat command line
 	SLASH_INLINEAURA1 = "/inlineaura"

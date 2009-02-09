@@ -216,6 +216,8 @@ do
 		AddAliases( 1499,  3355) -- Freezing Trap => Freezing Trap Effect
 		AddAliases(13795, 13797) -- Immolation Trap => Immolation Trap Effect
 		AddAliases(13813, 13812) -- Explosive Trap => Explosive Trap Effect
+	elseif class == 'WARRIOR' then
+		AddAliases(47498, 47467) -- Devastate => Sunder Armor
 	elseif class == 'WARLOCK' then
 		AddAliases(686, 17794) -- Shadow Bolt => Shadow Mastery
 	elseif class == 'DEATHKNIGHT' then

@@ -77,6 +77,13 @@ local options = {
 			arg = 'hideStack',
 			order = 40,
 		},
+		preciseCountdown = {
+			name = L['Precise countdown'],
+			desc = L['Check to have a more accurate countdown display for short-lived auras.'],
+			type = 'toggle',
+			arg = 'preciseCountdown',
+			order = 45,
+		},
 		colors = {
 			name = L['Border colors'],
 			desc = L['Select the colors used to highlight the action button. There are selected based on aura type and caster.'],

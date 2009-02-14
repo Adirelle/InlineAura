@@ -71,6 +71,7 @@ local DEFAULT_OPTIONS = {
 		onlyMyDebuffs = false,
 		hideCountdown = false,
 		hideStack = false,
+		preciseCountdown = false,
 		fontName = FONT_NAME,
 		smallFontSize = FONT_SIZE_SMALL,
 		largeFontSize = FONT_SIZE_LARGE,
@@ -122,34 +123,54 @@ local function WipeAuras(auras)
 end
 
 local newAuras = {}
-local function UpdateUnitAuras(auras, query, unit)
+local function UpdateUnitAuras(auras, unit, filter, onlyMine)
 	wipe(newAuras)
+	-- First, get all auras, included those applied by other players (if configured so)
+	if not onlyMine then
+		for i = 1,255 do
+			local name, _, _, count, _, duration, expirationTime, isMine = UnitAura(unit, i, filter)
+			if not name then
+				break
+			else
+				local data, isNew = newAuras[name], false
+				if not data then
+					data, isNew = new(), true
+					newAuras[name] = data
+				end
+				if isNew or (expirationTime or 0) > (data.expirationTime or 0) or (count or 0) > (data.count or 0) then
+					data.count = count
+					data.duration = duration
+					data.expirationTime = expirationTime
+					data.isMine = isMine and 1 or 0
+				end
+			end
+		end
+	end
+	-- Then get the aura applied only by the player
+	local filter_mine = filter .. '|PLAYER'
 	for i = 1,255 do
-		local name, _, _, count, _, duration, expirationTime, isMine = query(unit, i)
+		local name, _, _, count, _, duration, expirationTime = UnitAura(unit, i, filter_mine)
 		if not name then
 			break
 		end
-		isMine = isMine and 1 or 0
 		local data = newAuras[name]
 		if not data then
 			data = new()
 			newAuras[name] = data
 		end
-		if not data.isMine or (isMine > data.isMine)
-				or (isMine == data.isMine and ((expirationTime > data.expirationTime) or (count ~= data.count)))
-		then
-			data.count = count
-			data.duration = duration
-			data.expirationTime = expirationTime
-			data.isMine = isMine
-		end
+		data.count = count
+		data.duration = duration
+		data.expirationTime = expirationTime
+		data.isMine = 1
 	end
+	-- Remove auras that have faded out
 	for name, data in pairs(auras) do
 		if not newAuras[name] then
 			auras[name] = del(auras[name])
 			InlineAura.needUpdate = true
 		end
 	end
+	-- Add new auras and update existing ones
 	for name, data in pairs(newAuras) do
 		local old = auras[name]
 		if old then
@@ -165,15 +186,15 @@ local function UpdateUnitAuras(auras, query, unit)
 end
 
 local function UpdatePlayerBuffs()
-	UpdateUnitAuras(playerAuras, UnitBuff, 'player')
+	UpdateUnitAuras(playerAuras, 'player', 'HELPFUL', db.profile.onlyMyBuffs)
 end
 
 local function UpdateTargetAuras()
 	if UnitExists('target') then
 		if UnitIsFriend('player', 'target') then
-			UpdateUnitAuras(targetAuras, UnitBuff, 'target')
+			UpdateUnitAuras(targetAuras, 'target', 'HELPFUL', db.profile.onlyMyBuffs)
 		else
-			UpdateUnitAuras(targetAuras, UnitDebuff, 'target')
+			UpdateUnitAuras(targetAuras, 'target', 'HARMFUL', db.profile.onlyMyDebuffs)
 		end
 	else
 		WipeAuras(targetAuras)
@@ -300,16 +321,26 @@ local function TimerFrame_Update(self)
 		countdownText:Hide()
 		self.delay = timeLeft
 	else
+		local isShortLived = data.duration < 300
 		local displayTime
-		if timeLeft > 3600 then
+		if timeLeft >= 3600 then
 			displayTime = math.ceil(timeLeft/3600) .. 'h'
-			self.delay = timeLeft % 3600
-		elseif timeLeft > 60 then
-			displayTime = math.ceil(timeLeft/60) .. 'm'
-			self.delay = timeLeft % 60
+			self.delay = 0.1 + timeLeft % 3600
+		elseif timeLeft >= 60 then
+			if db.profile.preciseCountdown and isShortLived and timeLeft < 300 then
+				local v = math.ceil(timeLeft)
+				displayTime = ("%d:%02d"):format(math.floor(v/60), math.floor(v%60))
+				self.delay = 1
+			else
+				displayTime = math.ceil(timeLeft/60) .. 'm'
+				self.delay = 0.1 + timeLeft % 60
+			end
+		elseif db.profile.preciseCountdown and isShortLived and timeLeft < 5 then
+			displayTime = ("%.1f"):format(math.ceil(timeLeft*10)/10)
+			self.delay = 0.1
 		else
 			displayTime = tostring(math.ceil(timeLeft))
-			self.delay = math.max(timeLeft % 1, UPDATE_PERIOD)
+			self.delay = 1
 		end
 
 		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)		
@@ -317,11 +348,9 @@ local function TimerFrame_Update(self)
 		countdownText:SetText(displayTime)
 		countdownText:Show()
 
-		if bigCountdown then
-			local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
-			if sizeRatio > 1 then
-				countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
-			end
+		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
+		if sizeRatio > 1 then
+			countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
 		end
 	end
 
@@ -369,8 +398,7 @@ end
 local function ActionButton_UpdateBorder(self, spell)
 	if spell then
 		local aura, auraType = GetAuraToDisplay(spell)
-		local onlyMine = db.profile['onlyMy'..auraType..'s']
-		if aura and (not onlyMine or aura.isMine == 1) then
+		if aura then
 			local color = db.profile['color'..auraType..((aura.isMine == 1) and 'Mine' or 'Others')]
 			self:GetCheckedTexture():SetVertexColor(unpack(color))
 			ActionButton_UpdateTimer(self, aura)
@@ -439,6 +467,10 @@ end)
 
 function InlineAura:RequireUpdate(configUpdated)
 	self.configUpdated = configUpdated
+	if configUpdated then
+		UpdatePlayerBuffs()
+		UpdateTargetAuras()
+	end
 	self.needUpdate = true
 end
 

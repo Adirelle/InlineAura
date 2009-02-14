@@ -248,6 +248,28 @@ do
 end
 
 ------------------------------------------------------------------------------
+-- Countdown formatting
+------------------------------------------------------------------------------
+
+local floor = math.floor
+
+local function GetCountdownText(timeLeft, precise)
+	if timeLeft >= 3600 then
+		return floor(timeLeft/3600) .. 'h', timeLeft % 3600
+	elseif timeLeft >= 60 then
+		if precise and timeLeft < 300 then
+			return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
+		else
+			return floor(timeLeft/60) .. 'm', timeLeft % 60
+		end
+	elseif timeLeft < 1 or (precise and timeLeft < 5) then
+		return ("%.1f"):format(floor(timeLeft*10)/10), timeLeft % 0.1
+	else
+		return tostring(floor(timeLeft)), timeLeft % 1
+	end
+end
+
+------------------------------------------------------------------------------
 -- Timer frame handling
 ------------------------------------------------------------------------------
 
@@ -255,14 +277,14 @@ local TimerFrame_OnUpdate
 
 local function TimerFrame_Skin(self)
 	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
-	
+
 	local countdownText = self.countdownText
 	countdownText.fontName = font
 	countdownText.baseFontSize = db.profile[bigCountdown and "largeFontSize" or "smallFontSize"]
 	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
-	countdownText:SetTextColor(unpack(db.profile.colorCountdown))		
-	
-	local stackText = self.stackText	
+	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
+
+	local stackText = self.stackText
 	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
 	stackText:SetTextColor(unpack(db.profile.colorStack))
 end
@@ -286,9 +308,9 @@ local function CreateTimerFrame(button)
 	local stackText = timer:CreateFontString(nil, "OVERLAY")
 	stackText:SetAllPoints(timer)
 	stackText:SetJustifyH("RIGHT")
-	stackText:SetJustifyV("BOTTOM")	
+	stackText:SetJustifyV("BOTTOM")
 	timer.stackText = stackText
-	
+
 	TimerFrame_Skin(timer)
 
 	return timer
@@ -301,7 +323,7 @@ local function TimerFrame_Update(self)
 		self:Hide()
 		return
 	end
-	
+
 	local countdownJustfiyH = 'CENTER'
 
 	local stackText = self.stackText
@@ -314,37 +336,18 @@ local function TimerFrame_Update(self)
 	else
 		stackText:Hide()
 	end
-	
+
 	local countdownText = self.countdownText
 	local timeLeft = data.expirationTime - GetTime()
 	if db.profile.hideCountdown then
 		countdownText:Hide()
 		self.delay = timeLeft
 	else
-		local isShortLived = data.duration < 300
 		local displayTime
-		if timeLeft >= 3600 then
-			displayTime = math.ceil(timeLeft/3600) .. 'h'
-			self.delay = 0.1 + timeLeft % 3600
-		elseif timeLeft >= 60 then
-			if db.profile.preciseCountdown and isShortLived and timeLeft < 300 then
-				local v = math.ceil(timeLeft)
-				displayTime = ("%d:%02d"):format(math.floor(v/60), math.floor(v%60))
-				self.delay = 1
-			else
-				displayTime = math.ceil(timeLeft/60) .. 'm'
-				self.delay = 0.1 + timeLeft % 60
-			end
-		elseif db.profile.preciseCountdown and isShortLived and timeLeft < 5 then
-			displayTime = ("%.1f"):format(math.ceil(timeLeft*10)/10)
-			self.delay = 0.1
-		else
-			displayTime = tostring(math.ceil(timeLeft))
-			self.delay = 1
-		end
+		displayTime, self.delay = GetCountdownText(timeLeft, db.profile.preciseCountdown and data.duration < 300 )
 
-		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)		
-		countdownText:SetJustifyH(countdownJustfiyH)		
+		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
+		countdownText:SetJustifyH(countdownJustfiyH)
 		countdownText:SetText(displayTime)
 		countdownText:Show()
 

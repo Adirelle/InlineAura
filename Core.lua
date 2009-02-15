@@ -81,8 +81,16 @@ local DEFAULT_OPTIONS = {
 		colorDebuffOthers = { 1.0, 1.0, 0.0, 1.0 },
 		colorCountdown = { 1.0, 1.0, 1.0, 1.0 },
 		colorStack = { 1.0, 1.0, 1.0, 1.0 },
+		spells = {
+			['**'] = {
+				disabled = false,
+				auraType = 'buff',
+				aliases = {},
+			},
+		},
 	},
 }
+InlineAura.DEFAULT_OPTIONS = DEFAULT_OPTIONS
 
 ------------------------------------------------------------------------------
 -- Table recycling stub
@@ -123,26 +131,24 @@ local function WipeAuras(auras)
 end
 
 local newAuras = {}
-local function UpdateUnitAuras(auras, unit, filter, onlyMine)
+local function UpdateUnitAuras(auras, unit, filter)
 	wipe(newAuras)
 	-- First, get all auras, included those applied by other players (if configured so)
-	if not onlyMine then
-		for i = 1,255 do
-			local name, _, _, count, _, duration, expirationTime, isMine = UnitAura(unit, i, filter)
-			if not name then
-				break
-			else
-				local data, isNew = newAuras[name], false
-				if not data then
-					data, isNew = new(), true
-					newAuras[name] = data
-				end
-				if isNew or (expirationTime or 0) > (data.expirationTime or 0) or (count or 0) > (data.count or 0) then
-					data.count = count
-					data.duration = duration
-					data.expirationTime = expirationTime
-					data.isMine = isMine and 1 or 0
-				end
+	for i = 1,255 do
+		local name, _, _, count, _, duration, expirationTime, isMine = UnitAura(unit, i, filter)
+		if not name then
+			break
+		else
+			local data, isNew = newAuras[name], false
+			if not data then
+				data, isNew = new(), true
+				newAuras[name] = data
+			end
+			if isNew or (expirationTime or 0) > (data.expirationTime or 0) or (count or 0) > (data.count or 0) then
+				data.count = count
+				data.duration = duration
+				data.expirationTime = expirationTime
+				data.isMine = not not isMine
 			end
 		end
 	end
@@ -161,7 +167,7 @@ local function UpdateUnitAuras(auras, unit, filter, onlyMine)
 		data.count = count
 		data.duration = duration
 		data.expirationTime = expirationTime
-		data.isMine = 1
+		data.isMine = true
 	end
 	-- Remove auras that have faded out
 	for name, data in pairs(auras) do
@@ -186,64 +192,18 @@ local function UpdateUnitAuras(auras, unit, filter, onlyMine)
 end
 
 local function UpdatePlayerBuffs()
-	UpdateUnitAuras(playerAuras, 'player', 'HELPFUL', db.profile.onlyMyBuffs)
+	UpdateUnitAuras(playerAuras, 'player', 'HELPFUL')
 end
 
 local function UpdateTargetAuras()
 	if UnitExists('target') then
 		if UnitIsFriend('player', 'target') then
-			UpdateUnitAuras(targetAuras, 'target', 'HELPFUL', db.profile.onlyMyBuffs)
+			UpdateUnitAuras(targetAuras, 'target', 'HELPFUL')
 		else
-			UpdateUnitAuras(targetAuras, 'target', 'HARMFUL', db.profile.onlyMyDebuffs)
+			UpdateUnitAuras(targetAuras, 'target', 'HARMFUL')
 		end
 	else
 		WipeAuras(targetAuras)
-	end
-end
-
-------------------------------------------------------------------------------
--- Aura aliases
-------------------------------------------------------------------------------
-
-local FindAura
-
-do
-	local aliases = {}
-
-	function FindAura(auras, name)
-		local aura = auras[name]
-		if not aura and aliases[name] then
-			for i,alias in ipairs(aliases[name]) do
-				aura = auras[alias]
-				if aura then
-					break
-				end
-			end
-		end
-		return aura
-	end
-
-	local function AddAliases(id, ...)
-		local name = GetSpellInfo(id)
-		aliases[name] = {}
-		for i = 1, select('#', ...) do
-			aliases[name][i] = GetSpellInfo(select(i, ...))
-		end
-	end
-
-	local _, class = UnitClass('player')
-	if class == 'HUNTER' then
-		AddAliases(60192, 60210) -- Freezing Arrow => Freezing Arrow Effect
-		AddAliases( 1499,  3355) -- Freezing Trap => Freezing Trap Effect
-		AddAliases(13795, 13797) -- Immolation Trap => Immolation Trap Effect
-		AddAliases(13813, 13812) -- Explosive Trap => Explosive Trap Effect
-	elseif class == 'WARRIOR' then
-		AddAliases(47498, 47467) -- Devastate => Sunder Armor
-	elseif class == 'WARLOCK' then
-		AddAliases(686, 17794) -- Shadow Bolt => Shadow Mastery
-	elseif class == 'DEATHKNIGHT' then
-		AddAliases(45462, 55078) -- Plague Strike => Blood Plague
-		AddAliases(45477, 55095) -- Icy Touch => Frost Fever
 	end
 end
 
@@ -384,25 +344,74 @@ local function ActionButton_UpdateTimer(self, data)
 	TimerFrame_Update(timer)
 end
 
-local function GetAuraToDisplay(spell)
-	if UnitExists('target') then
-		if UnitIsFriend('player', 'target') then
-			return FindAura(targetAuras, spell), 'Buff'
-		else
-			local aura = FindAura(targetAuras, spell)
+local function CheckAura(auras, name, onlyMine)
+	local aura = auras[name]
+	if aura and (aura.isMine or not onlyMine) then
+		return aura
+	end
+end
+
+local function LookupAura(auras, spell, aliases, auraType, onlyMine)
+	local aura = CheckAura(auras, spell)
+	if not aura and aliases then
+		for i, alias in pairs(aliases) do
+			aura = CheckAura(auras, alias)
 			if aura then
-				return aura, 'Debuff'
+				break
 			end
 		end
 	end
-	return FindAura(playerAuras, spell), 'Buff'
+	if aura then
+		return aura, auraType
+	end
+end
+
+local function GetTristateValue(value, default)
+	if value ~= nil then
+		return value
+	else
+		return default
+	end
+end
+
+local function GetAuraToDisplay(spell)
+	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
+	local onlyMine, aliases
+	if type(specific) == 'table' then
+		if specific.disabled then 
+			return
+		end
+		if specific.auraType == 'debuff' then
+			if UnitExists('target') and not UnitIsFriend('player', 'target') then
+				return LookupAura(targetAuras, spell, specific.aliases, 'Debuff', GetTristateValue(specific.onlyMine, db.profile.onlyMyDebuffs))
+			end
+		else
+			if UnitExists('target') and UnitIsFriend('player', 'target') then
+				return LookupAura(targetAuras, spell, specific.aliases, 'Buff', GetTristateValue(specific.onlyMine, db.profile.onlyMyBuffs))
+			else
+				return LookupAura(playerAuras, spell, specific.aliases, 'Buff', GetTristateValue(specific.onlyMine, db.profile.onlyMyBuffs))
+			end
+		end
+	else
+		if UnitExists('target') then
+			if UnitIsFriend('player', 'target') then
+				return LookupAura(targetAuras, spell, nil, 'Buff', db.profile.onlyMyBuffs)
+			else
+				local aura, auraType = LookupAura(targetAuras, spell, nil, 'Debuff', db.profile.onlyMyDebuffs)
+				if aura then
+					return aura, auraType
+				end
+			end
+		end
+		return LookupAura(playerAuras, spell, nil, 'Buff', db.profile.onlyMyBuffs)
+	end
 end
 
 local function ActionButton_UpdateBorder(self, spell)
 	if spell then
 		local aura, auraType = GetAuraToDisplay(spell)
 		if aura then
-			local color = db.profile['color'..auraType..((aura.isMine == 1) and 'Mine' or 'Others')]
+			local color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
 			self:GetCheckedTexture():SetVertexColor(unpack(color))
 			ActionButton_UpdateTimer(self, aura)
 			return true

@@ -26,4 +26,6 @@ libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 Localization.lua
 Core.lua
 Options.lua
+ClassDefaults.lua
+
 

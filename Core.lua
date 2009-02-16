@@ -29,10 +29,12 @@ local InlineAura = InlineAura
 
 -- Use a loose table until the string list get stable
 local InlineAura_L = _G.InlineAura_L
-InlineAura.L = setmetatable({}, {__index = function(self, key)
-	local value = InlineAura_L[key] or key
-	self[key] = value
-	return value
+InlineAura.L = setmetatable(InlineAura_L, {__index = function(self, key)
+	self[key] = key
+	--@debug@
+	print("Missing locale:", key)
+	--@end-debug@
+	return key
 end})
 
 _G.InlineAura_L = nil -- cleanup the global namespace
@@ -212,21 +214,34 @@ end
 ------------------------------------------------------------------------------
 
 local floor = math.floor
+local ceil = math.ceil
+
+local function GetPreciseCountdownText(timeLeft)
+	if timeLeft >= 3600 then
+		return L["%dh"]:format(floor(timeLeft/3600)), timeLeft % 3600
+	elseif timeLeft >= 600 then
+		return L["%dm"]:format(floor(timeLeft/60)), timeLeft % 60
+	elseif timeLeft >= 60 then
+		return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
+	elseif timeLeft >= 10 then
+		return tostring(floor(timeLeft)), timeLeft % 1
+	elseif timeLeft >= 0.1 then
+		return ("%.1f"):format(floor(timeLeft*10)/10), timeLeft % 0.1
+	end
+end
+
+local function GetImpreciseCountdownText(timeLeft)
+	if timeLeft >= 3600 then
+		return L["%dh"]:format(ceil(timeLeft/3600)), timeLeft % 3600
+	elseif timeLeft >= 60 then
+		return L["%dm"]:format(ceil(timeLeft/60)), timeLeft % 60
+	else
+		return ceil(timeLeft), timeLeft % 1
+	end
+end
 
 local function GetCountdownText(timeLeft, precise)
-	if timeLeft >= 3600 then
-		return floor(timeLeft/3600) .. 'h', timeLeft % 3600
-	elseif timeLeft >= 60 then
-		if precise and timeLeft < 300 then
-			return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
-		else
-			return floor(timeLeft/60) .. 'm', timeLeft % 60
-		end
-	elseif timeLeft < 1 or (precise and timeLeft < 5) then
-		return ("%.1f"):format(floor(timeLeft*10)/10), timeLeft % 0.1
-	else
-		return tostring(floor(timeLeft)), timeLeft % 1
-	end
+	return (precise and GetPreciseCountdownText or GetImpreciseCountdownText)(timeLeft)
 end
 
 ------------------------------------------------------------------------------
@@ -299,13 +314,12 @@ local function TimerFrame_Update(self)
 
 	local countdownText = self.countdownText
 	local timeLeft = data.expirationTime - GetTime()
-	if db.profile.hideCountdown then
+	local displayTime
+	displayTime, self.delay = GetCountdownText(timeLeft, db.profile.preciseCountdown)
+	if db.profile.hideCountdown or not displayTime then
 		countdownText:Hide()
 		self.delay = timeLeft
-	else
-		local displayTime
-		displayTime, self.delay = GetCountdownText(timeLeft, db.profile.preciseCountdown and data.duration < 300 )
-
+	else		
 		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
 		countdownText:SetJustifyH(countdownJustfiyH)
 		countdownText:SetText(displayTime)

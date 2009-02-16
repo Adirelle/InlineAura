@@ -92,7 +92,7 @@ local options = {
 		},
 		preciseCountdown = {
 			name = L['Precise countdown'],
-			desc = L['Check to have a more accurate countdown display for short-lived auras.'],
+			desc = L['Check to have a more accurate countdown display instead of default Blizzard rounding.'],
 			type = 'toggle',
 			arg = 'preciseCountdown',
 			disabled = function(info) return InlineAura.db.profile.hideCountdown end,

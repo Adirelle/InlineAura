@@ -76,51 +76,28 @@ L["Unknown spell: %s"] = true
 for k,v in pairs(L) do if v == true then L[k] = k end end
 
 --------------------------------------------------------------------------------
+-- Locales from localization system
+--------------------------------------------------------------------------------
+
+-- All theses locales are included by the WowAce packager.
+-- You can help translating this project using the WowAce localization system:
+-- http://www.wowace.com/projects/inline-aura/localization/ 
+
 if locale == "frFR" then
---------------------------------------------------------------------------------
-
-	--@localization(locale="frFR", format="lua_additive_table", handle-unlocalized="ignore")@
-
---------------------------------------------------------------------------------
+--@localization(locale="frFR", format="lua_additive_table", handle-unlocalized="ignore")@
 elseif locale == "deDE" then
---------------------------------------------------------------------------------
-
-	--@localization(locale="deDE", format="lua_additive_table", handle-unlocalized="ignore")@
-
---------------------------------------------------------------------------------
+--@localization(locale="deDE", format="lua_additive_table", handle-unlocalized="ignore")@
 elseif locale == "esMX" then
---------------------------------------------------------------------------------
-
-	--@localization(locale="esMX", format="lua_additive_table", handle-unlocalized="ignore")@
-
---------------------------------------------------------------------------------
+--@localization(locale="esMX", format="lua_additive_table", handle-unlocalized="ignore")@
 elseif locale == "ruRU" then
---------------------------------------------------------------------------------
-
-	--@localization(locale="ruRU", format="lua_additive_table", handle-unlocalized="ignore")@
-
---------------------------------------------------------------------------------
+--@localization(locale="ruRU", format="lua_additive_table", handle-unlocalized="ignore")@
 elseif locale == "esES" then
---------------------------------------------------------------------------------
-
-	--@localization(locale="esES", format="lua_additive_table", handle-unlocalized="ignore")@
-
---------------------------------------------------------------------------------
+--@localization(locale="esES", format="lua_additive_table", handle-unlocalized="ignore")@
 elseif locale == "zhTW" then
---------------------------------------------------------------------------------
-
-	--@localization(locale="zhTW", format="lua_additive_table", handle-unlocalized="ignore")@
-
---------------------------------------------------------------------------------
+--@localization(locale="zhTW", format="lua_additive_table", handle-unlocalized="ignore")@
 elseif locale == 'zhCN' then
---------------------------------------------------------------------------------
-
-	--@localization(locale="zhCN", format="lua_additive_table", handle-unlocalized="ignore")@
-
---------------------------------------------------------------------------------
+--@localization(locale="zhCN", format="lua_additive_table", handle-unlocalized="ignore")@
 elseif locale == 'koKR' then
---------------------------------------------------------------------------------
-
-	--@localization(locale="koKR", format="lua_additive_table", handle-unlocalized="ignore")@
-
+--@localization(locale="koKR", format="lua_additive_table", handle-unlocalized="ignore")@
 end
+

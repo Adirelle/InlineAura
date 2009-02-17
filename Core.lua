@@ -150,7 +150,7 @@ local function UpdateUnitAuras(auras, unit, filter)
 				data.count = count
 				data.duration = duration
 				data.expirationTime = expirationTime
-				data.isMine = not not isMine
+				data.isMine = isMine and true or false
 			end
 		end
 	end
@@ -368,7 +368,7 @@ end
 local function LookupAura(auras, spell, aliases, auraType, onlyMine)
 	local aura = CheckAura(auras, spell)
 	if not aura and aliases then
-		for i, alias in pairs(aliases) do
+		for i, alias in ipairs(aliases) do
 			aura = CheckAura(auras, alias)
 			if aura then
 				break

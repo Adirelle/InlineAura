@@ -79,7 +79,7 @@ for k,v in pairs(L) do if v == true then L[k] = k end end
 -- Locales from localization system
 --------------------------------------------------------------------------------
 
--- All theses locales are included by the WowAce packager.
+-- All these locales are included by the WowAce packager.
 -- You can help translating this project using the WowAce localization system:
 -- http://www.wowace.com/projects/inline-aura/localization/ 
 

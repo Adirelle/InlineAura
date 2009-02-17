@@ -319,7 +319,7 @@ local function TimerFrame_Update(self)
 	if db.profile.hideCountdown or not displayTime then
 		countdownText:Hide()
 		self.delay = timeLeft
-	else		
+	else
 		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
 		countdownText:SetJustifyH(countdownJustfiyH)
 		countdownText:SetText(displayTime)
@@ -341,22 +341,8 @@ function TimerFrame_OnUpdate(self, elapsed)
 end
 
 ------------------------------------------------------------------------------
--- Button hooks
+-- Aura lookup
 ------------------------------------------------------------------------------
-
-local function ActionButton_UpdateTimer(self, data)
-	if not data or not data.duration or data.duration == 0 or GetTime() > data.expirationTime then
-		if timerFrames[self] then
-			timerFrames[self].data = nil
-			timerFrames[self]:Hide()
-		end
-		return
-	end
-	local timer = timerFrames[self] or CreateTimerFrame(self)
-	timer.data = data
-	timer:Show()
-	TimerFrame_Update(timer)
-end
 
 local function CheckAura(auras, name, onlyMine)
 	local aura = auras[name]
@@ -366,10 +352,10 @@ local function CheckAura(auras, name, onlyMine)
 end
 
 local function LookupAura(auras, spell, aliases, auraType, onlyMine)
-	local aura = CheckAura(auras, spell)
+	local aura = CheckAura(auras, spell, onlyMine)
 	if not aura and aliases then
 		for i, alias in ipairs(aliases) do
-			aura = CheckAura(auras, alias)
+			aura = CheckAura(auras, alias, onlyMine)
 			if aura then
 				break
 			end
@@ -392,7 +378,7 @@ local function GetAuraToDisplay(spell)
 	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
 	local onlyMine, aliases
 	if type(specific) == 'table' then
-		if specific.disabled then 
+		if specific.disabled then
 			return
 		end
 		if specific.auraType == 'debuff' then
@@ -419,6 +405,24 @@ local function GetAuraToDisplay(spell)
 		end
 		return LookupAura(playerAuras, spell, nil, 'Buff', db.profile.onlyMyBuffs)
 	end
+end
+
+------------------------------------------------------------------------------
+-- Button hooks
+------------------------------------------------------------------------------
+
+local function ActionButton_UpdateTimer(self, data)
+	if not data or not data.duration or data.duration == 0 or GetTime() > data.expirationTime then
+		if timerFrames[self] then
+			timerFrames[self].data = nil
+			timerFrames[self]:Hide()
+		end
+		return
+	end
+	local timer = timerFrames[self] or CreateTimerFrame(self)
+	timer.data = data
+	timer:Show()
+	TimerFrame_Update(timer)
 end
 
 local function ActionButton_UpdateBorder(self, spell)

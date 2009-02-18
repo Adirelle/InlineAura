@@ -87,7 +87,6 @@ local DEFAULT_OPTIONS = {
 			['**'] = {
 				disabled = false,
 				auraType = 'buff',
-				aliases = {},
 			},
 		},
 	},
@@ -117,6 +116,7 @@ do
 		end
 	end
 end
+InlineAura.new, InlineAura.del = new, del
 
 ------------------------------------------------------------------------------
 -- Aura monitoring

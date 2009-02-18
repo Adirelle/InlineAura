@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 -----------------------------------------------------------------------------
 
 local InlineAura = InlineAura
-local L = InlineAura.L
+local L, new, del = InlineAura.L, InlineAura.new, InlineAura.del
 
 -- This is used to prevent AceDB to load the default values for a spell
 -- when it has been explictly removed by the user. I'd rather use "false",
@@ -402,11 +402,19 @@ function spellSpecificHandler:SetAliases(info, value)
 	if aliases then
 		wipe(aliases)
 	else
-		aliases = {}
-		self.db.aliases = aliases
+		aliases = new()
 	end
 	for name in tostring(value):gmatch("[^\n]+") do
-		table.insert(aliases, name)
+		name = name:trim()
+		if name ~= "" then
+			table.insert(aliases, name)
+		end
+	end
+	if #aliases > 0 then	
+		self.db.aliases = aliases
+	else
+		del(aliases)
+		self.db.aliases = nil
 	end
 	InlineAura:RequireUpdate(true)
 end

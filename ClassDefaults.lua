@@ -46,21 +46,26 @@ if class == 'HUNTER' then
 	SetSpellDefaults('debuff',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
 	SetSpellDefaults('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	SetSpellDefaults('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
-
-elseif class == 'MAGE' then
-	-- Proposed by FlareCDE
-	AddAliases(42859, 22959) -- Scorch => Improved Scorch
 		
 elseif class == 'WARRIOR' then
 	SetSpellDefaults('debuff', 47498, 47467) -- Devastate => Sunder Armor
 	
 elseif class == 'WARLOCK' then
-	SetSpellDefaults('debuff', 686, 17794) -- Shadow Bolt => Shadow Mastery
+	SetSpellDefaults('debuff',   686, 17794) -- Shadow Bolt => Shadow Mastery
+	
+elseif class == 'MAGE' then
+	-- Proposed by FlareCDE
+	SetSpellDefaults('debuff', 42859, 22959) -- Scorch => Improved Scorch
 	
 elseif class == 'DEATHKNIGHT' then
 	-- Proposed by jexxlc
 	SetSpellDefaults('debuff', 45462, 55078) -- Plague Strike => Blood Plague
 	SetSpellDefaults('debuff', 45477, 55095) -- Icy Touch => Frost Fever
 	
+elseif class == 'DRUID' then
+	-- Proposed by pusikas2
+	SetSpellDefaults('debuff', 48564, 48566) -- Mangle - Bear => Mangle - Cat
+	SetSpellDefaults('debuff', 48566, 48564) -- Mangle - Cat => Mangle - Bear
+	SetSpellDefaults('debuff', 48475, 48476) -- Faerie Fire (Feral) => Faerie Fire	
 end
 

@@ -124,34 +124,38 @@ InlineAura.new, InlineAura.del = new, del
 
 local function WipeAuras(auras)
 	if next(auras) then
-		for name,data in pairs(auras) do
-			del(data)
+		for name,aura in pairs(auras) do
+			del(aura)
 		end
 		wipe(auras)
 		InlineAura.needUpdate = true
 	end
 end
 
-local newAuras = {}
+local serial = 0
+
 local function UpdateUnitAuras(auras, unit, filter)
-	wipe(newAuras)
+	serial = (serial + 1) % 10000
+
 	-- First, get all auras, included those applied by other players (if configured so)
 	for i = 1,255 do
 		local name, _, _, count, _, duration, expirationTime, isMine = UnitAura(unit, i, filter)
 		if not name then
 			break
-		else
-			local data, isNew = newAuras[name], false
+		elseif not isMine then
+			local data = auras[name]
 			if not data then
-				data, isNew = new(), true
-				newAuras[name] = data
+				data = new()
+				auras[name] = data
+				InlineAura.needUpdate = true
+			elseif expirationTime ~= data.expirationTime or count ~= data.count or data.isMine then
+				InlineAura.needUpdate = true
 			end
-			if isNew or (expirationTime or 0) > (data.expirationTime or 0) or (count or 0) > (data.count or 0) then
-				data.count = count
-				data.duration = duration
-				data.expirationTime = expirationTime
-				data.isMine = isMine and true or false
-			end
+			data.serial = serial
+			data.count = count
+			data.duration = duration
+			data.expirationTime = expirationTime
+			data.isMine = false
 		end
 	end
 	-- Then get the aura applied only by the player
@@ -161,11 +165,15 @@ local function UpdateUnitAuras(auras, unit, filter)
 		if not name then
 			break
 		end
-		local data = newAuras[name]
+		local data = auras[name]
 		if not data then
 			data = new()
-			newAuras[name] = data
+			auras[name] = data
+			InlineAura.needUpdate = true
+		elseif expirationTime ~= data.expirationTime or count ~= data.count or not data.isMine then
+			InlineAura.needUpdate = true			
 		end
+		data.serial = serial
 		data.count = count
 		data.duration = duration
 		data.expirationTime = expirationTime
@@ -173,23 +181,10 @@ local function UpdateUnitAuras(auras, unit, filter)
 	end
 	-- Remove auras that have faded out
 	for name, data in pairs(auras) do
-		if not newAuras[name] then
+		if data.serial ~= serial then
 			auras[name] = del(auras[name])
 			InlineAura.needUpdate = true
 		end
-	end
-	-- Add new auras and update existing ones
-	for name, data in pairs(newAuras) do
-		local old = auras[name]
-		if old then
-			if old.isMine ~= data.isMine or old.count ~= data.count or old.duration ~= data.duration or old.expirationTime ~= data.expirationTime then
-				InlineAura.needUpdate = true
-			end
-			del(old)
-		else
-			InlineAura.needUpdate = true
-		end
-		auras[name] = data
 	end
 end
 
@@ -300,7 +295,6 @@ local function TimerFrame_Update(self)
 	end
 
 	local countdownJustfiyH = 'CENTER'
-
 	local stackText = self.stackText
 	if not db.profile.hideStack and data.count and data.count > 0 then
 		stackText:SetText(data.count)
@@ -412,7 +406,7 @@ end
 ------------------------------------------------------------------------------
 
 local function ActionButton_UpdateTimer(self, data)
-	if not data or not data.duration or data.duration == 0 or GetTime() > data.expirationTime then
+	if not data or not data.serial then
 		if timerFrames[self] then
 			timerFrames[self].data = nil
 			timerFrames[self]:Hide()
@@ -543,6 +537,7 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 			UpdateTargetAuras()
 		elseif event == 'PLAYER_TARGET_CHANGED' then
 			UpdateTargetAuras()
+			self.needUpdate = true
 		elseif event == 'VARIABLES_LOADED' then
 			-- Miscellanous addon support
 			if Dominos then self:RegisterButtons("DominosActionButton", 48) end

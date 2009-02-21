@@ -44,7 +44,7 @@ L["%dh"] = true
 L['Disable'] = true
 L["%dm"] = true
 L['Do you really want to remove these aura specific settings ?'] = true
-L['Either OmniCC or CooldownCount is loaded so aura countdowns are displayed with the small at the bottom of action buttons.'] = true
+L['Either OmniCC or CooldownCount is loaded so aura countdowns are displayed using small font at the bottom of action buttons.'] = true
 L['Enter additional aura names to check. This allows to check for alternative or equivalent auras. Some spells also apply auras that do not have the same name as the spell.'] = true
 L['Enter the name of the spell for which you want to add specific settings. Spell names are checked against your spellbook.'] = true
 L['Font name'] = true
@@ -77,8 +77,8 @@ L['Size of small text'] = true
 L['Spell specific settings'] = true
 L['Spell to edit'] = true
 L['Text appearance'] = true
-L['The large font is used to display large aura countdowns.'] = true
-L['The small font is used to display aura application count (and possibly small countdown).'] = true
+L['The large font is used to display countdowns.'] = true
+L['The small font is used to display application count (and countdown when cooldown addons are loaded).'] = true
 L["Unknown spell: %s"] = true
 
 -- Replace true values by the key

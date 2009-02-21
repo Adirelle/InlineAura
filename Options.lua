@@ -144,7 +144,7 @@ local options = {
 			order = 60,
 			args = {
 				smallCountdownExplanation = {
-					name = L['Either OmniCC or CooldownCount is loaded so aura countdowns are displayed with the small at the bottom of action buttons.'],
+					name = L['Either OmniCC or CooldownCount is loaded so aura countdowns are displayed using small font at the bottom of action buttons.'],
 					type = 'description',
 					hidden = function() return InlineAura.bigCountdown end,
 					order = 5,
@@ -160,7 +160,7 @@ local options = {
 				},
 				smallFontSize = {
 					name = L['Size of small text'],
-					desc = L['The small font is used to display aura application count (and possibly small countdown).'],
+					desc = L['The small font is used to display application count (and countdown when cooldown addons are loaded).'],
 					type = 'range',
 					min = 5,
 					max = 30,
@@ -170,7 +170,7 @@ local options = {
 				},
 				largeFontSize = {
 					name = L['Size of large text'],
-					desc = L['The large font is used to display large aura countdowns.'],
+					desc = L['The large font is used to display countdowns.'],
 					type = 'range',
 					min = 5,
 					max = 30,

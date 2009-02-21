@@ -57,8 +57,6 @@ local timerFrames = {}
 
 local UPDATE_PERIOD = 0.25
 
-local bigCountdown = true
-
 local LSM = LibStub('LibSharedMedia-3.0')
 local FONTMEDIA = LSM.MediaType.FONT
 
@@ -250,7 +248,7 @@ local function TimerFrame_Skin(self)
 
 	local countdownText = self.countdownText
 	countdownText.fontName = font
-	countdownText.baseFontSize = db.profile[bigCountdown and "largeFontSize" or "smallFontSize"]
+	countdownText.baseFontSize = db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
 	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
 	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
 
@@ -272,7 +270,7 @@ local function CreateTimerFrame(button)
 
 	local countdownText = timer:CreateFontString(nil, "OVERLAY")
 	countdownText:SetAllPoints(timer)
-	countdownText:SetJustifyV(bigCountdown and 'MIDDLE' or 'BOTTOM')
+	countdownText:SetJustifyV(InlineAura.bigCountdown and 'MIDDLE' or 'BOTTOM')
 	timer.countdownText = countdownText
 
 	local stackText = timer:CreateFontString(nil, "OVERLAY")
@@ -298,7 +296,7 @@ local function TimerFrame_Update(self)
 	local stackText = self.stackText
 	if not db.profile.hideStack and data.count and data.count > 0 then
 		stackText:SetText(data.count)
-		if not bigCountdown then
+		if not InlineAura.bigCountdown then
 			countdownJustfiyH = 'LEFT'
 		end
 		stackText:Show()
@@ -542,10 +540,13 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 			-- Miscellanous addon support
 			if Dominos then self:RegisterButtons("DominosActionButton", 48) end
 			if Bartender4 then self:RegisterButtons("BT4Button", 120) end
-			if OmniCC then bigCountdown = false end
+			if OmniCC or CooldownCount then InlineAura.bigCountdown = false end
 			self:RequireUpdate()
 		end
 	end)
+
+	-- Setup
+	self.bigCountdown = true
 
 	-- Set event listening up
 	self:RegisterEvent('UNIT_AURA')

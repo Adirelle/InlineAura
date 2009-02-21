@@ -10,7 +10,7 @@
 ## X-eMail: adirelle@tagada-team.net
 
 ## SavedVariables: InlineAuraDB
-## OptDeps: Ace3, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidget, ButtonFacade, Bartender4, Dominos, OmniCC
+## OptDeps: Ace3, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidget, ButtonFacade, Bartender4, Dominos, OmniCC, CooldownCount
 
 #@no-lib-strip@
 libs\LibStub\LibStub.lua

@@ -143,6 +143,12 @@ local options = {
 			inline = true,
 			order = 60,
 			args = {
+				smallCountdownExplanation = {
+					name = L['Either OmniCC or CooldownCount is loaded so aura countdowns are displayed with the small at the bottom of action buttons.'],
+					type = 'description',
+					hidden = function() return InlineAura.bigCountdown end,
+					order = 5,
+				},
 				fontName = {
 					name = L['Font name'],
 					desc = L['Select the font to be used to display both countdown and application count.'],
@@ -154,7 +160,7 @@ local options = {
 				},
 				smallFontSize = {
 					name = L['Size of small text'],
-					desc = L['The small font is used to display aura application count and also countdown when OmniCC is loaded.'],
+					desc = L['The small font is used to display aura application count (and possibly small countdown).'],
 					type = 'range',
 					min = 5,
 					max = 30,
@@ -164,12 +170,13 @@ local options = {
 				},
 				largeFontSize = {
 					name = L['Size of large text'],
-					desc = L['The large font is used to display aura countdowns unless OmniCC is loaded.'],
+					desc = L['The large font is used to display large aura countdowns.'],
 					type = 'range',
 					min = 5,
 					max = 30,
 					step = 1,
 					arg = 'largeFontSize',
+					disabled = function() return not InlineAura.bigCountdown end,
 					order = 30,
 				},
 				colorCountdown = {
@@ -178,6 +185,7 @@ local options = {
 					arg = 'colorCountdown',
 					hasAlpha = true,
 					order = 40,
+					disabled = function() return InlineAura.db.profile.hideCountdown end,
 				},
 				colorStack = {
 					name = L['Application text color'],
@@ -185,6 +193,7 @@ local options = {
 					arg = 'colorStack',
 					hasAlpha = true,
 					order = 50,
+					disabled = function() return InlineAura.db.profile.hideStack end,
 				},
 			},
 		},
@@ -209,6 +218,7 @@ local spellOptions = {
 	args = {
 		addInput = {
 			name = L['New spell name'],
+			desc = L['Enter the name of the spell for which you want to add specific settings. Spell names are checked against your spellbook.'],
 			type = 'input',
 			get = function(info) return spellToAdd end,
 			set = function(info, value) spellToAdd = value end,
@@ -223,6 +233,7 @@ local spellOptions = {
 		},
 		addButton = {
 			name = L['Add spell'],
+			desc = L['Click to create specific settings for the spell.'],
 			type = 'execute',
 			order = 20,
 			func = function(info) 
@@ -233,6 +244,7 @@ local spellOptions = {
 		},
 		editList = {
 			name = L['Spell to edit'],
+			desc = L['Select the spell to edit or to remove its specific settings.'],
 			type = 'select',
 			get = function(info) return spellSpecificHandler:GetSelectedSpell() end,
 			set = function(info, value) spellSpecificHandler:SelectSpell(value) end,
@@ -242,6 +254,7 @@ local spellOptions = {
 		},
 		removeButton = {
 			name = L['Remove spell'],
+			desc = L['Remove spell specific settings.'],
 			type = 'execute',
 			func = function(info) 
 				info.handler:RemoveSpell(spellSpecificHandler:GetSelectedSpell())
@@ -263,12 +276,14 @@ local spellOptions = {
 			args = {
 				disable = {
 					name = L['Disable'],
+					desc = L['Check to totally disable this spell. No border highlight nor text is displayed for disabled spells.'],
 					type = 'toggle',
 					arg = 'disabled',
 					order = 10,
 				},
 				auraType = {
 					name = L['Aura type'],
+					desc = L['Select the aura type of this spell. This helps to look up the aura.'],
 					type = 'select',
 					arg = 'auraType',
 					disabled = 'IsSpellDisabled',
@@ -280,6 +295,7 @@ local spellOptions = {
 				},
 				onlyMine = {
 					name = L['Only show mine'],
+					desc = L['Check to only show aura you applied. Uncheck to always show aura, even when applied by others. Leave grayed to use default settings.'],
 					type = 'toggle',
 					arg = 'onlyMine',
 					tristate = true,
@@ -287,8 +303,9 @@ local spellOptions = {
 					order = 30,
 				},
 				aliases = {
-					name = L['Aura to lookup'],
-					usage = L['One name per line'],
+					name = L['Auras to look up'],
+					desc = L['Enter additional aura names to check. This allows to check for alternative or equivalent auras. Some spells also apply auras that do not have the same name as the spell.'],
+					usage = L['One aura name per line. Name are used as provided so watch your spelling.'],
 					type = 'input',
 					arg = 'aliases',
 					disabled = 'IsSpellDisabled',

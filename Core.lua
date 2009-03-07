@@ -130,6 +130,20 @@ local function WipeAuras(auras)
 	end
 end
 
+local UnitAura = _G.UnitAura
+
+do -- 3.1 compatibility
+	local _, buildNumber = GetBuildInfo()
+	if tonumber(buildNumber) >= 9658 then
+		local origUnitAura, UnitIsUnit = _G.UnitAura, _G.UnitIsUnit
+		UnitAura = function(...)
+			local name, rank, icon, count, debuffType, duration, expirationTime, caster, isStealable = origUnitAura(...)
+			local isMine = name and caster and (UnitIsUnit(caster, 'player') or UnitIsUnit(caster, 'pet'))
+			return name, rank, icon, count, debuffType, duration, expirationTime, isMine, isStealable
+		end
+	end
+end
+
 local serial = 0
 
 local function UpdateUnitAuras(auras, unit, filter)

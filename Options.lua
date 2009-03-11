@@ -355,7 +355,7 @@ end
 ---- Specific aura options
 
 function spellSpecificHandler:ListUpdated()
-	if self.name and type(InlineAura.db.profile.spells[self.name]) == 'table' then
+	if self.name and type(rawget(InlineAura.db.profile.spells, self.name)) == 'table' then
 		return self:SelectSpell(self.name)
 	end
 	for name, data in pairs(InlineAura.db.profile.spells) do
@@ -375,7 +375,7 @@ function spellSpecificHandler:GetSelectedSpellName()
 end
 
 function spellSpecificHandler:SelectSpell(name)
-	local db = name and InlineAura.db.profile.spells[name]
+	local db = name and rawget(InlineAura.db.profile.spells, name)
 	if type(db) == 'table' then
 		self.name, self.db = name, db
 	else 

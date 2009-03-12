@@ -191,6 +191,23 @@ local function UpdateUnitAuras(auras, unit, filter)
 		data.expirationTime = expirationTime
 		data.isMine = true
 	end
+	-- Handle tracking as self buff
+	if unit == 'player' then
+		for i = 1, GetNumTrackingTypes() do
+			local name, _, active, category = GetTrackingInfo(i)
+			if active and category == 'spell' then
+				local data = auras[name]
+				if not data then
+					data = new()
+					auras[name] = data
+					InlineAura.needUpdate = true
+				end
+				data.serial = serial
+				data.count = 0
+				data.isMine = true
+			end
+		end
+	end
 	-- Remove auras that have faded out
 	for name, data in pairs(auras) do
 		if data.serial ~= serial then

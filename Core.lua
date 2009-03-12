@@ -436,6 +436,7 @@ local function ActionButton_UpdateBorder(self, spell)
 		local aura, auraType = GetAuraToDisplay(spell)
 		if aura then
 			local color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
+			self:GetCheckedTexture():SetVertexColor(nil, nil, nil, nil) -- hack to bypass LibButtonFacade coloring, thanks to StormFX for this
 			self:GetCheckedTexture():SetVertexColor(unpack(color))
 			ActionButton_UpdateTimer(self, aura)
 			return true

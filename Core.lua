@@ -595,7 +595,7 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 			self.needUpdate = true
 		elseif event == 'VARIABLES_LOADED' then
 			-- ButtonFacade support
-			local LBF = LibStub('LibButtonFacade', false)
+			local LBF = LibStub('LibButtonFacade', true)
 			local LBF_RegisterCallback = function() end
 			if LBF then
 				UpdateHighlight = LBF_UpdateHighlight

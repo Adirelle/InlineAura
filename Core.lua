@@ -435,7 +435,7 @@ end
 ------------------------------------------------------------------------------
 
 local function UpdateTimer(self, aura)
-	if aura then
+	if aura and aura.serial then
 		local timer = timerFrames[self] or CreateTimerFrame(self)
 		timer.data = aura
 		timer:Show()
@@ -488,7 +488,7 @@ local function ActionButton_UpdateState_Hook(self)
 	InlineAura.buttons[self] = true
 	local spell = self.actionName
 	if spell and self.actionType == 'macro' then
-		spell = GetMacroSpell(actionName)
+		spell = GetMacroSpell(spell)
 	end
 	local aura, color
 	if spell then

@@ -431,51 +431,79 @@ local function GetAuraToDisplay(spell)
 end
 
 ------------------------------------------------------------------------------
+-- Visual feedback
+------------------------------------------------------------------------------
+
+local function UpdateTimer(self, aura)
+	if aura then
+		local timer = timerFrames[self] or CreateTimerFrame(self)
+		timer.data = aura
+		timer:Show()
+		TimerFrame_Update(timer)
+	elseif timerFrames[self] then
+		timerFrames[self].data = nil
+		timerFrames[self]:Hide()
+	end
+end
+
+local function UpdateHighlight(self, aura, color)
+	local texture = self:GetCheckedTexture()
+	if aura then
+		texture:SetVertexColor(unpack(color))
+		self:SetChecked(true)
+	else
+		texture:SetVertexColor(1, 1, 1)
+	end
+end
+
+------------------------------------------------------------------------------
+-- LibButtonFacade compatibility
+------------------------------------------------------------------------------
+
+local function LBF_UpdateHighlight(self, aura, color)
+	local texture = self:GetCheckedTexture()
+	if aura then
+		local r, g, b, a = unpack(color)
+    local R, G, B, A = texture:GetVertexColor()
+		texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
+		self:SetChecked(true)
+	else
+		texture:SetVertexColor(1, 1, 1)
+	end
+end
+
+local function LBF_Callback()
+	InlineAura:RequireUpdate(true)
+end
+
+------------------------------------------------------------------------------
 -- Button hooks
 ------------------------------------------------------------------------------
 
-local function ActionButton_UpdateTimer(self, data)
-	if not data or not data.serial then
-		if timerFrames[self] then
-			timerFrames[self].data = nil
-			timerFrames[self]:Hide()
-		end
-		return
-	end
-	local timer = timerFrames[self] or CreateTimerFrame(self)
-	timer.data = data
-	timer:Show()
-	TimerFrame_Update(timer)
+local function ActionButton_OnLoad_Hook(self)
+	InlineAura.buttons[self] = true
 end
 
-local function ActionButton_UpdateBorder(self, spell)
+local function ActionButton_UpdateState_Hook(self)
+	InlineAura.buttons[self] = true
+	local spell = self.actionName
+	if spell and self.actionType == 'macro' then
+		spell = GetMacroSpell(actionName)
+	end
+	local aura, color
 	if spell then
-		local aura, auraType = GetAuraToDisplay(spell)
+		local auraType
+		aura, auraType = GetAuraToDisplay(spell)
 		if aura then
-			local color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
-			self:GetCheckedTexture():SetVertexColor(nil, nil, nil, nil) -- hack to bypass LibButtonFacade coloring, thanks to StormFX for this
-			self:GetCheckedTexture():SetVertexColor(unpack(color))
-			ActionButton_UpdateTimer(self, aura)
-			return true
+			color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
 		end
 	end
-
-	ActionButton_UpdateTimer(self, nil)
-	self:GetCheckedTexture():SetVertexColor(1, 1, 1)
+	UpdateHighlight(self, aura, color)
+	UpdateTimer(self, aura)
 end
 
-local function ActionButton_IsSpellInUse(self)
-	local actionName = self.actionName
-	if actionName then
-		if self.actionType == 'macro' then
-			return ActionButton_UpdateBorder(self, GetMacroSpell(actionName))
-		else
-			return ActionButton_UpdateBorder(self, actionName)
-		end
-	end
-end
-
-local function ActionButton_UpdateSpell(self)
+local function ActionButton_Update_Hook(self)
+	self.actionName, self.actionType = nil, nil
 	if self.action then
 		local type, arg1, arg2 = GetActionInfo(ActionButton_GetPagedID(self))
 
@@ -483,17 +511,14 @@ local function ActionButton_UpdateSpell(self)
 		if type == 'spell' then
 			if arg1 and arg2 and arg1 > 0 then
 				self.actionName = GetSpellName(arg1, arg2)
-			else
-				self.actionName = nil
 			end
 		elseif type == 'item' then
 			self.actionName = GetItemSpell(arg1)
 		else
 			self.actionName = arg1
 		end
-
-		ActionButton_UpdateState(self)
 	end
+	ActionButton_UpdateState_Hook(self)
 end
 
 ------------------------------------------------------------------------------
@@ -569,10 +594,29 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 			UpdateTargetAuras()
 			self.needUpdate = true
 		elseif event == 'VARIABLES_LOADED' then
+			-- ButtonFacade support
+			local LBF = LibStub('LibButtonFacade', false)
+			local LBF_RegisterCallback = function() end
+			if LBF then
+				UpdateHighlight = LBF_UpdateHighlight
+				LBF:RegisterSkinCallback("Blizzard", LBF_Callback)
+			end
 			-- Miscellanous addon support
-			if Dominos then self:RegisterButtons("DominosActionButton", 48) end
-			if Bartender4 then self:RegisterButtons("BT4Button", 120) end
-			if OmniCC or CooldownCount then InlineAura.bigCountdown = false end
+			if Dominos then 
+				self:RegisterButtons("DominosActionButton", 48)
+				if LBF then
+					LBF:RegisterSkinCallback("Dominos", LBF_Callback)
+				end
+			end
+			if Bartender4 then 
+				self:RegisterButtons("BT4Button", 120) 
+				if LBF then
+					LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
+				end
+			end
+			if OmniCC or CooldownCount then 
+				InlineAura.bigCountdown = false 
+			end
 			self:RequireUpdate()
 		end
 	end)
@@ -595,18 +639,9 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 	self:RegisterButtons("MultiBarBottomLeftButton", 12)
 
 	-- Hooks
-	hooksecurefunc('ActionButton_UpdateState', function(self)
-		InlineAura.buttons[self] = true
-		self:SetChecked(ActionButton_IsSpellInUse(self) or self:GetChecked())
-	end)
-
-	hooksecurefunc('ActionButton_Update', function(self)
-		ActionButton_UpdateSpell(self)
-	end)
-
-	hooksecurefunc('ActionButton_OnLoad', function(self)
-		InlineAura.buttons[self] = true
-	end)
+	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
+	hooksecurefunc('ActionButton_UpdateState', ActionButton_UpdateState_Hook)
+	hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
 
 	self:SetupConfig()
 end)

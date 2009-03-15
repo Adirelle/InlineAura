@@ -42,8 +42,8 @@ end
 local _, class = UnitClass('player')
 
 if class == 'HUNTER' then
-	SetSpellDefaults('debuff', 60192, 60210) -- Freezing Arrow => Freezing Arrow Effect
-	SetSpellDefaults('debuff',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
+	SetSpellDefaults('debuff', 60192, 60210,  3355) -- Freezing Arrow => Freezing Arrow Effect and Freezing Trap Effect
+	SetSpellDefaults('debuff',  1499,  3355, 60210) -- Freezing Trap => Freezing Trap Effect and Freezing Arrow Effect
 	SetSpellDefaults('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	SetSpellDefaults('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
 		
@@ -63,9 +63,11 @@ elseif class == 'DEATHKNIGHT' then
 	SetSpellDefaults('debuff', 45477, 55095) -- Icy Touch => Frost Fever
 	
 elseif class == 'DRUID' then
+	SetSpellDefaults('buff',    1126, 21849) -- Mark of the Wild => Gift of the Wild
+	SetSpellDefaults('buff',   21849,  1126) -- Gift of the Wild => Mark of the Wild
 	-- Proposed by pusikas2
 	SetSpellDefaults('debuff', 48564, 48566) -- Mangle - Bear => Mangle - Cat
 	SetSpellDefaults('debuff', 48566, 48564) -- Mangle - Cat => Mangle - Bear
-	SetSpellDefaults('debuff', 48475, 48476) -- Faerie Fire (Feral) => Faerie Fire	
+	SetSpellDefaults('debuff', 48475, 48476) -- Faerie Fire (Feral) => Faerie Fire
 end
 

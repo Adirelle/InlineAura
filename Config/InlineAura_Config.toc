@@ -1,0 +1,17 @@
+## Interface: 30100
+
+## Title: Inline Aura Configuration GUI
+## Author: Adirelle
+## LoadOnDemand: 1
+## Dependencies: InlineAura
+## OptDeps: Ace3, AceGUI-3.0-SharedMediaWidgets
+
+#@no-lib-strip@
+libs\AceGUI-3.0\AceGUI-3.0.xml
+libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
+libs\AceConfig-3.0\AceConfig-3.0.xml
+libs\AceDBOptions-3.0\AceDBOptions-3.0.xml
+#@end-no-lib-strip@
+
+Config.lua
+

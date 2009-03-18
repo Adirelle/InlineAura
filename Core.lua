@@ -642,8 +642,6 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
 	hooksecurefunc('ActionButton_UpdateState', ActionButton_UpdateState_Hook)
 	hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
-
-	self:SetupConfig()
 end)
 
 -- Initialize on ADDON_LOADED

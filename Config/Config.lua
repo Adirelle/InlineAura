@@ -440,36 +440,30 @@ end
 -- Setup method
 -----------------------------------------------------------------------------
 
-function InlineAura:SetupConfig()
-	local AceConfig = LibStub("AceConfig-3.0")
-	local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local AceConfig = LibStub("AceConfig-3.0")
+local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
-	-- Register main options
-	AceConfig:RegisterOptionsTable('InlineAura-main', options)
+-- Register main options
+AceConfig:RegisterOptionsTable('InlineAura-main', options)
 
-	-- Register spell specific options
-	AceConfig:RegisterOptionsTable('InlineAura-spells', spellOptions)
+-- Register spell specific options
+AceConfig:RegisterOptionsTable('InlineAura-spells', spellOptions)
 
-	-- Register profile options
-	AceConfig:RegisterOptionsTable('InlineAura-profiles', LibStub('AceDBOptions-3.0'):GetOptionsTable(self.db)	)
+-- Register profile options
+AceConfig:RegisterOptionsTable('InlineAura-profiles', LibStub('AceDBOptions-3.0'):GetOptionsTable(InlineAura.db))
 
-	-- Create Blizzard AddOn option frames
-	local mainTitle = L['Inline Aura']
-	local mainPanel = AceConfigDialog:AddToBlizOptions('InlineAura-main', mainTitle)
-	AceConfigDialog:AddToBlizOptions('InlineAura-spells', spellOptions.name, mainTitle)
-	AceConfigDialog:AddToBlizOptions('InlineAura-profiles', L['Profiles'], mainTitle)
+-- Create Blizzard AddOn option frames
+local mainTitle = L['Inline Aura']
+local mainPanel = AceConfigDialog:AddToBlizOptions('InlineAura-main', mainTitle)
+AceConfigDialog:AddToBlizOptions('InlineAura-spells', L['Spell specific settings'], mainTitle)
+AceConfigDialog:AddToBlizOptions('InlineAura-profiles', L['Profiles'], mainTitle)
 
-	-- Chat command line
-	SLASH_INLINEAURA1 = "/inlineaura"
-	function SlashCmdList.INLINEAURA()
-		InterfaceOptionsFrame_OpenToCategory(mainPanel)
-	end
-	
-	-- Update selected spell on database change
-	InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileChanged', 'ListUpdated')
-	InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileCopied', 'ListUpdated')
-	InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')	
-	spellSpecificHandler:ListUpdated()
-end
+-- Update selected spell on database change
+InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileChanged', 'ListUpdated')
+InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileCopied', 'ListUpdated')
+InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')	
+spellSpecificHandler:ListUpdated()
 
+-- Erase OpenConfig stub
+InlineAura.OpenConfig = InterfaceOptionsFrame_OpenToCategory
 

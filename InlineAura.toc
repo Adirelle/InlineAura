@@ -22,5 +22,5 @@ libs\LibSharedMedia-3.0\lib.xml
 Localization.lua
 Core.lua
 ClassDefaults.lua
-ConfigStub.lua
+ConfStub.lua
 

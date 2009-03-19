@@ -47,8 +47,16 @@ local db
 
 local L = InlineAura.L
 
-local playerAuras = {}
-local targetAuras = {}
+local unitAuras = {
+	player = {},
+	target = {},
+	pet = {},
+	focus = {}
+}
+local enabledUnits = {
+	player = true,
+	target = true,
+}
 local timerFrames = {}
 
 ------------------------------------------------------------------------------
@@ -85,11 +93,25 @@ local DEFAULT_OPTIONS = {
 			['**'] = {
 				disabled = false,
 				auraType = 'buff',
+				unitsToScan = {
+					target = true,
+					player = true,
+					['*'] = false,
+				}
 			},
 		},
 	},
 }
 InlineAura.DEFAULT_OPTIONS = DEFAULT_OPTIONS
+
+-- Events only needed if the unit is enabled
+local UNIT_EVENTS = {
+	pet = 'UNIT_PET',
+	focus = 'PLAYER_FOCUS_CHANGED',
+}
+
+local UNIT_SCAN_ORDER = { 'focus', 'target', 'pet', 'player' }
+local DEFAULT_UNITS_TO_SCAN = { target = true, player = true }
 
 ------------------------------------------------------------------------------
 -- Table recycling stub
@@ -146,7 +168,12 @@ end
 
 local serial = 0
 
-local function UpdateUnitAuras(auras, unit, filter)
+local function UpdateUnitAuras(unit)
+	local auras = unitAuras[unit]
+	if not UnitExists(unit) then
+		return WipeAuras(auras)
+	end
+	local filter = UnitIsFriend('player', unit) and 'HELPFUL' or 'HARMFUL'		
 	serial = (serial + 1) % 10000
 
 	-- First, get all auras, included those applied by other players (if configured so)
@@ -214,22 +241,6 @@ local function UpdateUnitAuras(auras, unit, filter)
 			auras[name] = del(auras[name])
 			InlineAura.needUpdate = true
 		end
-	end
-end
-
-local function UpdatePlayerBuffs()
-	UpdateUnitAuras(playerAuras, 'player', 'HELPFUL')
-end
-
-local function UpdateTargetAuras()
-	if UnitExists('target') then
-		if UnitIsFriend('player', 'target') then
-			UpdateUnitAuras(targetAuras, 'target', 'HELPFUL')
-		else
-			UpdateUnitAuras(targetAuras, 'target', 'HARMFUL')
-		end
-	else
-		WipeAuras(targetAuras)
 	end
 end
 
@@ -397,36 +408,44 @@ local function GetTristateValue(value, default)
 	end
 end
 
+local function UnitIsNotFriend(a, b)
+	return not UnitIsFriend(a, b)
+end
+
 local function GetAuraToDisplay(spell)
 	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
-	local onlyMine, aliases
 	if type(specific) == 'table' then
 		if specific.disabled then
 			return
 		end
+		local units = specific.unitsToScan or DEFAULT_UNITS_TO_SCAN
+		local onlyMine, auraType, friendshipTest 
 		if specific.auraType == 'debuff' then
-			if UnitExists('target') and not UnitIsFriend('player', 'target') then
-				return LookupAura(targetAuras, spell, specific.aliases, 'Debuff', GetTristateValue(specific.onlyMine, db.profile.onlyMyDebuffs))
-			end
+			onlyMine = GetTristateValue(specific.onlyMine, db.profile.onlyMyDebuffs)
+			auraType = 'Debuff'
+			friendshipTest = UnitIsNotFriend
 		else
-			if UnitExists('target') and UnitIsFriend('player', 'target') then
-				return LookupAura(targetAuras, spell, specific.aliases, 'Buff', GetTristateValue(specific.onlyMine, db.profile.onlyMyBuffs))
-			else
-				return LookupAura(playerAuras, spell, specific.aliases, 'Buff', GetTristateValue(specific.onlyMine, db.profile.onlyMyBuffs))
+			onlyMine = GetTristateValue(specific.onlyMine, db.profile.onlyMyBuffs)
+			auraType = 'Buff'
+			friendshipTest = UnitIsFriend
+		end
+		for i, unit in pairs(UNIT_SCAN_ORDER) do
+			if units[unit] and UnitExists(unit) and friendshipTest('player', unit) then
+				return LookupAura(unitAuras[unit], spell, specific.aliases, auraType, onlyMine)
 			end
 		end
 	else
 		if UnitExists('target') then
 			if UnitIsFriend('player', 'target') then
-				return LookupAura(targetAuras, spell, nil, 'Buff', db.profile.onlyMyBuffs)
+				return LookupAura(unitAuras.target, spell, nil, 'Buff', db.profile.onlyMyBuffs)
 			else
-				local aura, auraType = LookupAura(targetAuras, spell, nil, 'Debuff', db.profile.onlyMyDebuffs)
+				local aura, auraType = LookupAura(unitAuras.target, spell, nil, 'Debuff', db.profile.onlyMyDebuffs)
 				if aura then
 					return aura, auraType
 				end
 			end
 		end
-		return LookupAura(playerAuras, spell, nil, 'Buff', db.profile.onlyMyBuffs)
+		return LookupAura(unitAuras.player, spell, nil, 'Buff', db.profile.onlyMyBuffs)
 	end
 end
 
@@ -525,16 +544,42 @@ end
 -- Button update
 ------------------------------------------------------------------------------
 
+local function IsUnitEnabled(unit, event)
+	for name, spell in pairs(db.profile.spells) do
+		if not spell.disabled and spell.unitsToScan and spell.unitsToScan[unit] then
+			InlineAura:RegisterEvent(event)
+			return true
+		end
+	end
+	InlineAura:UnregisterEvent(event)
+	WipeAuras(unitAuras[unit])
+end
+
 InlineAura.buttons = {}
 
 InlineAura:SetScript('OnUpdate', function(self, elapsed)
 	if self.needUpdate then
-		if self.configUpdated then
+	
+		if self.configUpdated then						
+			-- Update event listening
+			for unit, event in pairs(UNIT_EVENTS) do
+				enabledUnits[unit] = IsUnitEnabled(unit, event)
+			end
+		
+			-- Update all auras
+			for unit in pairs(enabledUnits) do
+				UpdateUnitAuras(unit)
+			end
+			
+			-- Update timers
 			for button, timerFrame in pairs(timerFrames) do
 				TimerFrame_Skin(timerFrame)
 			end
+			
 			self.configUpdated = false
 		end
+		
+		-- Update buttons
 		for button in pairs(self.buttons) do
 			if button:IsVisible() and HasAction(button.action) then
 				ActionButton_UpdateState(button)
@@ -546,10 +591,6 @@ end)
 
 function InlineAura:RequireUpdate(configUpdated)
 	self.configUpdated = configUpdated
-	if configUpdated then
-		UpdatePlayerBuffs()
-		UpdateTargetAuras()
-	end
 	self.needUpdate = true
 end
 
@@ -566,7 +607,65 @@ end
 -- Event handling
 ------------------------------------------------------------------------------
 
-InlineAura:SetScript('OnEvent', function(self, event, name)
+function InlineAura:UNIT_AURA(event, unit)
+	if event == 'UNIT_AURA' and enabledUnits[unit] then
+		UpdateUnitAuras(unit)
+	end
+end
+
+function InlineAura:UNIT_PET(event, unit)
+	if unit == 'player' then
+		UpdateUnitAuras('pet')
+		self.needUpdate = true
+	end
+end
+
+function InlineAura:PLAYER_ENTERING_WORLD()
+	for unit in pairs(enabledUnits) do
+		UpdateUnitAuras(unit)
+	end
+end
+
+function InlineAura:PLAYER_FOCUS_CHANGED()
+	UpdateUnitAuras('focus')
+	self.needUpdate = true
+end
+
+function InlineAura:PLAYER_TARGET_CHANGED()
+	UpdateUnitAuras('target')
+	self.needUpdate = true
+end
+
+function InlineAura:VARIABLES_LOADED()
+	-- ButtonFacade support
+	local LBF = LibStub('LibButtonFacade', true)
+	local LBF_RegisterCallback = function() end
+	if LBF then
+		UpdateHighlight = LBF_UpdateHighlight
+		LBF:RegisterSkinCallback("Blizzard", LBF_Callback)
+	end
+	-- Miscellanous addon support
+	if Dominos then 
+		self:RegisterButtons("DominosActionButton", 48)
+		if LBF then
+			LBF:RegisterSkinCallback("Dominos", LBF_Callback)
+		end
+	end
+	if Bartender4 then 
+		self:RegisterButtons("BT4Button", 120) 
+		if LBF then
+			LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
+		end
+	end
+	if OmniCC or CooldownCount then 
+		InlineAura.bigCountdown = false 
+	end
+	
+	-- Refresh everything
+	self:RequireUpdate(true)
+end
+
+function InlineAura:ADDON_LOADED(event, name)
 	if name ~= 'InlineAura' then
 		return
 	end
@@ -579,52 +678,10 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
 	self.db = db
 
-	-- New event handler
-	self:SetScript('OnEvent', function(self, event, arg1, ...)
-		if event == 'UNIT_AURA' then
-			if arg1 == 'player' then
-				UpdatePlayerBuffs()
-			elseif arg1 == 'target' then
-				UpdateTargetAuras()
-			end
-		elseif event == 'PLAYER_ENTERING_WORLD' then
-			UpdatePlayerBuffs()
-			UpdateTargetAuras()
-		elseif event == 'PLAYER_TARGET_CHANGED' then
-			UpdateTargetAuras()
-			self.needUpdate = true
-		elseif event == 'VARIABLES_LOADED' then
-			-- ButtonFacade support
-			local LBF = LibStub('LibButtonFacade', true)
-			local LBF_RegisterCallback = function() end
-			if LBF then
-				UpdateHighlight = LBF_UpdateHighlight
-				LBF:RegisterSkinCallback("Blizzard", LBF_Callback)
-			end
-			-- Miscellanous addon support
-			if Dominos then 
-				self:RegisterButtons("DominosActionButton", 48)
-				if LBF then
-					LBF:RegisterSkinCallback("Dominos", LBF_Callback)
-				end
-			end
-			if Bartender4 then 
-				self:RegisterButtons("BT4Button", 120) 
-				if LBF then
-					LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
-				end
-			end
-			if OmniCC or CooldownCount then 
-				InlineAura.bigCountdown = false 
-			end
-			self:RequireUpdate()
-		end
-	end)
-
 	-- Setup
 	self.bigCountdown = true
 
-	-- Set event listening up
+	-- Setup basic event listening up
 	self:RegisterEvent('UNIT_AURA')
 	self:RegisterEvent('PLAYER_TARGET_CHANGED')
 	self:RegisterEvent('PLAYER_ENTERING_WORLD')
@@ -642,8 +699,37 @@ InlineAura:SetScript('OnEvent', function(self, event, name)
 	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
 	hooksecurefunc('ActionButton_UpdateState', ActionButton_UpdateState_Hook)
 	hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
+end
+
+-- Event handler
+InlineAura:SetScript('OnEvent', function(self, event, ...)
+	if type(self[event]) == 'function' then
+		return pcall(self[event], self, event, ...)
+--@debug@
+	else
+		print('InlineAura: registered event has no handler: '..event)
+--@end-debug@
+	end
 end)
 
 -- Initialize on ADDON_LOADED
 InlineAura:RegisterEvent('ADDON_LOADED')
+
+------------------------------------------------------------------------------
+-- Configuration GUI loader
+------------------------------------------------------------------------------
+
+local function LoadConfigGUI()
+	LoadAddOn('InlineAura_Config')
+end
+
+-- Chat command line
+SLASH_INLINEAURA1 = "/inlineaura"
+function SlashCmdList.INLINEAURA()	
+	LoadConfigGUI()
+	InterfaceOptionsFrame_OpenToCategory(L['Inline Aura'])
+end
+
+-- InterfaceOptionsFrame spy
+CreateFrame("Frame", nil, InterfaceOptionsFrameAddOns):SetScript('OnShow', LoadConfigGUI)
 

@@ -28,6 +28,20 @@ local L, new, del = InlineAura.L, InlineAura.new, InlineAura.del
 -- but it seems AceDB has some issue with it.
 local REMOVED = '**REMOVED**'
 
+-- Units available to scan depending on aura type
+local UNITS_TO_SCAN = {
+	buff = {
+		player = L['Player'],
+		pet = L['Pet'],
+		target = L['Friendly target'],
+		focus = L['Friendly focus'],
+	},
+	debuff = {
+		target = L['Hostile target'],
+		focus = L['Hostile focus'],
+	},
+}
+
 -----------------------------------------------------------------------------
 -- Default option handler
 -----------------------------------------------------------------------------
@@ -293,6 +307,15 @@ local spellOptions = {
 					},
 					order = 20,
 				},
+				unitsToScan = {
+					name = L['Units to scan'],
+					desc = L['Check which units you want to be scanned for the aura. Auras of the first existing unit are shown, using this order: focus, target, pet and then player.'],
+					type = 'multiselect',
+					arg = 'unitsToScan',
+					disabled = 'IsSpellDisabled',
+					values = 'GetUnitList',
+					order = 25,
+				},
 				onlyMine = {
 					name = L['Only show mine'],
 					desc = L['Check to only show aura you applied. Uncheck to always show aura, even when applied by others. Leave grayed to use default settings.'],
@@ -337,7 +360,8 @@ function spellPanelHandler:HasNoSpell()
 end
 
 function spellPanelHandler:AddSpell(name)
-	InlineAura.db.profile.spells[name] = {}
+	-- This enforces AceDB auto-creation with defaults
+	InlineAura.db.profile.spells[name] = InlineAura.db.profile.spells[name] 
 	spellSpecificHandler:SelectSpell(name)
 	InlineAura:RequireUpdate(true)
 end
@@ -395,15 +419,25 @@ function spellSpecificHandler:Set(info, ...)
 	if info.type == 'color' then
 		local color = self.db[info.arg]
 		color[1], color[2], color[3], color[4] = ...
+	elseif info.type == 'multiselect' then
+		local key, value = ...		
+		value = value and true or false
+		if type(self.db[info.arg]) ~= 'table' then
+			self.db[info.arg] = { key = value }
+		else 
+			self.db[info.arg][key] = value
+		end
 	else
 		self.db[info.arg] = ...
 	end
 	InlineAura:RequireUpdate(true)
 end
 
-function spellSpecificHandler:Get(info)
+function spellSpecificHandler:Get(info, key)
 	if info.type == 'color' then
 		return unpack(self.db[info.arg])
+	elseif info.type == 'multiselect' then
+		return type(self.db[info.arg]) == "table" and self.db[info.arg][key]
 	else
 		return self.db[info.arg]
 	end
@@ -436,8 +470,12 @@ function spellSpecificHandler:SetAliases(info, value)
 	InlineAura:RequireUpdate(true)
 end
 
+function spellSpecificHandler:GetUnitList(info)
+	return UNITS_TO_SCAN[self.db.auraType or 'debuff']
+end
+
 -----------------------------------------------------------------------------
--- Setup method
+-- Setup
 -----------------------------------------------------------------------------
 
 local AceConfig = LibStub("AceConfig-3.0")
@@ -464,6 +502,4 @@ InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileCopied', 'ListUpd
 InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')	
 spellSpecificHandler:ListUpdated()
 
--- Erase OpenConfig stub
-InlineAura.OpenConfig = InterfaceOptionsFrame_OpenToCategory
 

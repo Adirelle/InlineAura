@@ -22,31 +22,37 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 
-local function SetSpellDefaults(auraType, id, ...)
-	local defaults = { 
-		auraType = auraType,
-	}
+local function GetSpellName(id)
 	local name = GetSpellInfo(id)
-	SPELL_DEFAULTS[name] = defaults
+	if not name then
+		error("Invalid spell id "..id, 3)
+	end
+	return name
+end
+
+local function SetSpellDefaults(auraType, id, ...)
+	local name = GetSpellName(id)
+	local defaults = SPELL_DEFAULTS[name] or {}
+	defaults.auraType = auraType
 	if select('#', ...) > 0 then
 		local aliases = {}
-		defaults.aliases = aliases
 		for i = 1, select('#', ...) do
-			local aliasId = select(i, ...)
-			local aliasName = GetSpellInfo(aliasId)
-			table.insert(aliases, aliasName)
+			table.insert(aliases, GetSpellName(select(i, ...)))
 		end
+		defaults.aliases = aliases
 	end
+	SPELL_DEFAULTS[name] = defaults	
 end
 
 local SELF_BUFF_UNITS = { player = true, pet = false, focus = false, target = false }
+
 local function DeclareSelfBuffs(ids)
 	for i, id in ipairs(ids) do
-		local name = GetSpellInfo(id)
+		local name = GetSpellName(id)
 		local defaults = SPELL_DEFAULTS[name] or {}
-		SPELL_DEFAULTS[name] = defaults
 		defaults.auraType = 'buff'
 		defaults.unitsToScan = SELF_BUFF_UNITS
+		SPELL_DEFAULTS[name] = defaults
 	end
 end
 
@@ -98,11 +104,26 @@ elseif class == 'DEATHKNIGHT' then
 	SetSpellDefaults('debuff', 45477, 55095) -- Icy Touch => Frost Fever
 	
 elseif class == 'DRUID' then
+
+	DeclareSelfBuffs({
+		  768, -- Cat Form
+		  783, -- Travel Form
+		 1066, -- Aquatic Form
+		 5487, -- Bear Form
+		 9634, -- Dire Bear Form
+		24858, -- Moonkin Form
+		33891, -- Tree of Life
+		33943, -- Flight Form
+		40120, -- Swift Flight Form
+	})
+
 	SetSpellDefaults('buff',  1126, 21849) -- Mark of the Wild => Gift of the Wild
 	SetSpellDefaults('buff', 21849,  1126) -- Gift of the Wild => Mark of the Wild
+	
 	-- Proposed by pusikas2
 	SetSpellDefaults('debuff', 48564, 48566) -- Mangle - Bear => Mangle - Cat
 	SetSpellDefaults('debuff', 48566, 48564) -- Mangle - Cat => Mangle - Bear
 	SetSpellDefaults('debuff', 48475, 48476) -- Faerie Fire (Feral) => Faerie Fire
+	SetSpellDefaults('debuff', 48476, 48475) -- Faerie Fire => Faerie Fire (Feral)
 end
 

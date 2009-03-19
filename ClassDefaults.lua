@@ -25,14 +25,21 @@ local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 local function GetSpellName(id)
 	local name = GetSpellInfo(id)
 	if not name then
-		error("Invalid spell id "..id, 3)
+		error("Invalid spell id "..tostring(id), 4)
 	end
 	return name
 end
 
-local function SetSpellDefaults(auraType, id, ...)
+local function GetSpellDefaults(id)
 	local name = GetSpellName(id)
-	local defaults = SPELL_DEFAULTS[name] or {}
+	if not SPELL_DEFAULTS[name] then
+		SPELL_DEFAULTS[name] = {}
+	end
+	return SPELL_DEFAULTS[name]
+end
+
+local function SetSpellDefaults(auraType, id, ...)
+	local defaults = GetSpellDefaults(id)
 	defaults.auraType = auraType
 	if select('#', ...) > 0 then
 		local aliases = {}
@@ -41,18 +48,15 @@ local function SetSpellDefaults(auraType, id, ...)
 		end
 		defaults.aliases = aliases
 	end
-	SPELL_DEFAULTS[name] = defaults	
 end
 
 local SELF_BUFF_UNITS = { player = true, pet = false, focus = false, target = false }
 
 local function DeclareSelfBuffs(ids)
 	for i, id in ipairs(ids) do
-		local name = GetSpellName(id)
-		local defaults = SPELL_DEFAULTS[name] or {}
+		local defaults = GetSpellDefaults(id)
 		defaults.auraType = 'buff'
 		defaults.unitsToScan = SELF_BUFF_UNITS
-		SPELL_DEFAULTS[name] = defaults
 	end
 end
 
@@ -86,7 +90,9 @@ if class == 'HUNTER' then
 	})
 	
 	-- Mend Pet applies only on the pet
-	SPELL_DEFAULTS[GetSpellInfo(136)] = { auraType = 'buff', unitsToScan = { pet = true, player = false, focus = false, target = false } }
+	local MendPet = GetSpellDefaults(136)
+	MendPet.auraType = 'buff'
+	MendPet.unitsToScan = { pet = true, player = false, focus = false, target = false }
 
 elseif class == 'WARRIOR' then
 	SetSpellDefaults('debuff', 47498, 47467) -- Devastate => Sunder Armor

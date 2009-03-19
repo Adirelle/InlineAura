@@ -59,6 +59,12 @@ local enabledUnits = {
 }
 local timerFrames = {}
 
+local UnitCanAssist, UnitCanAttack = UnitCanAssist, UnitCanAttack
+
+-- These two functions return nil when unit does not exist
+local UnitIsBuffable = function(unit) return UnitCanAssist('player', unit) end
+local UnitIsDebuffable = function(unit) return UnitCanAttack('player', unit) end
+
 ------------------------------------------------------------------------------
 -- Constants
 ------------------------------------------------------------------------------
@@ -169,11 +175,14 @@ end
 local serial = 0
 
 local function UpdateUnitAuras(unit)
-	local auras = unitAuras[unit]
-	if not UnitExists(unit) then
+	local auras, filter = unitAuras[unit]
+	if UnitIsBuffable(unit) then
+		filter = 'HELPFUL'
+	elseif UnitIsDebuffable(unit) then
+		filter = 'HARMFUL'
+	else
 		return WipeAuras(auras)
 	end
-	local filter = UnitIsFriend('player', unit) and 'HELPFUL' or 'HARMFUL'		
 	serial = (serial + 1) % 10000
 
 	-- First, get all auras, included those applied by other players (if configured so)
@@ -408,10 +417,6 @@ local function GetTristateValue(value, default)
 	end
 end
 
-local function UnitIsNotFriend(a, b)
-	return not UnitIsFriend(a, b)
-end
-
 local function GetAuraToDisplay(spell)
 	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
 	if type(specific) == 'table' then
@@ -419,30 +424,28 @@ local function GetAuraToDisplay(spell)
 			return
 		end
 		local units = specific.unitsToScan or DEFAULT_UNITS_TO_SCAN
-		local onlyMine, auraType, friendshipTest 
+		local onlyMine, auraType, buffTest 
 		if specific.auraType == 'debuff' then
 			onlyMine = GetTristateValue(specific.onlyMine, db.profile.onlyMyDebuffs)
 			auraType = 'Debuff'
-			friendshipTest = UnitIsNotFriend
+			buffTest = UnitIsDebuffable
 		else
 			onlyMine = GetTristateValue(specific.onlyMine, db.profile.onlyMyBuffs)
 			auraType = 'Buff'
-			friendshipTest = UnitIsFriend
+			buffTest = UnitIsBuffable
 		end
 		for i, unit in pairs(UNIT_SCAN_ORDER) do
-			if units[unit] and UnitExists(unit) and friendshipTest('player', unit) then
+			if units[unit] and buffTest(unit) then
 				return LookupAura(unitAuras[unit], spell, specific.aliases, auraType, onlyMine)
 			end
 		end
 	else
-		if UnitExists('target') then
-			if UnitIsFriend('player', 'target') then
-				return LookupAura(unitAuras.target, spell, nil, 'Buff', db.profile.onlyMyBuffs)
-			else
-				local aura, auraType = LookupAura(unitAuras.target, spell, nil, 'Debuff', db.profile.onlyMyDebuffs)
-				if aura then
-					return aura, auraType
-				end
+		if UnitIsBuffable('target') then
+			return LookupAura(unitAuras.target, spell, nil, 'Buff', db.profile.onlyMyBuffs)
+		elseif UnitIsDebuffable('target') then
+			local aura, auraType = LookupAura(unitAuras.target, spell, nil, 'Debuff', db.profile.onlyMyDebuffs)
+			if aura then
+				return aura, auraType
 			end
 		end
 		return LookupAura(unitAuras.player, spell, nil, 'Buff', db.profile.onlyMyBuffs)

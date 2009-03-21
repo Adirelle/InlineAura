@@ -27,25 +27,15 @@ local InlineAura = InlineAura
 -- Retrieve the localization table
 ------------------------------------------------------------------------------
 
--- Use a loose table until the string list get stable
-local InlineAura_L = _G.InlineAura_L
-InlineAura.L = setmetatable(InlineAura_L, {__index = function(self, key)
-	self[key] = key
-	--@debug@
-	print("Missing locale:", key)
-	--@end-debug@
-	return key
-end})
-
-_G.InlineAura_L = nil -- cleanup the global namespace
+local L = InlineAura_L
+InlineAura.L = L
+InlineAura_L = nil
 
 ------------------------------------------------------------------------------
 -- Locals
 ------------------------------------------------------------------------------
 
 local db
-
-local L = InlineAura.L
 
 local unitAuras = {
 	player = {},

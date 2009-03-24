@@ -101,14 +101,34 @@ elseif class == 'WARLOCK' then
 	SetSpellDefaults('debuff', 686, 17794) -- Shadow Bolt => Shadow Mastery
 	
 elseif class == 'MAGE' then
-	-- Proposed by FlareCDE
+
+	-- Contributed by FlareCDE
 	SetSpellDefaults('debuff', 42859, 22959) -- Scorch => Improved Scorch
 	
 elseif class == 'DEATHKNIGHT' then
-	-- Proposed by jexxlc
+
+	-- Contributed by jexxlc
 	SetSpellDefaults('debuff', 45462, 55078) -- Plague Strike => Blood Plague
 	SetSpellDefaults('debuff', 45477, 55095) -- Icy Touch => Frost Fever
 	
+elseif class == 'PRIEST' then
+
+	-- Contributed by brotherhobbes
+	DeclareSelfBuffs({
+		  518, -- Inner Fire
+		15473, -- Shadowform
+		47585, -- Dispersion
+	})
+
+	SetSpellDefaults('buff',  1243, 21562) -- Power Word: Fortitude => Prayer of Fortitude
+	SetSpellDefaults('buff', 21562,  1243) -- Prayer of Fortitude => Power Word: Fortitude
+
+	SetSpellDefaults('buff',   976, 27683) -- Shadow Protection => Prayer of Shadow Protection
+	SetSpellDefaults('buff', 27683,   976) -- Prayer of Shadow Protection => Shadow Protection
+
+	SetSpellDefaults('buff', 14752, 27681) -- Divine Spirit => Prayer of Spirit
+	SetSpellDefaults('buff', 27681, 14752) -- Prayer of Spirit => Divine Spirit
+
 elseif class == 'DRUID' then
 
 	DeclareSelfBuffs({
@@ -126,7 +146,7 @@ elseif class == 'DRUID' then
 	SetSpellDefaults('buff',  1126, 21849) -- Mark of the Wild => Gift of the Wild
 	SetSpellDefaults('buff', 21849,  1126) -- Gift of the Wild => Mark of the Wild
 	
-	-- Proposed by pusikas2
+	-- Contributed by pusikas2
 	SetSpellDefaults('debuff', 48564, 48566) -- Mangle - Bear => Mangle - Cat
 	SetSpellDefaults('debuff', 48566, 48564) -- Mangle - Cat => Mangle - Bear
 	SetSpellDefaults('debuff', 48475, 48476) -- Faerie Fire (Feral) => Faerie Fire

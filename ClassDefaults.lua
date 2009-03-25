@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 
+-- Get the spell name, throwing error if not found
 local function GetSpellName(id)
 	local name = GetSpellInfo(id)
 	if not name then
@@ -30,6 +31,7 @@ local function GetSpellName(id)
 	return name
 end
 
+-- Get the spell defaults, creating the table if need be
 local function GetSpellDefaults(id)
 	local name = GetSpellName(id)
 	if not SPELL_DEFAULTS[name] then
@@ -38,7 +40,8 @@ local function GetSpellDefaults(id)
 	return SPELL_DEFAULTS[name]
 end
 
-local function SetSpellDefaults(auraType, id, ...)
+-- Defines spell type and aliases
+local function Aliases(auraType, id, ...)
 	local defaults = GetSpellDefaults(id)
 	defaults.auraType = auraType
 	if select('#', ...) > 0 then
@@ -50,9 +53,9 @@ local function SetSpellDefaults(auraType, id, ...)
 	end
 end
 
+-- Defines buffs that only apply to the player
 local SELF_BUFF_UNITS = { player = true, pet = false, focus = false, target = false }
-
-local function DeclareSelfBuffs(ids)
+local function SelfBuffs(ids)
 	for i, id in ipairs(ids) do
 		local defaults = GetSpellDefaults(id)
 		defaults.auraType = 'buff'
@@ -60,16 +63,34 @@ local function DeclareSelfBuffs(ids)
 	end
 end
 
+-- Defines auras that appear on the player and modify another spell
+local function SelfTalentProc(spellId, talentId)
+	local defaults = GetSpellDefaults(spellId)
+	local talent = GetSpellName(talentId)
+	defaults.auraType = 'buff'
+	defaults.unitsToScan = SELF_BUFF_UNITS
+	if defaults.aliases then
+		for i, alias in pairs(defaults.aliases) do
+			if alias == talent then
+				return
+			end
+		end
+		table.insert(defaults.aliases, talent)
+	else
+		defaults.aliases = { talent }
+	end
+end
+
 local _, class = UnitClass('player')
 
 if class == 'HUNTER' then
 
-	SetSpellDefaults('debuff', 60192, 60210,  3355) -- Freezing Arrow => Freezing Arrow Effect and Freezing Trap Effect
-	SetSpellDefaults('debuff',  1499,  3355, 60210) -- Freezing Trap => Freezing Trap Effect and Freezing Arrow Effect
-	SetSpellDefaults('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
-	SetSpellDefaults('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
-	
-	DeclareSelfBuffs({
+	Aliases('debuff', 60192, 60210,  3355) -- Freezing Arrow => Freezing Arrow Effect and Freezing Trap Effect
+	Aliases('debuff',  1499,  3355, 60210) -- Freezing Trap => Freezing Trap Effect and Freezing Arrow Effect
+	Aliases('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
+	Aliases('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
+
+	SelfBuffs({
 		13161, -- Aspect of the Beast
 		 5118, -- Aspect of the Cheetah
 		61846, -- Aspect of the Dragonhawk
@@ -88,7 +109,7 @@ if class == 'HUNTER' then
 		19263, -- Deterrence
 		 5384, -- Feign Death
 	})
-	
+
 	-- Mend Pet applies only on the pet
 	local MendPet = GetSpellDefaults(136)
 	MendPet.auraType = 'buff'
@@ -97,9 +118,9 @@ if class == 'HUNTER' then
 elseif class == 'WARRIOR' then
 
 	-- Contributed by brotherhobbes
-	SetSpellDefaults('debuff', 47498, 47467) -- Devastate => Sunder Armor
-	
-	DeclareSelfBuffs({
+	Aliases('debuff', 47498, 47467) -- Devastate => Sunder Armor
+
+	SelfBuffs({
 			871, -- Shield Wall
 		 1719, -- Recklessness
 		 2565, -- Shield Block
@@ -110,54 +131,59 @@ elseif class == 'WARRIOR' then
 		23920, -- Spell Reflection
 		46924, -- Bladestorm
 		55694, -- Enraged Regeneration
-		-- These are not really buffs but we aliases them to talent buffs
-		 1464, -- Slam
-		 5308, -- Execute
-		 7384, -- Overpower
-		23922, -- Shield Slam
 	})
 
-	-- Alias spells to talents that modify them
-	SetSpellDefaults('buff',  1464, 46916) -- lights up Slam when Bloodsurge talent procs
-	SetSpellDefaults('buff', 23922, 46951) -- lights up Shield Slam when Sword and Board talent procs
-	SetSpellDefaults('buff',  7384, 60503) -- lights up Overpower when Taste for Blood talent procs
-	SetSpellDefaults('buff',  5308, 52437) -- lights up Execute when Sudden Death talent procs
-	
+	SelfTalentProc( 1464, 46916) -- Slam => Bloodsurge
+	SelfTalentProc(23922, 46951) -- Shield Slam => Sword and Board
+	SelfTalentProc( 7384, 60503) -- Overpower => Taste for Blood
+	SelfTalentProc( 5308, 52437) -- Execute => Sudden Death
+
 elseif class == 'WARLOCK' then
-	SetSpellDefaults('debuff', 686, 17794) -- Shadow Bolt => Shadow Mastery
-	
+	Aliases('debuff', 686, 17794) -- Shadow Bolt => Shadow Mastery
+
 elseif class == 'MAGE' then
 
+	-- Intellect buffs
+	Aliases('buff',  1459, 23028, 61024, 61316) -- Arcane Intellect = 3 others
+	Aliases('buff', 23028,  1459, 61024, 61316) -- Arcane Brilliance = 3 others
+	Aliases('buff', 61024,  1459, 23028, 61316) -- Dalaran Intellect = 3 others
+	Aliases('buff', 61316,  1459, 23028, 61024) -- Dalaran Brilliance = 3 others
+
 	-- Contributed by FlareCDE
-	SetSpellDefaults('debuff', 42859, 22959) -- Scorch => Improved Scorch
-	
+	Aliases('debuff', 42859, 22959) -- Scorch => Improved Scorch
+
+	-- Contributed by sun
+	SelfTalentProc(11366, 44445) -- Pyroblast => Hot Streak
+	SelfTalentProc( 5143,	44404) -- Arcane Missiles => Missile Barrage
+	SelfTalentProc(  133, 57761) -- Fireball => Brain Freeze (buff named "Fireball!")
+
 elseif class == 'DEATHKNIGHT' then
 
 	-- Contributed by jexxlc
-	SetSpellDefaults('debuff', 45462, 55078) -- Plague Strike => Blood Plague
-	SetSpellDefaults('debuff', 45477, 55095) -- Icy Touch => Frost Fever
-	
+	Aliases('debuff', 45462, 55078) -- Plague Strike => Blood Plague
+	Aliases('debuff', 45477, 55095) -- Icy Touch => Frost Fever
+
 elseif class == 'PRIEST' then
 
 	-- Contributed by brotherhobbes
-	DeclareSelfBuffs({
+	SelfBuffs({
 		  588, -- Inner Fire
 		15473, -- Shadowform
 		47585, -- Dispersion
 	})
 
-	SetSpellDefaults('buff',  1243, 21562) -- Power Word: Fortitude => Prayer of Fortitude
-	SetSpellDefaults('buff', 21562,  1243) -- Prayer of Fortitude => Power Word: Fortitude
+	Aliases('buff',  1243, 21562) -- Power Word: Fortitude => Prayer of Fortitude
+	Aliases('buff', 21562,  1243) -- Prayer of Fortitude => Power Word: Fortitude
 
-	SetSpellDefaults('buff',   976, 27683) -- Shadow Protection => Prayer of Shadow Protection
-	SetSpellDefaults('buff', 27683,   976) -- Prayer of Shadow Protection => Shadow Protection
+	Aliases('buff',   976, 27683) -- Shadow Protection => Prayer of Shadow Protection
+	Aliases('buff', 27683,   976) -- Prayer of Shadow Protection => Shadow Protection
 
-	SetSpellDefaults('buff', 14752, 27681) -- Divine Spirit => Prayer of Spirit
-	SetSpellDefaults('buff', 27681, 14752) -- Prayer of Spirit => Divine Spirit
+	Aliases('buff', 14752, 27681) -- Divine Spirit => Prayer of Spirit
+	Aliases('buff', 27681, 14752) -- Prayer of Spirit => Divine Spirit
 
 elseif class == 'DRUID' then
 
-	DeclareSelfBuffs({
+	SelfBuffs({
 		  768, -- Cat Form
 		  783, -- Travel Form
 		 1066, -- Aquatic Form
@@ -169,13 +195,57 @@ elseif class == 'DRUID' then
 		40120, -- Swift Flight Form
 	})
 
-	SetSpellDefaults('buff',  1126, 21849) -- Mark of the Wild => Gift of the Wild
-	SetSpellDefaults('buff', 21849,  1126) -- Gift of the Wild => Mark of the Wild
-	
+	Aliases('buff',  1126, 21849) -- Mark of the Wild => Gift of the Wild
+	Aliases('buff', 21849,  1126) -- Gift of the Wild => Mark of the Wild
+
 	-- Contributed by pusikas2
-	SetSpellDefaults('debuff', 48564, 48566) -- Mangle - Bear => Mangle - Cat
-	SetSpellDefaults('debuff', 48566, 48564) -- Mangle - Cat => Mangle - Bear
-	SetSpellDefaults('debuff', 48475, 48476) -- Faerie Fire (Feral) => Faerie Fire
-	SetSpellDefaults('debuff', 48476, 48475) -- Faerie Fire => Faerie Fire (Feral)
+	Aliases('debuff', 48564, 48566) -- Mangle - Bear => Mangle - Cat
+	Aliases('debuff', 48566, 48564) -- Mangle - Cat => Mangle - Bear
+	Aliases('debuff', 48475, 48476) -- Faerie Fire (Feral) => Faerie Fire
+	Aliases('debuff', 48476, 48475) -- Faerie Fire => Faerie Fire (Feral)
+
+elseif class == 'PALADIN' then
+
+	local _, race = UnitRace('player')
+
+	SelfBuffs({
+		25780, -- Righteous Fury
+		31884, -- Avenging Wrath
+		20164, -- Seal of Justice
+		20165, -- Seal of Light
+		21084, -- Seal of Righteousness
+		20166, -- Seal of Wisdom
+	})
+
+	if race == 'BloodElf' then
+		SelfBuffs({
+			31892, -- Seal of Blood
+			53736, -- Seal of Corruption
+		})
+	else
+		SelfBuffs({
+			53720, -- Seal of the Martyr
+			31801, -- Seal of Vengeance
+		})
+	end
+
+	-- Holy Light is modified both by Infusion of Light and Light's Grace but
+	-- they have different effects so we only show one.
+	SelfTalentProc(  635, 31834) -- Holy Light => Light's Grace
+	SelfTalentProc(19750, 53672) -- Flash of Light => Infusion of Light
+
+	-- Blessings
+	Aliases('buff', 19740, 25782) -- Blessing of Might => Greater Blessing of Might
+	Aliases('buff', 25782, 19740) -- Greater Blessing of Might => Blessing of Might
+
+	Aliases('buff', 19742, 25894) -- Blessing of Wisdom => Greater Blessing of Wisdom
+	Aliases('buff', 25894, 19742) -- Greater Blessing of Wisdom => Blessing of Wisdom
+
+	Aliases('buff', 20911, 25899) -- Blessing of Sanctuary => Greater Blessing of Sanctuary
+	Aliases('buff', 25899, 20911) -- Greater Blessing of Sanctuary => Blessing of Sanctuary
+
+	Aliases('buff', 20217, 25898) -- Blessing of Kings => Greater Blessing of Kings
+	Aliases('buff', 25899, 20217) -- Greater Blessing of Kings => Blessing of Kings
+
 end
 

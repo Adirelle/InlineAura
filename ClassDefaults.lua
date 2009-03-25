@@ -95,7 +95,33 @@ if class == 'HUNTER' then
 	MendPet.unitsToScan = { pet = true, player = false, focus = false, target = false }
 
 elseif class == 'WARRIOR' then
+
+	-- Contributed by brotherhobbes
 	SetSpellDefaults('debuff', 47498, 47467) -- Devastate => Sunder Armor
+	
+	DeclareSelfBuffs({
+			871, -- Shield Wall
+		 1719, -- Recklessness
+		 2565, -- Shield Block
+		12292, -- Death Wish
+		12975, -- Last Stand
+		18499, -- Berserker Rage
+		20230, -- Retaliation
+		23920, -- Spell Reflection
+		46924, -- Bladestorm
+		55694, -- Enraged Regeneration
+		-- These are not really buffs but we aliases them to talent buffs
+		 1464, -- Slam
+		 5308, -- Execute
+		 7384, -- Overpower
+		23922, -- Shield Slam
+	})
+
+	-- Alias spells to talents that modify them
+	SetSpellDefaults('buff',  1464, 46916) -- lights up Slam when Bloodsurge talent procs
+	SetSpellDefaults('buff', 23922, 46951) -- lights up Shield Slam when Sword and Board talent procs
+	SetSpellDefaults('buff',  7384, 60503) -- lights up Overpower when Taste for Blood talent procs
+	SetSpellDefaults('buff',  5308, 52437) -- lights up Execute when Sudden Death talent procs
 	
 elseif class == 'WARLOCK' then
 	SetSpellDefaults('debuff', 686, 17794) -- Shadow Bolt => Shadow Mastery
@@ -115,7 +141,7 @@ elseif class == 'PRIEST' then
 
 	-- Contributed by brotherhobbes
 	DeclareSelfBuffs({
-		  518, -- Inner Fire
+		  588, -- Inner Fire
 		15473, -- Shadowform
 		47585, -- Dispersion
 	})

@@ -131,7 +131,6 @@ local options = {
 					desc = L['Select the color to use for the buffs cast by other characters.'],
 					type = 'color',
 					arg = 'colorBuffOthers',
-					disabled = function() return InlineAura.db.profile.onlyMyBuffs end,
 					order = 20,
 				},
 				debuffMine = {
@@ -146,7 +145,6 @@ local options = {
 					desc = L['Select the color to use for the debuffs cast by other characters.'],
 					type = 'color',
 					arg = 'colorDebuffOthers',
-					disabled = function() return InlineAura.db.profile.onlyMyDebuffs end,
 					order = 40,
 				},
 			},
@@ -207,7 +205,6 @@ local options = {
 					arg = 'colorStack',
 					hasAlpha = true,
 					order = 50,
-					disabled = function() return InlineAura.db.profile.hideStack end,
 				},
 			},
 		},
@@ -236,7 +233,7 @@ local spellOptions = {
 			type = 'input',
 			get = function(info) return spellToAdd end,
 			set = function(info, value) spellToAdd = value end,
-			validate = function(info, value) 
+			validate = function(info, value)
 				if value and GetSpellInfo(value) and GetSpellInfo(GetSpellInfo(value)) then
 					return true
 				else
@@ -250,7 +247,7 @@ local spellOptions = {
 			desc = L['Click to create specific settings for the spell.'],
 			type = 'execute',
 			order = 20,
-			func = function(info) 
+			func = function(info)
 				info.handler:AddSpell(spellToAdd)
 				spellToAdd = nil
 			end,
@@ -270,18 +267,18 @@ local spellOptions = {
 			name = L['Remove spell'],
 			desc = L['Remove spell specific settings.'],
 			type = 'execute',
-			func = function(info) 
+			func = function(info)
 				info.handler:RemoveSpell(spellSpecificHandler:GetSelectedSpell())
 			end,
 			disabled = function() return spellSpecificHandler:IsNoSpellSelected() end,
 			confirm = true,
 			confirmText = L['Do you really want to remove these aura specific settings ?'],
 			order = 40,
-		},		
+		},
 		settings = {
 			name = function(info) return spellSpecificHandler:GetSelectedSpellName() end,
 			type = 'group',
-			hidden = 'IsNoSpellSelected', 	
+			hidden = 'IsNoSpellSelected',
 			handler = spellSpecificHandler,
 			get = 'Get',
 			set = 'Set',
@@ -325,6 +322,15 @@ local spellOptions = {
 					disabled = 'IsSpellDisabled',
 					order = 30,
 				},
+				hideStack = {
+					name = L['No application count'],
+					desc = L['Check to hide the aura application count (charges or stacks).'],
+					type = 'toggle',
+					arg = 'hideStack',
+					tristate = true,
+					disabled = 'IsSpellDisabled',
+					order = 40,
+				},
 				aliases = {
 					name = L['Auras to look up'],
 					desc = L['Enter additional aura names to check. This allows to check for alternative or equivalent auras. Some spells also apply auras that do not have the same name as the spell.'],
@@ -335,12 +341,12 @@ local spellOptions = {
 					multiline = true,
 					get = 'GetAliases',
 					set = 'SetAliases',
-					order = 40,
+					order = 50,
 				},
 			},
 		},
 	},
-} 
+}
 
 do
 	local spellList = {}
@@ -361,7 +367,7 @@ end
 
 function spellPanelHandler:AddSpell(name)
 	-- This enforces AceDB auto-creation with defaults
-	InlineAura.db.profile.spells[name] = InlineAura.db.profile.spells[name] 
+	InlineAura.db.profile.spells[name] = InlineAura.db.profile.spells[name]
 	spellSpecificHandler:SelectSpell(name)
 	InlineAura:RequireUpdate(true)
 end
@@ -402,7 +408,7 @@ function spellSpecificHandler:SelectSpell(name)
 	local db = name and rawget(InlineAura.db.profile.spells, name)
 	if type(db) == 'table' then
 		self.name, self.db = name, db
-	else 
+	else
 		self.name, self.db = nil, nil
 	end
 end
@@ -420,11 +426,11 @@ function spellSpecificHandler:Set(info, ...)
 		local color = self.db[info.arg]
 		color[1], color[2], color[3], color[4] = ...
 	elseif info.type == 'multiselect' then
-		local key, value = ...		
+		local key, value = ...
 		value = value and true or false
 		if type(self.db[info.arg]) ~= 'table' then
 			self.db[info.arg] = { key = value }
-		else 
+		else
 			self.db[info.arg][key] = value
 		end
 	else
@@ -461,7 +467,7 @@ function spellSpecificHandler:SetAliases(info, value)
 			table.insert(aliases, name)
 		end
 	end
-	if #aliases > 0 then	
+	if #aliases > 0 then
 		self.db.aliases = aliases
 	else
 		del(aliases)
@@ -499,7 +505,7 @@ AceConfigDialog:AddToBlizOptions('InlineAura-profiles', L['Profiles'], mainTitle
 -- Update selected spell on database change
 InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileChanged', 'ListUpdated')
 InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileCopied', 'ListUpdated')
-InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')	
+InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')
 spellSpecificHandler:ListUpdated()
 
 

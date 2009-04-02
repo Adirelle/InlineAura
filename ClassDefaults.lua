@@ -81,9 +81,24 @@ local function SelfTalentProc(spellId, talentId)
 	end
 end
 
+local function ShowOnlyMineByDefault()
+	local profile = InlineAura.DEFAULT_OPTIONS.profile
+	profile.onlyMyBuffs = true
+	profile.onlyMyDebuffs = true
+end
+
+local function ShowOthers(ids) -- requires ShowOnlyMineByDefault() to be meaningful
+	for i, id in ipairs(ids) do
+		GetSpellDefaults(id).onlyMine = false
+	end
+end
+
+
 local _, class = UnitClass('player')
 
+------------------------------------------------------------------------------
 if class == 'HUNTER' then
+------------------------------------------------------------------------------
 
 	Aliases('debuff', 60192, 60210,  3355) -- Freezing Arrow => Freezing Arrow Effect and Freezing Trap Effect
 	Aliases('debuff',  1499,  3355, 60210) -- Freezing Trap => Freezing Trap Effect and Freezing Arrow Effect
@@ -115,7 +130,9 @@ if class == 'HUNTER' then
 	MendPet.auraType = 'buff'
 	MendPet.unitsToScan = { pet = true, player = false, focus = false, target = false }
 
+------------------------------------------------------------------------------
 elseif class == 'WARRIOR' then
+------------------------------------------------------------------------------
 
 	-- Contributed by brotherhobbes
 	Aliases('debuff', 47498, 47467) -- Devastate => Sunder Armor
@@ -138,10 +155,15 @@ elseif class == 'WARRIOR' then
 	SelfTalentProc( 7384, 60503) -- Overpower => Taste for Blood
 	SelfTalentProc( 5308, 52437) -- Execute => Sudden Death
 
+------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
+------------------------------------------------------------------------------
+
 	Aliases('debuff', 686, 17794) -- Shadow Bolt => Shadow Mastery
 
+------------------------------------------------------------------------------
 elseif class == 'MAGE' then
+------------------------------------------------------------------------------
 
 	-- Intellect buffs
 	Aliases('buff',  1459, 23028, 61024, 61316) -- Arcane Intellect = 3 others
@@ -157,13 +179,17 @@ elseif class == 'MAGE' then
 	SelfTalentProc( 5143,	44404) -- Arcane Missiles => Missile Barrage
 	SelfTalentProc(  133, 57761) -- Fireball => Brain Freeze (buff named "Fireball!")
 
+------------------------------------------------------------------------------
 elseif class == 'DEATHKNIGHT' then
+------------------------------------------------------------------------------
 
 	-- Contributed by jexxlc
 	Aliases('debuff', 45462, 55078) -- Plague Strike => Blood Plague
 	Aliases('debuff', 45477, 55095) -- Icy Touch => Frost Fever
 
+------------------------------------------------------------------------------
 elseif class == 'PRIEST' then
+------------------------------------------------------------------------------
 
 	-- Contributed by brotherhobbes
 	SelfBuffs({
@@ -181,7 +207,20 @@ elseif class == 'PRIEST' then
 	Aliases('buff', 14752, 27681) -- Divine Spirit => Prayer of Spirit
 	Aliases('buff', 27681, 14752) -- Prayer of Spirit => Divine Spirit
 
+------------------------------------------------------------------------------
 elseif class == 'DRUID' then
+------------------------------------------------------------------------------
+
+	ShowOnlyMineByDefault()
+	
+	ShowOthers({
+		 1126, -- Mark of the Wild
+		21849, -- Gift of the Wild
+		48564, -- Mangle - Bear
+		48566, -- Mangle - Cat
+		48475, -- Faerie Fire (Feral)
+		48476, -- Faerie Fire
+	})
 
 	SelfBuffs({
 		  768, -- Cat Form
@@ -193,6 +232,7 @@ elseif class == 'DRUID' then
 		33891, -- Tree of Life
 		33943, -- Flight Form
 		40120, -- Swift Flight Form
+		52610, -- Savage Roar
 	})
 
 	Aliases('buff',  1126, 21849) -- Mark of the Wild => Gift of the Wild
@@ -204,17 +244,24 @@ elseif class == 'DRUID' then
 	Aliases('debuff', 48475, 48476) -- Faerie Fire (Feral) => Faerie Fire
 	Aliases('debuff', 48476, 48475) -- Faerie Fire => Faerie Fire (Feral)
 
+------------------------------------------------------------------------------
 elseif class == 'PALADIN' then
+------------------------------------------------------------------------------
 
 	local _, race = UnitRace('player')
 
 	SelfBuffs({
-		25780, -- Righteous Fury
-		31884, -- Avenging Wrath
+		  498, -- Divine Protection
+		  642, -- Divine Shield
 		20164, -- Seal of Justice
 		20165, -- Seal of Light
-		21084, -- Seal of Righteousness
 		20166, -- Seal of Wisdom
+		20216, -- Divine Favor
+		21084, -- Seal of Righteousness
+		25780, -- Righteous Fury
+		31842, -- Divine Illumination
+		31884, -- Avenging Wrath
+		53651, -- Beacon of Light buff name on player is Light's Beacon
 	})
 
 	if race == 'BloodElf' then
@@ -228,11 +275,13 @@ elseif class == 'PALADIN' then
 			31801, -- Seal of Vengeance
 		})
 	end
+	
 
 	-- Holy Light is modified both by Infusion of Light and Light's Grace but
 	-- they have different effects so we only show one.
 	SelfTalentProc(  635, 31834) -- Holy Light => Light's Grace
 	SelfTalentProc(19750, 53672) -- Flash of Light => Infusion of Light
+	SelfTalentProc(19750, 53489) -- Flash of Light => Art of War
 
 	-- Blessings
 	Aliases('buff', 19740, 25782) -- Blessing of Might => Greater Blessing of Might

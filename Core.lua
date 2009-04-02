@@ -84,7 +84,7 @@ local DEFAULT_OPTIONS = {
 		colorDebuffMine = { 1.0, 0.0, 0.0, 1.0 },
 		colorDebuffOthers = { 1.0, 1.0, 0.0, 1.0 },
 		colorCountdown = { 1.0, 1.0, 1.0, 1.0 },
-		colorStack = { 1.0, 1.0, 1.0, 1.0 },
+		colorStack = { 1.0, 1.0, 0.0, 1.0 },
 		spells = {
 			['**'] = {
 				disabled = false,
@@ -327,15 +327,16 @@ end
 
 local function TimerFrame_Update(self)
 	local data = self.data
-	if not data or not data.expirationTime or data.expirationTime <= GetTime() or (db.profile.hideCountdown and db.profile.hideStack) then
+	if not data or not data.expirationTime or data.expirationTime <= GetTime() or (db.profile.hideCountdown and self.hideStack) then
 		self.data = nil
+		self.hideStack = nil
 		self:Hide()
 		return
 	end
 
 	local countdownJustfiyH = 'CENTER'
 	local stackText = self.stackText
-	if not db.profile.hideStack and data.count and data.count > 0 then
+	if not self.hideStack and data.count and data.count > 0 then
 		stackText:SetText(data.count)
 		if not InlineAura.bigCountdown then
 			countdownJustfiyH = 'LEFT'
@@ -384,7 +385,7 @@ local function CheckAura(auras, name, onlyMine)
 	end
 end
 
-local function LookupAura(auras, spell, aliases, auraType, onlyMine)
+local function LookupAura(auras, spell, aliases, auraType, onlyMine, ...)
 	local aura = CheckAura(auras, spell, onlyMine)
 	if not aura and aliases then
 		for i, alias in ipairs(aliases) do
@@ -395,7 +396,7 @@ local function LookupAura(auras, spell, aliases, auraType, onlyMine)
 		end
 	end
 	if aura then
-		return aura, auraType
+		return aura, auraType, ...
 	end
 end
 
@@ -414,7 +415,8 @@ local function GetAuraToDisplay(spell)
 			return
 		end
 		local units = specific.unitsToScan or DEFAULT_UNITS_TO_SCAN
-		local onlyMine, auraType, buffTest 
+		local onlyMine, auraType, buffTest
+		local hideStack = GetTristateValue(specific.hideStack, db.profile.hideStack)
 		if specific.auraType == 'debuff' then
 			onlyMine = GetTristateValue(specific.onlyMine, db.profile.onlyMyDebuffs)
 			auraType = 'Debuff'
@@ -426,19 +428,19 @@ local function GetAuraToDisplay(spell)
 		end
 		for i, unit in pairs(UNIT_SCAN_ORDER) do
 			if units[unit] and buffTest(unit) then
-				return LookupAura(unitAuras[unit], spell, specific.aliases, auraType, onlyMine)
+				return LookupAura(unitAuras[unit], spell, specific.aliases, auraType, onlyMine, hideStack)
 			end
 		end
 	else
 		if UnitIsBuffable('target') then
-			return LookupAura(unitAuras.target, spell, nil, 'Buff', db.profile.onlyMyBuffs)
+			return LookupAura(unitAuras.target, spell, nil, 'Buff', db.profile.onlyMyBuffs, db.profile.hideStack)
 		elseif UnitIsDebuffable('target') then
 			local aura, auraType = LookupAura(unitAuras.target, spell, nil, 'Debuff', db.profile.onlyMyDebuffs)
 			if aura then
-				return aura, auraType
+				return aura, auraType, db.profile.hideStack
 			end
 		end
-		return LookupAura(unitAuras.player, spell, nil, 'Buff', db.profile.onlyMyBuffs)
+		return LookupAura(unitAuras.player, spell, nil, 'Buff', db.profile.onlyMyBuffs, db.profile.hideStack)
 	end
 end
 
@@ -446,15 +448,18 @@ end
 -- Visual feedback
 ------------------------------------------------------------------------------
 
-local function UpdateTimer(self, aura)
+local function UpdateTimer(self, aura, hideStack)
 	if aura and aura.serial then
 		local timer = timerFrames[self] or CreateTimerFrame(self)
 		timer.data = aura
+		timer.hideStack = hideStack
 		timer:Show()
 		TimerFrame_Update(timer)
 	elseif timerFrames[self] then
-		timerFrames[self].data = nil
-		timerFrames[self]:Hide()
+		local	timer = timerFrames[self]
+		timer.data = nil
+		timer.hideStack = nil
+		timer:Hide()
 	end
 end
 
@@ -502,16 +507,16 @@ local function ActionButton_UpdateState_Hook(self)
 	if spell and self.actionType == 'macro' then
 		spell = GetMacroSpell(spell)
 	end
-	local aura, color
+	local aura, color, hideStack
 	if spell then
 		local auraType
-		aura, auraType = GetAuraToDisplay(spell)
+		aura, auraType, hideStack = GetAuraToDisplay(spell)
 		if aura then
 			color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
 		end
 	end
 	UpdateHighlight(self, aura, color)
-	UpdateTimer(self, aura)
+	UpdateTimer(self, aura, hideStack)
 end
 
 local function ActionButton_Update_Hook(self)
@@ -697,7 +702,10 @@ end
 -- Event handler
 InlineAura:SetScript('OnEvent', function(self, event, ...)
 	if type(self[event]) == 'function' then
-		return pcall(self[event], self, event, ...)
+		local success, msg = pcall(self[event], self, event, ...)
+		if not success then
+			geterrorhandler()(msg)
+		end
 --@debug@
 	else
 		print('InlineAura: registered event has no handler: '..event)

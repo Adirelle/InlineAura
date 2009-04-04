@@ -255,7 +255,7 @@ local spellOptions = {
 		},
 		editList = {
 			name = L['Spell to edit'],
-			desc = L['Select the spell to edit or to remove its specific settings.'],
+			desc = L['Select the spell to edit or to remove its specific settings. Spells with specific defaults are marked by a star (*).'],
 			type = 'select',
 			get = function(info) return spellSpecificHandler:GetSelectedSpell() end,
 			set = function(info, value) spellSpecificHandler:SelectSpell(value) end,
@@ -275,6 +275,18 @@ local spellOptions = {
 			confirmText = L['Do you really want to remove these aura specific settings ?'],
 			order = 40,
 		},
+		restoreDefaults = {
+			name = L['Restore defaults'],
+			desc = L['Restore default settings of the selected spell.'],
+			type = 'execute',
+			func = function(info)
+				spellPanelHandler:RestoreDefaults(spellSpecificHandler:GetSelectedSpell())
+			end,
+			hidden = function(info) 
+				return not spellPanelHandler:HasDefault(spellSpecificHandler:GetSelectedSpell()) 
+			end,
+			order = 45,
+		},		
 		settings = {
 			name = function(info) return spellSpecificHandler:GetSelectedSpellName() end,
 			type = 'group',
@@ -354,7 +366,13 @@ do
 		wipe(spellList)
 		for name, data in pairs(InlineAura.db.profile.spells) do
 			if type(data) == 'table' then
-				spellList[name] = name
+				local label = name
+				if self:HasDefault(name) then
+					label = label .. '*'
+				end
+				spellList[name] = label
+			elseif data == REMOVED then
+				spellList[name] = '|cff7f7f7f'..name..'*|r';
 			end
 		end
 		return spellList
@@ -363,6 +381,10 @@ end
 
 function spellPanelHandler:HasNoSpell()
 	return not next(self:GetSpellList())
+end
+
+function spellPanelHandler:HasDefault(name)
+	return name and InlineAura.DEFAULT_OPTIONS.profile.spells[name]
 end
 
 function spellPanelHandler:AddSpell(name)
@@ -378,6 +400,16 @@ function spellPanelHandler:RemoveSpell(name)
 	else
 		InlineAura.db.profile.spells[name] = nil
 	end
+	InlineAura:RequireUpdate(true)
+	spellSpecificHandler:ListUpdated()
+end
+
+function spellPanelHandler:RestoreDefaults(name)
+  -- Dish current settings
+	InlineAura.db.profile.spells[name] = nil
+	-- Force auto-creation
+	InlineAura.db.profile.spells[name] = InlineAura.db.profile.spells[name]
+	-- Update all
 	InlineAura:RequireUpdate(true)
 	spellSpecificHandler:ListUpdated()
 end
@@ -401,20 +433,22 @@ function spellSpecificHandler:GetSelectedSpell()
 end
 
 function spellSpecificHandler:GetSelectedSpellName()
-	return self.name or ""
+	return self.name or "???"
 end
 
 function spellSpecificHandler:SelectSpell(name)
 	local db = name and rawget(InlineAura.db.profile.spells, name)
 	if type(db) == 'table' then
 		self.name, self.db = name, db
+	elseif db == REMOVED then
+		self.name, self.db = name, nil
 	else
 		self.name, self.db = nil, nil
 	end
 end
 
 function spellSpecificHandler:IsNoSpellSelected()
-	return not self.name
+	return not self.db
 end
 
 function spellSpecificHandler:IsSpellDisabled()

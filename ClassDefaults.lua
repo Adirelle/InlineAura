@@ -40,23 +40,32 @@ local function GetSpellDefaults(id)
 	return SPELL_DEFAULTS[name]
 end
 
+-- Create a list of aliases, ignoring origId when found in ...
+local function MakeAliases(origId, ...)
+	local aliases = {}
+	for i = 1,select('#', ...) do
+		local id = select(i, ...)
+		if id ~= origId then
+			table.insert(aliases, GetSpellName(id))
+		end
+	end
+	if #aliases > 0 then
+		return aliases
+	end
+end
+
 -- Defines spell type and aliases
 local function Aliases(auraType, id, ...)
 	local defaults = GetSpellDefaults(id)
 	defaults.auraType = auraType
-	if select('#', ...) > 0 then
-		local aliases = {}
-		for i = 1, select('#', ...) do
-			table.insert(aliases, GetSpellName(select(i, ...)))
-		end
-		defaults.aliases = aliases
-	end
+	defaults.aliases = MakeAliases(id, ...)
 end
 
 -- Defines buffs that only apply to the player
 local SELF_BUFF_UNITS = { player = true, pet = false, focus = false, target = false }
-local function SelfBuffs(ids)
-	for i, id in ipairs(ids) do
+local function SelfBuffs(...)
+	for i = 1, select('#', ...) do
+		local id = select(i, ...)
 		local defaults = GetSpellDefaults(id)
 		defaults.auraType = 'buff'
 		defaults.unitsToScan = SELF_BUFF_UNITS
@@ -81,18 +90,27 @@ local function SelfTalentProc(spellId, talentId)
 	end
 end
 
-local function ShowOnlyMineByDefault()
-	local profile = InlineAura.DEFAULT_OPTIONS.profile
-	profile.onlyMyBuffs = true
-	profile.onlyMyDebuffs = true
-end
-
-local function ShowOthers(ids) -- requires ShowOnlyMineByDefault() to be meaningful
-	for i, id in ipairs(ids) do
-		GetSpellDefaults(id).onlyMine = false
+-- Declare a category of group-wide buffs
+local function GroupBuffs(...) 
+	for i = 1, select('#', ...) do
+		local id = select(i, ...)
+		local defaults = GetSpellDefaults(id)
+		defaults.auraType = 'buff'
+		defaults.onlyMine = false
+		defaults.aliases = MakeAliases(id, ...)
 	end
 end
 
+-- Declare a category of group-wide debuffs
+local function GroupDebuffs(...)
+	for i = 1, select('#', ...) do
+		local id = select(i, ...)
+		local defaults = GetSpellDefaults(id)
+		defaults.auraType = 'debuff'
+		defaults.onlyMine = false
+		defaults.aliases = MakeAliases(id, ...)
+	end
+end
 
 local _, class = UnitClass('player')
 
@@ -105,7 +123,7 @@ if class == 'HUNTER' then
 	Aliases('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	Aliases('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
 
-	SelfBuffs({
+	SelfBuffs(
 		13161, -- Aspect of the Beast
 		 5118, -- Aspect of the Cheetah
 		61846, -- Aspect of the Dragonhawk
@@ -122,22 +140,40 @@ if class == 'HUNTER' then
 		19884, -- Track Undead
 		 3045, -- Rapid Fire
 		19263, -- Deterrence
-		 5384, -- Feign Death
-	})
+		 5384  -- Feign Death
+	)
+	
+	GroupBuffs(20043) -- Aspect of the Wild
+	GroupBuffs(19506) -- Trueshot Aura
+	
+	GroupDebuffs(1130) -- Hunter's Mark
 
-	-- Mend Pet applies only on the pet
+	-- Pet only spells
+	local PET_UNITS = { pet = true, player = false, focus = false, target = false }
+
+	-- Mend Pet
 	local MendPet = GetSpellDefaults(136)
 	MendPet.auraType = 'buff'
-	MendPet.unitsToScan = { pet = true, player = false, focus = false, target = false }
+	MendPet.unitsToScan = PET_UNITS
+	
+	-- Bestial Wrath
+	local BestialWrath = GetSpellDefaults(19574)
+	BestialWrath.auraType = 'buff'
+	BestialWrath.unitsToScan = PET_UNITS
 
 ------------------------------------------------------------------------------
 elseif class == 'WARRIOR' then
 ------------------------------------------------------------------------------
 
+	GroupBuffs( 469) -- Commanding Shout
+	GroupBuffs(6673) -- Battle Shout
+
+	GroupDebuffs(1160) -- Demoralizing Shout
+
 	-- Contributed by brotherhobbes
 	Aliases('debuff', 47498, 47467) -- Devastate => Sunder Armor
 
-	SelfBuffs({
+	SelfBuffs(
 			871, -- Shield Wall
 		 1719, -- Recklessness
 		 2565, -- Shield Block
@@ -147,8 +183,8 @@ elseif class == 'WARRIOR' then
 		20230, -- Retaliation
 		23920, -- Spell Reflection
 		46924, -- Bladestorm
-		55694, -- Enraged Regeneration
-	})
+		55694  -- Enraged Regeneration
+	)
 
 	SelfTalentProc( 1464, 46916) -- Slam => Bloodsurge
 	SelfTalentProc(23922, 46951) -- Shield Slam => Sword and Board
@@ -165,11 +201,8 @@ elseif class == 'WARLOCK' then
 elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
 
-	-- Intellect buffs
-	Aliases('buff',  1459, 23028, 61024, 61316) -- Arcane Intellect = 3 others
-	Aliases('buff', 23028,  1459, 61024, 61316) -- Arcane Brilliance = 3 others
-	Aliases('buff', 61024,  1459, 23028, 61316) -- Dalaran Intellect = 3 others
-	Aliases('buff', 61316,  1459, 23028, 61024) -- Dalaran Brilliance = 3 others
+	-- Intellect buffs 
+	GroupBuffs(1459, 23028, 61024, 61316) -- Arcane Intellect, Arcane Brilliance, Dalaran Intellect, Dalaran Brilliance
 
 	-- Contributed by FlareCDE
 	Aliases('debuff', 42859, 22959) -- Scorch => Improved Scorch
@@ -182,6 +215,8 @@ elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
 elseif class == 'DEATHKNIGHT' then
 ------------------------------------------------------------------------------
+	
+	GroupBuffs(57330) -- Horn of Winter
 
 	-- Contributed by jexxlc
 	Aliases('debuff', 45462, 55078) -- Plague Strike => Blood Plague
@@ -192,37 +227,23 @@ elseif class == 'PRIEST' then
 ------------------------------------------------------------------------------
 
 	-- Contributed by brotherhobbes
-	SelfBuffs({
+	SelfBuffs(
 		  588, -- Inner Fire
 		15473, -- Shadowform
-		47585, -- Dispersion
-	})
-
-	Aliases('buff',  1243, 21562) -- Power Word: Fortitude => Prayer of Fortitude
-	Aliases('buff', 21562,  1243) -- Prayer of Fortitude => Power Word: Fortitude
-
-	Aliases('buff',   976, 27683) -- Shadow Protection => Prayer of Shadow Protection
-	Aliases('buff', 27683,   976) -- Prayer of Shadow Protection => Shadow Protection
-
-	Aliases('buff', 14752, 27681) -- Divine Spirit => Prayer of Spirit
-	Aliases('buff', 27681, 14752) -- Prayer of Spirit => Divine Spirit
+		47585  -- Dispersion
+	)
+	
+	GroupBuffs( 1243, 21562) -- Power Word: Fortitude, Prayer of Fortitude
+	GroupBuffs(  976, 27683) -- Shadow Protection, Prayer of Shadow Protection
+	GroupBuffs(14752, 27681) -- Divine Spirit, Prayer of Spirit
 
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
 
-	ShowOnlyMineByDefault()
-	
-	ShowOthers({
-		 1126, -- Mark of the Wild
-		21849, -- Gift of the Wild
-		48564, -- Mangle - Bear
-		48566, -- Mangle - Cat
-		48475, -- Faerie Fire (Feral)
-		48476, -- Faerie Fire
-	})
+	GroupBuffs(1126, 21849) -- Mark of the Wild, Gift of the Wild
 
-	SelfBuffs({
+	SelfBuffs(
 		  768, -- Cat Form
 		  783, -- Travel Form
 		 1066, -- Aquatic Form
@@ -232,17 +253,12 @@ elseif class == 'DRUID' then
 		33891, -- Tree of Life
 		33943, -- Flight Form
 		40120, -- Swift Flight Form
-		52610, -- Savage Roar
-	})
-
-	Aliases('buff',  1126, 21849) -- Mark of the Wild => Gift of the Wild
-	Aliases('buff', 21849,  1126) -- Gift of the Wild => Mark of the Wild
+		52610  -- Savage Roar
+	)
 
 	-- Contributed by pusikas2
-	Aliases('debuff', 48564, 48566) -- Mangle - Bear => Mangle - Cat
-	Aliases('debuff', 48566, 48564) -- Mangle - Cat => Mangle - Bear
-	Aliases('debuff', 48475, 48476) -- Faerie Fire (Feral) => Faerie Fire
-	Aliases('debuff', 48476, 48475) -- Faerie Fire => Faerie Fire (Feral)
+	GroupDebuffs(48564, 48566) -- Mangle - Bear, Mangle - Cat
+	GroupDebuffs(48475, 48476) -- Faerie Fire (Feral), Faerie Fire
 
 ------------------------------------------------------------------------------
 elseif class == 'PALADIN' then
@@ -250,7 +266,7 @@ elseif class == 'PALADIN' then
 
 	local _, race = UnitRace('player')
 
-	SelfBuffs({
+	SelfBuffs(
 		  498, -- Divine Protection
 		  642, -- Divine Shield
 		20164, -- Seal of Justice
@@ -261,22 +277,21 @@ elseif class == 'PALADIN' then
 		25780, -- Righteous Fury
 		31842, -- Divine Illumination
 		31884, -- Avenging Wrath
-		53651, -- Beacon of Light buff name on player is Light's Beacon
-	})
+		53651  -- Beacon of Light buff name on player is Light's Beacon
+	)
 
 	if race == 'BloodElf' then
-		SelfBuffs({
+		SelfBuffs(
 			31892, -- Seal of Blood
-			53736, -- Seal of Corruption
-		})
+			53736  -- Seal of Corruption
+		)
 	else
-		SelfBuffs({
+		SelfBuffs(
 			53720, -- Seal of the Martyr
-			31801, -- Seal of Vengeance
-		})
+			31801  -- Seal of Vengeance
+		)
 	end
 	
-
 	-- Holy Light is modified both by Infusion of Light and Light's Grace but
 	-- they have different effects so we only show one.
 	SelfTalentProc(  635, 31834) -- Holy Light => Light's Grace
@@ -284,17 +299,10 @@ elseif class == 'PALADIN' then
 	SelfTalentProc(19750, 53489) -- Flash of Light => Art of War
 
 	-- Blessings
-	Aliases('buff', 19740, 25782) -- Blessing of Might => Greater Blessing of Might
-	Aliases('buff', 25782, 19740) -- Greater Blessing of Might => Blessing of Might
-
-	Aliases('buff', 19742, 25894) -- Blessing of Wisdom => Greater Blessing of Wisdom
-	Aliases('buff', 25894, 19742) -- Greater Blessing of Wisdom => Blessing of Wisdom
-
-	Aliases('buff', 20911, 25899) -- Blessing of Sanctuary => Greater Blessing of Sanctuary
-	Aliases('buff', 25899, 20911) -- Greater Blessing of Sanctuary => Blessing of Sanctuary
-
-	Aliases('buff', 20217, 25898) -- Blessing of Kings => Greater Blessing of Kings
-	Aliases('buff', 25899, 20217) -- Greater Blessing of Kings => Blessing of Kings
+	GroupBuffs(19740, 25782) -- Blessing of Might, Greater Blessing of Might
+	GroupBuffs(19742, 25894) -- Blessing of Wisdom, Greater Blessing of Wisdom
+	GroupBuffs(20911, 25899) -- Blessing of Sanctuary, Greater Blessing of Sanctuary
+	GroupBuffs(20217, 25898) -- Blessing of Kings, Greater Blessing of Kings
 
 end
 

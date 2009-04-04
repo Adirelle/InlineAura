@@ -71,8 +71,8 @@ local FONT_SIZE_LARGE = 20
 
 local DEFAULT_OPTIONS = {
 	profile = {
-		onlyMyBuffs = false,
-		onlyMyDebuffs = false,
+		onlyMyBuffs = true,
+		onlyMyDebuffs = true,
 		hideCountdown = false,
 		hideStack = false,
 		preciseCountdown = false,

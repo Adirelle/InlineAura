@@ -144,6 +144,7 @@ if class == 'HUNTER' then
 	)
 	
 	GroupBuffs(20043) -- Aspect of the Wild
+	GroupBuffs(13159) -- Aspect of the Pack
 	GroupBuffs(19506) -- Trueshot Aura
 	
 	GroupDebuffs(1130) -- Hunter's Mark
@@ -208,11 +209,16 @@ elseif class == 'SHAMAN' then
 	SelfTalentProc( 331, 53390) -- Healing Wave => Tidal Waves
 	SelfTalentProc(8004, 53390) -- Lesser Healing Wave => Tidal Waves
 	
+	GroupDebuffs(51514) -- Hex
+	
 ------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
 	Aliases('debuff', 686, 17794) -- Shadow Bolt => Shadow Mastery
+	
+	GroupDebuffs(47865) -- Curse of the Elements
+	GroupDebuffs(710) -- Banish
 
 ------------------------------------------------------------------------------
 elseif class == 'MAGE' then
@@ -220,6 +226,9 @@ elseif class == 'MAGE' then
 
 	-- Intellect buffs 
 	GroupBuffs(1459, 23028, 61024, 61316) -- Arcane Intellect, Arcane Brilliance, Dalaran Intellect, Dalaran Brilliance
+	
+	-- Polymorphs
+	GroupDebuffs(118, 28272, 28271, 61025, 61305)
 
 	-- Contributed by FlareCDE
 	Aliases('debuff', 42859, 22959) -- Scorch => Improved Scorch
@@ -253,6 +262,8 @@ elseif class == 'PRIEST' then
 	GroupBuffs( 1243, 21562) -- Power Word: Fortitude, Prayer of Fortitude
 	GroupBuffs(  976, 27683) -- Shadow Protection, Prayer of Shadow Protection
 	GroupBuffs(14752, 27681) -- Divine Spirit, Prayer of Spirit
+	
+	GroupDebuffs(9484) -- Shackle Undead
 	
 	SelfTalentProc( 585, 33151) -- Smite => Surge of Light
 	SelfTalentProc(2061, 33151) -- Flash Heal => Surge of Light
@@ -292,6 +303,9 @@ elseif class == 'DRUID' then
 		52610, -- Savage Roar		
 		61336  -- Survival Instincts
 	)
+	
+	GroupDebuffs(  339) -- Entangling Roots
+	GroupDebuffs(33786) -- Cyclone
 
 	-- Contributed by pusikas2
 	GroupDebuffs(48564, 48566) -- Mangle - Bear, Mangle - Cat
@@ -340,6 +354,9 @@ elseif class == 'PALADIN' then
 	GroupBuffs(19742, 25894) -- Blessing of Wisdom, Greater Blessing of Wisdom
 	GroupBuffs(20911, 25899) -- Blessing of Sanctuary, Greater Blessing of Sanctuary
 	GroupBuffs(20217, 25898) -- Blessing of Kings, Greater Blessing of Kings
+	
+	GroupDebuffs(20066) -- Repentance
+	GroupDebuffs(10326) -- Turn Evil
 
 end
 

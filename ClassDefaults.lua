@@ -192,6 +192,23 @@ elseif class == 'WARRIOR' then
 	SelfTalentProc( 5308, 52437) -- Execute => Sudden Death
 
 ------------------------------------------------------------------------------
+elseif class == 'SHAMAN' then
+------------------------------------------------------------------------------
+	-- Contributed by brotherhobbes
+
+	SelfBuffs(
+		  324, -- Lightning Shield
+		 2645, -- Ghost Wolf
+		16188, -- Nature's Swiftness
+		30823, -- Shamanistic Rage
+		52127, -- Water Shield
+		55198  -- Tidal Force
+	)
+
+	SelfTalentProc( 331, 53390) -- Healing Wave => Tidal Waves
+	SelfTalentProc(8004, 53390) -- Lesser Healing Wave => Tidal Waves
+	
+------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
@@ -236,7 +253,17 @@ elseif class == 'PRIEST' then
 	GroupBuffs( 1243, 21562) -- Power Word: Fortitude, Prayer of Fortitude
 	GroupBuffs(  976, 27683) -- Shadow Protection, Prayer of Shadow Protection
 	GroupBuffs(14752, 27681) -- Divine Spirit, Prayer of Spirit
+	
+	SelfTalentProc( 585, 33151) -- Smite => Surge of Light
+	SelfTalentProc(2061, 33151) -- Flash Heal => Surge of Light
 
+	local _, buildNumber = GetBuildInfo()
+	if tonumber(buildNumber) >= 9658 then
+	  -- Serendipity changed in 3.1 
+		SelfTalentProc( 596, 63731) -- Prayer of Healing => Serendipity
+	  SelfTalentProc(2060, 63731) -- Greater Heal => Serendipity
+	end 
+	
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
@@ -247,13 +274,23 @@ elseif class == 'DRUID' then
 		  768, -- Cat Form
 		  783, -- Travel Form
 		 1066, -- Aquatic Form
+		 1850, -- Dash
+		 5217, -- Tiger's Fury
+		 5225, -- Track Humanoids
+		 5229, -- Enrage
 		 5487, -- Bear Form
 		 9634, -- Dire Bear Form
+		16689, -- Nature's Grasp
+		17116, -- Nature's Swiftness
+		22812, -- Barkskin
+		22842, -- Frenzied Regeneration
 		24858, -- Moonkin Form
 		33891, -- Tree of Life
 		33943, -- Flight Form
 		40120, -- Swift Flight Form
-		52610  -- Savage Roar
+		50334, -- Berserk
+		52610, -- Savage Roar		
+		61336  -- Survival Instincts
 	)
 
 	-- Contributed by pusikas2

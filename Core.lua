@@ -336,19 +336,19 @@ local function CreateTimerFrame(button)
 	return timer
 end
 
-local function TimerFrame_OnUpdate(self, elapsed)
-	self.timeLeft = self.timeLeft - elapsed
-	if self.timeLeft <= 0 then
+local function TimerFrame_OnUpdate(self)
+	local timeLeft = self.expirationTime - GetTime()
+	if timeLeft <= 0 then
 		self:Hide()
 		return
 	end
 	local displayTime
-	displayTime, self.delay = GetCountdownText(self.timeLeft, db.profile.preciseCountdown)
+	displayTime, self.delay = GetCountdownText(timeLeft, db.profile.preciseCountdown)
 	self.countdownText:SetText(displayTime)
 	return true
 end
 
-local function TimerFrame_Display(self, timeLeft, count)
+local function TimerFrame_Display(self, expirationTime, count)
 	self:Show()
 
 	local countdownJustfiyH = 'CENTER'
@@ -367,7 +367,7 @@ local function TimerFrame_Display(self, timeLeft, count)
 	if db.profile.hideCountdown then
 		countdownFrame:Hide()
 	else		
-		self.timeLeft = timeLeft
+		self.expirationTime = expirationTime
 		if TimerFrame_OnUpdate(self, 0) then
 			local countdownText = self.countdownText
 			countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
@@ -457,11 +457,10 @@ end
 
 local function UpdateTimer(self, aura, hideStack)
 	if aura and aura.serial and not (db.profile.hideCountdown and hideStack) then
-		local timeLeft = aura.expirationTime and (aura.expirationTime - GetTime())
-		if timeLeft > 0 then
+		if aura.expirationTime and aura.expirationTime > GetTime() then
 			local count = not hideStack and aura.count and aura.count > 0 and aura.count
 			local frame = timerFrames[self] or CreateTimerFrame(self)
-			TimerFrame_Display(frame, timeLeft, count)
+			TimerFrame_Display(frame, aura.expirationTime, count)
 		end
 	elseif timerFrames[self] then
 		timerFrames[self]:Hide()

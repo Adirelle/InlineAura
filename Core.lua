@@ -48,6 +48,7 @@ local enabledUnits = {
 	target = true,
 }
 local timerFrames = {}
+local visibleTimers = {}
 
 local UnitCanAssist, UnitCanAttack = UnitCanAssist, UnitCanAttack
 
@@ -59,7 +60,10 @@ local UnitIsDebuffable = function(unit) return UnitCanAttack('player', unit) end
 -- Constants
 ------------------------------------------------------------------------------
 
-local UPDATE_PERIOD = 0.25
+local UPDATE_PERIOD = {
+	[false] = 1.0, -- "unprecise" countdown, update every second
+	[true] = 0.1, -- precise countdown, update every tenth of second
+}
 
 local LSM = LibStub('LibSharedMedia-3.0')
 local FONTMEDIA = LSM.MediaType.FONT
@@ -209,7 +213,7 @@ local function UpdateUnitAuras(unit)
 			auras[name] = data
 			InlineAura.needUpdate = true
 		elseif expirationTime ~= data.expirationTime or count ~= data.count or not data.isMine then
-			InlineAura.needUpdate = true			
+			InlineAura.needUpdate = true
 		end
 		data.serial = serial
 		data.count = count
@@ -304,14 +308,21 @@ local function CreateTimerFrame(button)
 	timer:SetFrameLevel(cooldown:GetFrameLevel() + 5)
 	timer:SetAllPoints(cooldown)
 	timer:SetToplevel(true)
+	timer:Hide()
 	timer.delay = 0
-	timer:SetScript('OnUpdate', TimerFrame_OnUpdate)
-
 	timerFrames[button] = timer
 
-	local countdownText = timer:CreateFontString(nil, "OVERLAY")
-	countdownText:SetAllPoints(timer)
+	local countdownFrame = CreateFrame("Frame", nil, timer)
+	countdownFrame:SetAllPoints(timer)
+	countdownFrame:SetScript('OnShow', function() visibleTimers[timer] = 0 end)
+	countdownFrame:SetScript('OnHide', function() visibleTimers[timer] = nil end)
+	countdownFrame:Hide()
+	timer.countdownFrame = countdownFrame
+
+	local countdownText = countdownFrame:CreateFontString(nil, "OVERLAY")
+	countdownText:SetAllPoints(countdownFrame)
 	countdownText:SetJustifyV(InlineAura.bigCountdown and 'MIDDLE' or 'BOTTOM')
+	countdownText:Show()
 	timer.countdownText = countdownText
 
 	local stackText = timer:CreateFontString(nil, "OVERLAY")
@@ -325,19 +336,25 @@ local function CreateTimerFrame(button)
 	return timer
 end
 
-local function TimerFrame_Update(self)
-	local data = self.data
-	if not data or not data.expirationTime or data.expirationTime <= GetTime() or (db.profile.hideCountdown and self.hideStack) then
-		self.data = nil
-		self.hideStack = nil
+local function TimerFrame_OnUpdate(self, elapsed)
+	self.timeLeft = self.timeLeft - elapsed
+	if self.timeLeft <= 0 then
 		self:Hide()
 		return
 	end
+	local displayTime
+	displayTime, self.delay = GetCountdownText(self.timeLeft, db.profile.preciseCountdown)
+	self.countdownText:SetText(displayTime)
+	return true
+end
+
+local function TimerFrame_Display(self, timeLeft, count)
+	self:Show()
 
 	local countdownJustfiyH = 'CENTER'
 	local stackText = self.stackText
-	if not self.hideStack and data.count and data.count > 0 then
-		stackText:SetText(data.count)
+	if count then
+		stackText:SetText(count)
 		if not InlineAura.bigCountdown then
 			countdownJustfiyH = 'LEFT'
 		end
@@ -346,31 +363,21 @@ local function TimerFrame_Update(self)
 		stackText:Hide()
 	end
 
-	local countdownText = self.countdownText
-	local timeLeft = data.expirationTime - GetTime()
-	local displayTime
-	displayTime, self.delay = GetCountdownText(timeLeft, db.profile.preciseCountdown)
-	if db.profile.hideCountdown or not displayTime then
-		countdownText:Hide()
-		self.delay = timeLeft
-	else
-		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
-		countdownText:SetJustifyH(countdownJustfiyH)
-		countdownText:SetText(displayTime)
-		countdownText:Show()
-
-		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
-		if sizeRatio > 1 then
-			countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
+	local countdownFrame = self.countdownFrame
+	if db.profile.hideCountdown then
+		countdownFrame:Hide()
+	else		
+		self.timeLeft = timeLeft
+		if TimerFrame_OnUpdate(self, 0) then
+			local countdownText = self.countdownText
+			countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
+			countdownText:SetJustifyH(countdownJustfiyH)
+			countdownFrame:Show()
+			local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
+			if sizeRatio > 1 then
+				countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
+			end
 		end
-	end
-
-end
-
-function TimerFrame_OnUpdate(self, elapsed)
-	self.delay = self.delay - elapsed
-	if self.delay <= 0 then
-		TimerFrame_Update(self)
 	end
 end
 
@@ -449,17 +456,15 @@ end
 ------------------------------------------------------------------------------
 
 local function UpdateTimer(self, aura, hideStack)
-	if aura and aura.serial then
-		local timer = timerFrames[self] or CreateTimerFrame(self)
-		timer.data = aura
-		timer.hideStack = hideStack
-		timer:Show()
-		TimerFrame_Update(timer)
+	if aura and aura.serial and not (db.profile.hideCountdown and hideStack) then
+		local timeLeft = aura.expirationTime and (aura.expirationTime - GetTime())
+		if timeLeft > 0 then
+			local count = not hideStack and aura.count and aura.count > 0 and aura.count
+			local frame = timerFrames[self] or CreateTimerFrame(self)
+			TimerFrame_Display(frame, timeLeft, count)
+		end
 	elseif timerFrames[self] then
-		local	timer = timerFrames[self]
-		timer.data = nil
-		timer.hideStack = nil
-		timer:Hide()
+		timerFrames[self]:Hide()
 	end
 end
 
@@ -555,28 +560,30 @@ end
 
 InlineAura.buttons = {}
 
+local centralTimer = 0
 InlineAura:SetScript('OnUpdate', function(self, elapsed)
+	-- Handle updates once per frame
 	if self.needUpdate then
-	
-		if self.configUpdated then						
+
+		if self.configUpdated then
 			-- Update event listening
 			for unit, event in pairs(UNIT_EVENTS) do
 				enabledUnits[unit] = IsUnitEnabled(unit, event)
 			end
-		
+
 			-- Update all auras
 			for unit in pairs(enabledUnits) do
 				UpdateUnitAuras(unit)
 			end
-			
+
 			-- Update timers
 			for button, timerFrame in pairs(timerFrames) do
 				TimerFrame_Skin(timerFrame)
 			end
-			
+
 			self.configUpdated = false
 		end
-		
+
 		-- Update buttons
 		for button in pairs(self.buttons) do
 			if button:IsVisible() and HasAction(button.action) then
@@ -584,6 +591,23 @@ InlineAura:SetScript('OnUpdate', function(self, elapsed)
 			end
 		end
 		self.needUpdate = false
+	end
+
+	-- Handle timer updates
+	centralTimer = centralTimer + elapsed
+	if centralTimer > UPDATE_PERIOD[db.profile.preciseCountdown] then
+		for frame, frameTimer in pairs(visibleTimers) do
+			if frame.delay then
+				frameTimer = frameTimer + centralTimer
+				if frameTimer > frame.delay then
+					visibleTimers[frame] = 0
+					TimerFrame_OnUpdate(frame, frameTimer)
+				else
+					visibleTimers[frame] = frameTimer
+				end
+			end
+		end
+		centralTimer = 0
 	end
 end)
 
@@ -643,22 +667,22 @@ function InlineAura:VARIABLES_LOADED()
 		LBF:RegisterSkinCallback("Blizzard", LBF_Callback)
 	end
 	-- Miscellanous addon support
-	if Dominos then 
+	if Dominos then
 		self:RegisterButtons("DominosActionButton", 48)
 		if LBF then
 			LBF:RegisterSkinCallback("Dominos", LBF_Callback)
 		end
 	end
-	if Bartender4 then 
-		self:RegisterButtons("BT4Button", 120) 
+	if Bartender4 then
+		self:RegisterButtons("BT4Button", 120)
 		if LBF then
 			LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
 		end
 	end
-	if OmniCC or CooldownCount then 
-		InlineAura.bigCountdown = false 
+	if OmniCC or CooldownCount then
+		InlineAura.bigCountdown = false
 	end
-	
+
 	-- Refresh everything
 	self:RequireUpdate(true)
 end
@@ -726,7 +750,7 @@ end
 
 -- Chat command line
 SLASH_INLINEAURA1 = "/inlineaura"
-function SlashCmdList.INLINEAURA()	
+function SlashCmdList.INLINEAURA()
 	LoadConfigGUI()
 	InterfaceOptionsFrame_OpenToCategory(L['Inline Aura'])
 end

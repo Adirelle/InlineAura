@@ -114,8 +114,25 @@ local options = {
 			disabled = function(info) return InlineAura.db.profile.hideCountdown end,
 			order = 45,
 		},
+		showStackAtTop = {
+			name = L['Application count alignment'],
+			desc = L['Select where the application count is displayed.'],
+			type = 'select',
+			arg = 'showStackAtTop',
+			values = {
+				["false"] = L['Bottom'],
+				["true"] = L['Top'],
+			},
+			get = function(info)
+				return tostring(info.handler:Get(info))
+			end,
+			set = function(info, value)
+				info.handler:Set(info, value == 'true')
+			end,
+			order = 47,			
+		},
 		colors = {
-			name = L['Border colors'],
+			name = L['Border highlight colors'],
 			desc = L['Select the colors used to highlight the action button. There are selected based on aura type and caster.'],
 			type = 'group',
 			inline = true,

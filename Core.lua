@@ -79,6 +79,7 @@ local DEFAULT_OPTIONS = {
 		onlyMyDebuffs = true,
 		hideCountdown = false,
 		hideStack = false,
+		showStackAtTop = false,
 		preciseCountdown = false,
 		fontName = FONT_NAME,
 		smallFontSize = FONT_SIZE_SMALL,
@@ -290,16 +291,19 @@ local TimerFrame_OnUpdate
 
 local function TimerFrame_Skin(self)
 	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
+	local stackBorder = db.profile.showStackAtTop and 'TOP' or 'BOTTOM'
 
 	local countdownText = self.countdownText
 	countdownText.fontName = font
 	countdownText.baseFontSize = db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
 	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
 	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
+	countdownText:SetJustifyV(InlineAura.bigCountdown and 'CENTER' or stackBorder)
 
 	local stackText = self.stackText
 	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
 	stackText:SetTextColor(unpack(db.profile.colorStack))
+	stackText:SetJustifyV(stackBorder)
 end
 
 local function CreateTimerFrame(button)
@@ -321,14 +325,12 @@ local function CreateTimerFrame(button)
 
 	local countdownText = countdownFrame:CreateFontString(nil, "OVERLAY")
 	countdownText:SetAllPoints(countdownFrame)
-	countdownText:SetJustifyV(InlineAura.bigCountdown and 'MIDDLE' or 'BOTTOM')
 	countdownText:Show()
 	timer.countdownText = countdownText
 
 	local stackText = timer:CreateFontString(nil, "OVERLAY")
 	stackText:SetAllPoints(timer)
 	stackText:SetJustifyH("RIGHT")
-	stackText:SetJustifyV("BOTTOM")
 	timer.stackText = stackText
 
 	TimerFrame_Skin(timer)

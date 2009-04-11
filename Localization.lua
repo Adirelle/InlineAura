@@ -33,10 +33,12 @@ InlineAura_L = L
 --------------------------------------------------------------------------------
 
 L['Add spell'] = true
+L['Application count alignment'] = true
 L['Application text color'] = true
 L['Auras to look up'] = true
 L['Aura type'] = true
-L['Border colors'] = true
+L['Border highlight colors'] = true
+L['Bottom'] = true
 L['Buff'] = true
 L['Check to have a more accurate countdown display instead of default Blizzard rounding.'] = true
 L['Check to hide the aura application count (charges or stacks).'] = true
@@ -89,6 +91,7 @@ L['Select the color to use for the debuffs cast by other characters.'] = true
 L['Select the color to use for the debuffs you cast.'] = true
 L['Select the font to be used to display both countdown and application count.'] = true
 L['Select the spell to edit or to remove its specific settings. Spells with specific defaults are written in |cff77ffffcyan|r. Removed spells with specific defaults are written in |cff777777gray|r.'] = true
+L['Select where the application count is displayed.'] = true
 L['Size of large text'] = true
 L['Size of small text'] = true
 L['Spell specific settings'] = true
@@ -96,6 +99,7 @@ L['Spell to edit'] = true
 L['Text appearance'] = true
 L['The large font is used to display countdowns.'] = true
 L['The small font is used to display application count (and countdown when cooldown addons are loaded).'] = true
+L['Top'] = true
 L['Units to scan'] = true
 L["Unknown spell: %s"] = true
 

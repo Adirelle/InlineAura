@@ -26,7 +26,7 @@ local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 local function GetSpellName(id)
 	local name = GetSpellInfo(id)
 	if not name then
-		error("Invalid spell id "..tostring(id), 4)
+		geterrorhandler()("Invalid spell id "..tostring(id))
 	end
 	return name
 end
@@ -309,7 +309,7 @@ elseif class == 'DRUID' then
 
 	-- Contributed by pusikas2
 	GroupDebuffs(48564, 48566) -- Mangle - Bear, Mangle - Cat
-	GroupDebuffs(48475, 48476) -- Faerie Fire (Feral), Faerie Fire
+	GroupDebuffs(  770, 16857) -- Faerie Fire, Faerie Fire (Feral)
 
 ------------------------------------------------------------------------------
 elseif class == 'PALADIN' then

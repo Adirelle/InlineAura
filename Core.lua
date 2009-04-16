@@ -161,7 +161,7 @@ do -- 3.1 compatibility
 		local origUnitAura, UnitIsUnit = _G.UnitAura, _G.UnitIsUnit
 		UnitAura = function(...)
 			local name, rank, icon, count, debuffType, duration, expirationTime, caster, isStealable = origUnitAura(...)
-			local isMine = name and caster and (UnitIsUnit(caster, 'player') or UnitIsUnit(caster, 'pet'))
+			local isMine = name and caster and (UnitIsUnit(caster, 'player') or UnitIsUnit(caster, 'pet') or UnitIsUnit(caster, 'vehicule'))
 			return name, rank, icon, count, debuffType, duration, expirationTime, isMine, isStealable
 		end
 	end

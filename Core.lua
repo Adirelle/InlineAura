@@ -49,6 +49,8 @@ local enabledUnits = {
 }
 local timerFrames = {}
 local visibleTimers = {}
+local needUpdate = false
+local configUpdated = false
 
 local UnitCanAssist, UnitCanAttack = UnitCanAssist, UnitCanAttack
 
@@ -149,22 +151,15 @@ local function WipeAuras(auras)
 			del(aura)
 		end
 		wipe(auras)
-		InlineAura.needUpdate = true
+		needUpdate = true
 	end
 end
 
-local UnitAura = _G.UnitAura
-
-do -- 3.1 compatibility
-	local _, buildNumber = GetBuildInfo()
-	if tonumber(buildNumber) >= 9658 then
-		local origUnitAura, UnitIsUnit = _G.UnitAura, _G.UnitIsUnit
-		UnitAura = function(...)
-			local name, rank, icon, count, debuffType, duration, expirationTime, caster, isStealable = origUnitAura(...)
-			local isMine = name and caster and (UnitIsUnit(caster, 'player') or UnitIsUnit(caster, 'pet') or UnitIsUnit(caster, 'vehicule'))
-			return name, rank, icon, count, debuffType, duration, expirationTime, isMine, isStealable
-		end
-	end
+local origUnitAura, UnitIsUnit = _G.UnitAura, _G.UnitIsUnit
+local UnitAura = function(...)
+	local name, rank, icon, count, debuffType, duration, expirationTime, caster, isStealable = origUnitAura(...)
+	local isMine = name and caster and (UnitIsUnit(caster, 'player') or UnitIsUnit(caster, 'pet') or UnitIsUnit(caster, 'vehicle')) and true or false
+	return name, rank, icon, count, debuffType, duration, expirationTime, isMine, isStealable
 end
 
 local serial = 0
@@ -178,49 +173,33 @@ local function UpdateUnitAuras(unit)
 	else
 		return WipeAuras(auras)
 	end
-	serial = (serial + 1) % 10000
+	serial = (serial + 1) % 100000
 
-	-- First, get all auras, included those applied by other players (if configured so)
+	-- Scan all auras
 	for i = 1,255 do
 		local name, _, _, count, _, duration, expirationTime, isMine = UnitAura(unit, i, filter)
 		if not name then
 			break
-		elseif not isMine then
+		else
 			local data = auras[name]
 			if not data then
 				data = new()
 				auras[name] = data
-				InlineAura.needUpdate = true
-			elseif expirationTime ~= data.expirationTime or count ~= data.count or data.isMine then
-				InlineAura.needUpdate = true
+				needUpdate = true
+			elseif data.serial == serial and data.isMine and not isMine then
+				-- Do not overwrite player's auras by others' auras when they have already seen during this scan
+				data = nil
+			elseif expirationTime ~= data.expirationTime or count ~= data.count or isMine ~= data.isMine then
+				needUpdate = true
 			end
-			data.serial = serial
-			data.count = count
-			data.duration = duration
-			data.expirationTime = expirationTime
-			data.isMine = false
+			if data then
+				data.serial = serial
+				data.count = count
+				data.duration = duration
+				data.expirationTime = expirationTime
+				data.isMine = isMine
+			end
 		end
-	end
-	-- Then get the aura applied only by the player
-	local filter_mine = filter .. '|PLAYER'
-	for i = 1,255 do
-		local name, _, _, count, _, duration, expirationTime = UnitAura(unit, i, filter_mine)
-		if not name then
-			break
-		end
-		local data = auras[name]
-		if not data then
-			data = new()
-			auras[name] = data
-			InlineAura.needUpdate = true
-		elseif expirationTime ~= data.expirationTime or count ~= data.count or not data.isMine then
-			InlineAura.needUpdate = true
-		end
-		data.serial = serial
-		data.count = count
-		data.duration = duration
-		data.expirationTime = expirationTime
-		data.isMine = true
 	end
 	-- Handle tracking as self buff
 	if unit == 'player' then
@@ -231,7 +210,7 @@ local function UpdateUnitAuras(unit)
 				if not data then
 					data = new()
 					auras[name] = data
-					InlineAura.needUpdate = true
+					needUpdate = true
 				end
 				data.serial = serial
 				data.count = 0
@@ -243,7 +222,7 @@ local function UpdateUnitAuras(unit)
 	for name, data in pairs(auras) do
 		if data.serial ~= serial then
 			auras[name] = del(auras[name])
-			InlineAura.needUpdate = true
+			needUpdate = true
 		end
 	end
 end
@@ -496,7 +475,7 @@ local function LBF_UpdateHighlight(self, aura, color)
 end
 
 local function LBF_Callback()
-	InlineAura:RequireUpdate(true)
+	configUpdated = true
 end
 
 ------------------------------------------------------------------------------
@@ -540,6 +519,8 @@ local function ActionButton_Update_Hook(self)
 		else
 			self.actionName = arg1
 		end
+	else
+		self.actionName, self.actionType = nil, nil
 	end
 	ActionButton_UpdateState_Hook(self)
 end
@@ -564,9 +545,9 @@ InlineAura.buttons = {}
 local centralTimer = 0
 InlineAura:SetScript('OnUpdate', function(self, elapsed)
 	-- Handle updates once per frame
-	if self.needUpdate then
+	if needUpdate or configUpdated then
 
-		if self.configUpdated then
+		if configUpdated then
 			-- Update event listening
 			for unit, event in pairs(UNIT_EVENTS) do
 				enabledUnits[unit] = IsUnitEnabled(unit, event)
@@ -582,7 +563,7 @@ InlineAura:SetScript('OnUpdate', function(self, elapsed)
 				TimerFrame_Skin(timerFrame)
 			end
 
-			self.configUpdated = false
+			configUpdated = false
 		end
 
 		-- Update buttons
@@ -591,7 +572,7 @@ InlineAura:SetScript('OnUpdate', function(self, elapsed)
 				ActionButton_UpdateState(button)
 			end
 		end
-		self.needUpdate = false
+		needUpdate = false
 	end
 
 	-- Handle timer updates
@@ -612,9 +593,9 @@ InlineAura:SetScript('OnUpdate', function(self, elapsed)
 	end
 end)
 
-function InlineAura:RequireUpdate(configUpdated)
-	self.configUpdated = configUpdated
-	self.needUpdate = true
+function InlineAura:RequireUpdate(config)
+	configUpdated = config
+	needUpdate = true
 end
 
 function InlineAura:RegisterButtons(prefix, count)
@@ -639,7 +620,7 @@ end
 function InlineAura:UNIT_PET(event, unit)
 	if unit == 'player' then
 		UpdateUnitAuras('pet')
-		self.needUpdate = true
+		needUpdate = true
 	end
 end
 
@@ -651,12 +632,12 @@ end
 
 function InlineAura:PLAYER_FOCUS_CHANGED()
 	UpdateUnitAuras('focus')
-	self.needUpdate = true
+	needUpdate = true
 end
 
 function InlineAura:PLAYER_TARGET_CHANGED()
 	UpdateUnitAuras('target')
-	self.needUpdate = true
+	needUpdate = true
 end
 
 function InlineAura:VARIABLES_LOADED()
@@ -685,7 +666,7 @@ function InlineAura:VARIABLES_LOADED()
 	end
 
 	-- Refresh everything
-	self:RequireUpdate(true)
+	configUpdated = true
 end
 
 function InlineAura:ADDON_LOADED(event, name)

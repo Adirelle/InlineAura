@@ -300,8 +300,12 @@ local spellOptions = {
 			order = 40,
 		},
 		restoreDefaults = {
-			name = L['Restore defaults'],
-			desc = L['Restore default settings of the selected spell.'],
+			name = function()
+				return spellPanelHandler:HasDefault(spellSpecificHandler:GetSelectedSpell()) and L['Restore defaults'] or L['Reset settings']
+			end,
+			desc = function()
+				return spellPanelHandler:HasDefault(spellSpecificHandler:GetSelectedSpell()) and L['Restore default settings of the selected spell.'] or L['Reset settings to global defaults.']
+			end,
 			type = 'execute',
 			func = function(info)
 				spellPanelHandler:RestoreDefaults(spellSpecificHandler:GetSelectedSpell())

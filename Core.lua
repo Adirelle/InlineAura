@@ -448,13 +448,19 @@ local function UpdateTimer(self, aura, hideStack)
 	end
 end
 
+local function SetVertexColor(texture, r, g, b, a)
+	texture:SetVertexColor(r, g, b, a)
+end
+
 local function UpdateHighlight(self, aura, color)
 	local texture = self:GetCheckedTexture()
 	if aura then
-		texture:SetVertexColor(unpack(color))
+		SetVertexColor(texture, unpack(color))
 		self:SetChecked(true)
 	else
+		local action = self.action  
 		texture:SetVertexColor(1, 1, 1)
+		self:SetChecked(IsCurrentAction(action) or IsAutoRepeatAction(action))
 	end
 end
 
@@ -462,16 +468,9 @@ end
 -- LibButtonFacade compatibility
 ------------------------------------------------------------------------------
 
-local function LBF_UpdateHighlight(self, aura, color)
-	local texture = self:GetCheckedTexture()
-	if aura then
-		local r, g, b, a = unpack(color)
-    local R, G, B, A = texture:GetVertexColor()
-		texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
-		self:SetChecked(true)
-	else
-		texture:SetVertexColor(1, 1, 1)
-	end
+local function LBF_SetVertexColor(texture, r, g, b, a)
+	local R, G, B, A = texture:GetVertexColor()
+	texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
 end
 
 local function LBF_Callback()
@@ -645,7 +644,7 @@ function InlineAura:VARIABLES_LOADED()
 	local LBF = LibStub('LibButtonFacade', true)
 	local LBF_RegisterCallback = function() end
 	if LBF then
-		UpdateHighlight = LBF_UpdateHighlight
+		SetVertexColor = LBF_SetVertexColor
 		LBF:RegisterSkinCallback("Blizzard", LBF_Callback)
 	end
 	-- Miscellanous addon support

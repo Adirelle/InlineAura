@@ -51,12 +51,7 @@ local timerFrames = {}
 local visibleTimers = {}
 local needUpdate = false
 local configUpdated = false
-
-local UnitCanAssist, UnitCanAttack = UnitCanAssist, UnitCanAttack
-
--- These two functions return nil when unit does not exist
-local UnitIsBuffable = function(unit) return UnitCanAssist('player', unit) end
-local UnitIsDebuffable = function(unit) return UnitCanAttack('player', unit) end
+local inVehicle = false
 
 ------------------------------------------------------------------------------
 -- Constants
@@ -142,6 +137,26 @@ end
 InlineAura.new, InlineAura.del = new, del
 
 ------------------------------------------------------------------------------
+-- Some Unit helpers
+------------------------------------------------------------------------------
+
+local UnitCanAssist, UnitCanAttack, UnitIsUnit = UnitCanAssist, UnitCanAttack, UnitIsUnit
+
+local UnitIsMine = function(unit)
+	return unit and (UnitIsUnit(unit, 'player') or UnitIsUnit(unit, 'pet') or UnitIsUnit(unit, 'vehicle'))
+end
+
+-- These two functions return nil when unit does not exist
+local UnitIsBuffable = function(unit) return UnitIsMine(unit) or UnitCanAssist('player', unit) end
+local UnitIsDebuffable = function(unit) return UnitCanAttack('player', unit) end
+
+local origUnitAura, UnitIsUnit = _G.UnitAura, _G.UnitIsUnit
+local UnitAura = function(...)
+	local name, rank, icon, count, debuffType, duration, expirationTime, caster, isStealable = origUnitAura(...)
+	return name, rank, icon, count, debuffType, duration, expirationTime, UnitIsMine(caster), isStealable
+end
+
+------------------------------------------------------------------------------
 -- Aura monitoring
 ------------------------------------------------------------------------------
 
@@ -155,17 +170,16 @@ local function WipeAuras(auras)
 	end
 end
 
-local origUnitAura, UnitIsUnit = _G.UnitAura, _G.UnitIsUnit
-local UnitAura = function(...)
-	local name, rank, icon, count, debuffType, duration, expirationTime, caster, isStealable = origUnitAura(...)
-	local isMine = name and caster and (UnitIsUnit(caster, 'player') or UnitIsUnit(caster, 'pet') or UnitIsUnit(caster, 'vehicle')) and true or false
-	return name, rank, icon, count, debuffType, duration, expirationTime, isMine, isStealable
-end
-
 local serial = 0
 
 local function UpdateUnitAuras(unit)
-	local auras, filter = unitAuras[unit]
+	local auras, filter
+	if inVehicle then
+		unit = 'vehicle'
+		auras = unitAuras.player
+	else
+		auras = unitAuras[unit]
+	end
 	if UnitIsBuffable(unit) then
 		filter = 'HELPFUL'
 	elseif UnitIsDebuffable(unit) then
@@ -506,12 +520,14 @@ end
 local function ActionButton_Update_Hook(self)
 	self.actionName, self.actionType = nil, nil
 	if self.action then
-		local type, arg1, arg2 = GetActionInfo(ActionButton_GetPagedID(self))
+		local type, arg1, arg2, arg3 = GetActionInfo(ActionButton_GetPagedID(self))
 
 		self.actionType = type
 		if type == 'spell' then
 			if arg1 and arg2 and arg1 > 0 then
 				self.actionName = GetSpellName(arg1, arg2)
+			elseif arg3 then
+				self.actionName = GetSpellInfo(arg3)
 			end
 		elseif type == 'item' then
 			self.actionName = GetItemSpell(arg1)
@@ -610,8 +626,17 @@ end
 -- Event handling
 ------------------------------------------------------------------------------
 
+function InlineAura:UNIT_ENTERED_VEHICLE(event, unit)
+	if unit == 'player' then
+		inVehicle = (event == 'UNIT_ENTERED_VEHICLE')
+		UpdateUnitAuras('player')
+	end
+end
+
+InlineAura.UNIT_EXITED_VEHICLE = InlineAura.UNIT_ENTERED_VEHICLE
+
 function InlineAura:UNIT_AURA(event, unit)
-	if event == 'UNIT_AURA' and enabledUnits[unit] then
+	if enabledUnits[unit] or (unit == 'vehicle' and inVehicle) then
 		UpdateUnitAuras(unit)
 	end
 end
@@ -624,6 +649,7 @@ function InlineAura:UNIT_PET(event, unit)
 end
 
 function InlineAura:PLAYER_ENTERING_WORLD()
+	inVehicle = not not UnitControllingVehicle('player')
 	for unit in pairs(enabledUnits) do
 		UpdateUnitAuras(unit)
 	end
@@ -689,6 +715,8 @@ function InlineAura:ADDON_LOADED(event, name)
 	self:RegisterEvent('PLAYER_TARGET_CHANGED')
 	self:RegisterEvent('PLAYER_ENTERING_WORLD')
 	self:RegisterEvent('VARIABLES_LOADED')
+	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
+	self:RegisterEvent('UNIT_EXITED_VEHICLE')
 
 	-- standard buttons
 	self:RegisterButtons("ActionButton", 12)

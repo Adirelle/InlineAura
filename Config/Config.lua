@@ -234,6 +234,8 @@ local options = {
 -- Spell specific options
 -----------------------------------------------------------------------------
 
+local ValidateName
+
 ---- Main panel options
 
 local spellPanelHandler = {}
@@ -248,16 +250,12 @@ local spellOptions = {
 	args = {
 		addInput = {
 			name = L['New spell name'],
-			desc = L['Enter the name of the spell for which you want to add specific settings. Spell names are checked against your spellbook.'],
+			desc = L['Enter the name of the spell for which you want to add specific settings. Non-existent spell or item names are rejected.'],
 			type = 'input',
 			get = function(info) return spellToAdd end,
-			set = function(info, value) spellToAdd = value end,
-			validate = function(info, value)
-				if value and GetSpellInfo(value) and GetSpellInfo(GetSpellInfo(value)) then
-					return true
-				else
-					return L["Unknown spell: %s"]:format(tostring(value))
-				end
+			set = function(info, value) spellToAdd = ValidateName(value) end,
+			validate = function(info, value)			
+				return ValidateName(value) and true or L["Unknown spell: %s"]:format(tostring(value))
 			end,
 			order = 10,
 		},
@@ -371,13 +369,14 @@ local spellOptions = {
 				aliases = {
 					name = L['Auras to look up'],
 					desc = L['Enter additional aura names to check. This allows to check for alternative or equivalent auras. Some spells also apply auras that do not have the same name as the spell.'],
-					usage = L['One aura name per line. Name are used as provided so watch your spelling.'],
+					usage = L['Enter one aura name per line. They are spell-checked ; errors will prevents you to validate.'],
 					type = 'input',
 					arg = 'aliases',
 					disabled = 'IsSpellDisabled',
 					multiline = true,
 					get = 'GetAliases',
 					set = 'SetAliases',
+					validate = 'ValidateAliases',
 					order = 50,
 				},
 			},
@@ -548,7 +547,7 @@ function spellSpecificHandler:SetAliases(info, value)
 	for name in tostring(value):gmatch("[^\n]+") do
 		name = name:trim()
 		if name ~= "" then
-			table.insert(aliases, name)
+			table.insert(aliases, ValidateName(name))
 		end
 	end
 	if #aliases > 0 then
@@ -560,8 +559,54 @@ function spellSpecificHandler:SetAliases(info, value)
 	InlineAura:RequireUpdate(true)
 end
 
+function spellSpecificHandler:ValidateAliases(info, value)
+	for name in tostring(value):gmatch("[^\n]+") do
+		name = name:trim()
+		if name ~= "" and not ValidateName(name) then
+			return L["Unknown spell: %s"]:format(name)
+		end
+	end
+	return true
+end
+
 function spellSpecificHandler:GetUnitList(info)
 	return UNITS_TO_SCAN[self.db.auraType or 'debuff']
+end
+
+-----------------------------------------------------------------------------
+-- Spell name validation
+-----------------------------------------------------------------------------
+
+do
+	local GetSpellInfo, GetItemInfo = GetSpellInfo, GetItemInfo
+	local validNames = setmetatable({}, {
+		__mode = 'kv',
+		__index = function(self, key)
+			local result = GetSpellInfo(key) or GetItemInfo(key)
+			if not result then
+				local id = rawget(self, '__id') or 0
+				while id < 70000 do -- Arbitrary high spell id
+					local name = GetSpellInfo(id)
+					id = id + 1
+					if name then
+						if name:lower() == key:lower() then
+							result = name
+							break
+						else
+							self[name] = name
+						end
+					end
+				end
+				self.__id = id
+			end
+			self[key] = result
+			return result
+		end
+	})
+
+	function ValidateName(name)
+		return type(name) == "string" and validNames[name]
+	end
 end
 
 -----------------------------------------------------------------------------

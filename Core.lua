@@ -48,7 +48,6 @@ local enabledUnits = {
 	target = true,
 }
 local timerFrames = {}
-local visibleTimers = {}
 local needUpdate = false
 local configUpdated = false
 local inVehicle = false
@@ -257,7 +256,7 @@ local function GetPreciseCountdownText(timeLeft)
 		return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
 	elseif timeLeft >= 10 then
 		return tostring(floor(timeLeft)), timeLeft % 1
-	elseif timeLeft >= 0.1 then
+	else
 		return ("%.1f"):format(floor(timeLeft*10)/10), timeLeft % 0.1
 	end
 end
@@ -268,7 +267,7 @@ local function GetImpreciseCountdownText(timeLeft)
 	elseif timeLeft >= 60 then
 		return L["%dm"]:format(ceil(timeLeft/60)), timeLeft % 60
 	else
-		return ceil(timeLeft), timeLeft % 1
+		return tostring(floor(timeLeft)), timeLeft % 1
 	end
 end
 
@@ -280,9 +279,9 @@ end
 -- Timer frame handling
 ------------------------------------------------------------------------------
 
-local TimerFrame_OnUpdate
+local TimerFrame_OnUpdate, TimerFrame_Skin, TimerFrame_Display, TimerFrame_UpdateCountdown
 
-local function TimerFrame_Skin(self)
+function TimerFrame_Skin(self)
 	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
 	local stackBorder = db.profile.showStackAtTop and 'TOP' or 'BOTTOM'
 
@@ -299,6 +298,50 @@ local function TimerFrame_Skin(self)
 	stackText:SetJustifyV(stackBorder)
 end
 
+function TimerFrame_OnUpdate(self)
+	local now = GetTime()
+	if now >= self.expirationTime then
+		self:Hide()
+	elseif now >= self.nextUpdate then
+		TimerFrame_UpdateCountdown(self, now)
+	end
+end
+
+function TimerFrame_UpdateCountdown(self, now)
+	local displayTime, delay = GetCountdownText(self.expirationTime - now, db.profile.preciseCountdown)
+	self.countdownText:SetText(displayTime)
+	self.nextUpdate = now + delay
+end
+
+function TimerFrame_Display(self, expirationTime, count, now)
+	self:Show()
+
+	if count then
+		local stackText = self.stackText
+		stackText:SetText(count)
+		stackText:Show()
+	else
+		self.stackText:Hide()
+	end
+	
+	if not db.profile.hideCountdown then
+		local countdownText = self.countdownText
+		self.expirationTime = expirationTime
+		self:SetScript('OnUpdate', TimerFrame_OnUpdate)
+		TimerFrame_UpdateCountdown(self, now)		
+		countdownText:Show()
+		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
+		countdownText:SetJustifyH(count and not InlineAura.bigCountdown and 'LEFT' or 'CENTER')
+		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
+		if sizeRatio > 1 then
+			countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
+		end
+	else
+		self:SetScript('OnUpdate', nil)
+		self.countdownText:Hide()
+	end
+end
+
 local function CreateTimerFrame(button)
 	local timer = CreateFrame("Frame", nil, button)
 	local cooldown = _G[button:GetName()..'Cooldown']
@@ -306,18 +349,10 @@ local function CreateTimerFrame(button)
 	timer:SetAllPoints(cooldown)
 	timer:SetToplevel(true)
 	timer:Hide()
-	timer.delay = 0
 	timerFrames[button] = timer
 
-	local countdownFrame = CreateFrame("Frame", nil, timer)
-	countdownFrame:SetAllPoints(timer)
-	countdownFrame:SetScript('OnShow', function() visibleTimers[timer] = 0 end)
-	countdownFrame:SetScript('OnHide', function() visibleTimers[timer] = nil end)
-	countdownFrame:Hide()
-	timer.countdownFrame = countdownFrame
-
-	local countdownText = countdownFrame:CreateFontString(nil, "OVERLAY")
-	countdownText:SetAllPoints(countdownFrame)
+	local countdownText = timer:CreateFontString(nil, "OVERLAY")
+	countdownText:SetAllPoints(timer)
 	countdownText:Show()
 	timer.countdownText = countdownText
 
@@ -329,51 +364,6 @@ local function CreateTimerFrame(button)
 	TimerFrame_Skin(timer)
 
 	return timer
-end
-
-local function TimerFrame_OnUpdate(self)
-	local timeLeft = self.expirationTime - GetTime()
-	if timeLeft <= 0 then
-		self:Hide()
-		return
-	end
-	local displayTime
-	displayTime, self.delay = GetCountdownText(timeLeft, db.profile.preciseCountdown)
-	self.countdownText:SetText(displayTime)
-	return true
-end
-
-local function TimerFrame_Display(self, expirationTime, count)
-	self:Show()
-
-	local countdownJustfiyH = 'CENTER'
-	local stackText = self.stackText
-	if count then
-		stackText:SetText(count)
-		if not InlineAura.bigCountdown then
-			countdownJustfiyH = 'LEFT'
-		end
-		stackText:Show()
-	else
-		stackText:Hide()
-	end
-
-	local countdownFrame = self.countdownFrame
-	if db.profile.hideCountdown then
-		countdownFrame:Hide()
-	else		
-		self.expirationTime = expirationTime
-		if TimerFrame_OnUpdate(self, 0) then
-			local countdownText = self.countdownText
-			countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
-			countdownText:SetJustifyH(countdownJustfiyH)
-			countdownFrame:Show()
-			local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
-			if sizeRatio > 1 then
-				countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
-			end
-		end
-	end
 end
 
 ------------------------------------------------------------------------------
@@ -452,10 +442,11 @@ end
 
 local function UpdateTimer(self, aura, hideStack)
 	if aura and aura.serial and not (db.profile.hideCountdown and hideStack) then
-		if aura.expirationTime and aura.expirationTime > GetTime() then
+		local now = GetTime()
+		if aura.expirationTime and aura.expirationTime > now then
 			local count = not hideStack and aura.count and aura.count > 0 and aura.count
 			local frame = timerFrames[self] or CreateTimerFrame(self)
-			TimerFrame_Display(frame, aura.expirationTime, count)
+			TimerFrame_Display(frame, aura.expirationTime, count, now)
 		end
 	elseif timerFrames[self] then
 		timerFrames[self]:Hide()
@@ -588,23 +579,6 @@ InlineAura:SetScript('OnUpdate', function(self, elapsed)
 			end
 		end
 		needUpdate = false
-	end
-
-	-- Handle timer updates
-	centralTimer = centralTimer + elapsed
-	if centralTimer > UPDATE_PERIOD[db.profile.preciseCountdown] then
-		for frame, frameTimer in pairs(visibleTimers) do
-			if frame.delay then
-				frameTimer = frameTimer + centralTimer
-				if frameTimer > frame.delay then
-					visibleTimers[frame] = 0
-					TimerFrame_OnUpdate(frame, frameTimer)
-				else
-					visibleTimers[frame] = frameTimer
-				end
-			end
-		end
-		centralTimer = 0
 	end
 end)
 

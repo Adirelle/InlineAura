@@ -640,6 +640,7 @@ function InlineAura:PLAYER_TARGET_CHANGED()
 end
 
 function InlineAura:VARIABLES_LOADED()
+	self.VARIABLES_LOADED = nil
 	-- ButtonFacade support
 	local LBF = LibStub('LibButtonFacade', true)
 	local LBF_RegisterCallback = function() end
@@ -669,10 +670,11 @@ function InlineAura:VARIABLES_LOADED()
 end
 
 function InlineAura:ADDON_LOADED(event, name)
-	if name ~= 'InlineAura' then
+	if name:lower() ~= 'inlineaura' then
 		return
 	end
 	self:UnregisterEvent('ADDON_LOADED')
+	self.ADDON_LOADED = nil
 
 	-- Saved variables setup
 	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
@@ -688,9 +690,14 @@ function InlineAura:ADDON_LOADED(event, name)
 	self:RegisterEvent('UNIT_AURA')
 	self:RegisterEvent('PLAYER_TARGET_CHANGED')
 	self:RegisterEvent('PLAYER_ENTERING_WORLD')
-	self:RegisterEvent('VARIABLES_LOADED')
 	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
 	self:RegisterEvent('UNIT_EXITED_VEHICLE')
+
+	if IsLoggedIn() then
+		self:VARIABLES_LOADED()
+	else
+		self:RegisterEvent('VARIABLES_LOADED')
+	end
 
 	-- standard buttons
 	self:RegisterButtons("ActionButton", 12)

@@ -9,8 +9,11 @@
 ## X-License: GPL v2
 ## X-eMail: adirelle@tagada-team.net
 
+## LoadManagers: AddonLoader
+## X-LoadOn-Always: delayed
+
 ## SavedVariables: InlineAuraDB
-## OptDeps: Ace3, LibSharedMedia-3.0, ButtonFacade, Bartender4, Dominos, OmniCC, CooldownCount
+## OptionalDeps: Ace3, LibSharedMedia-3.0, ButtonFacade, Bartender4, Dominos, OmniCC, CooldownCount
 
 #@no-lib-strip@
 libs\LibStub\LibStub.lua

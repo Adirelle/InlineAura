@@ -355,6 +355,10 @@ elseif class == 'PALADIN' then
 	GroupBuffs(20911, 25899) -- Blessing of Sanctuary, Greater Blessing of Sanctuary
 	GroupBuffs(20217, 25898) -- Blessing of Kings, Greater Blessing of Kings
 	
+	GroupDebuffs(20271) -- Judgement of Light
+	GroupDebuffs(53407) -- Judgement of Justice
+	GroupDebuffs(53408) -- Judgement of Wisdom
+	
 	GroupDebuffs(20066) -- Repentance
 	GroupDebuffs(10326) -- Turn Evil
 

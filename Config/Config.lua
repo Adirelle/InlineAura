@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 -----------------------------------------------------------------------------
 -- Configuration panel
 -----------------------------------------------------------------------------
+if not InlineAura then return end
 
 local InlineAura = InlineAura
 local L, new, del = InlineAura.L, InlineAura.new, InlineAura.del
@@ -356,6 +357,15 @@ local spellOptions = {
 					tristate = true,
 					disabled = 'IsSpellDisabled',
 					order = 30,
+				},
+				hideCountdown = {
+					name = L['No countdown'],
+					desc = L['Check to hide the aura duration countdown.'],
+					type = 'toggle',
+					arg = 'hideCountdown',
+					tristate = true,
+					disabled = 'IsSpellDisabled',
+					order = 35,
 				},
 				hideStack = {
 					name = L['No application count'],

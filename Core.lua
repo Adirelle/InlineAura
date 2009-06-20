@@ -313,7 +313,7 @@ function TimerFrame_UpdateCountdown(self, now)
 	self.nextUpdate = now + delay
 end
 
-function TimerFrame_Display(self, expirationTime, count, now)
+function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 	self:Show()
 
 	if count then
@@ -324,7 +324,7 @@ function TimerFrame_Display(self, expirationTime, count, now)
 		self.stackText:Hide()
 	end
 	
-	if not db.profile.hideCountdown then
+	if not hideCountdown then
 		local countdownText = self.countdownText
 		self.expirationTime = expirationTime
 		self:SetScript('OnUpdate', TimerFrame_OnUpdate)
@@ -409,6 +409,7 @@ local function GetAuraToDisplay(spell)
 		local units = specific.unitsToScan or DEFAULT_UNITS_TO_SCAN
 		local onlyMine, auraType, buffTest
 		local hideStack = GetTristateValue(specific.hideStack, db.profile.hideStack)
+		local hideCountdown = GetTristateValue(specific.hideCountdown, db.profile.hideCountdown)
 		if specific.auraType == 'debuff' then
 			onlyMine = GetTristateValue(specific.onlyMine, db.profile.onlyMyDebuffs)
 			auraType = 'Debuff'
@@ -420,19 +421,19 @@ local function GetAuraToDisplay(spell)
 		end
 		for i, unit in pairs(UNIT_SCAN_ORDER) do
 			if units[unit] and buffTest(unit) then
-				return LookupAura(unitAuras[unit], spell, specific.aliases, auraType, onlyMine, hideStack)
+				return LookupAura(unitAuras[unit], spell, specific.aliases, auraType, onlyMine, hideStack, hideCountdown)
 			end
 		end
 	else
 		if UnitIsBuffable('target') then
-			return LookupAura(unitAuras.target, spell, nil, 'Buff', db.profile.onlyMyBuffs, db.profile.hideStack)
+			return LookupAura(unitAuras.target, spell, nil, 'Buff', db.profile.onlyMyBuffs, db.profile.hideStack, db.profile.hideCountdown)
 		elseif UnitIsDebuffable('target') then
-			local aura, auraType = LookupAura(unitAuras.target, spell, nil, 'Debuff', db.profile.onlyMyDebuffs)
+			local aura, auraType = LookupAura(unitAuras.target, spell, nil, 'Debuff', db.profile.onlyMyDebuffs, db.profile.hideStack, db.profile.hideCountdown)
 			if aura then
 				return aura, auraType, db.profile.hideStack
 			end
 		end
-		return LookupAura(unitAuras.player, spell, nil, 'Buff', db.profile.onlyMyBuffs, db.profile.hideStack)
+		return LookupAura(unitAuras.player, spell, nil, 'Buff', db.profile.onlyMyBuffs, db.profile.hideStack, db.profile.hideCountdown)
 	end
 end
 
@@ -440,13 +441,13 @@ end
 -- Visual feedback
 ------------------------------------------------------------------------------
 
-local function UpdateTimer(self, aura, hideStack)
-	if aura and aura.serial and not (db.profile.hideCountdown and hideStack) then
+local function UpdateTimer(self, aura, hideStack, hideCountdown)
+	if aura and aura.serial and not (hideCountdown and hideStack) then
 		local now = GetTime()
 		if aura.expirationTime and aura.expirationTime > now then
 			local count = not hideStack and aura.count and aura.count > 0 and aura.count
 			local frame = timerFrames[self] or CreateTimerFrame(self)
-			TimerFrame_Display(frame, aura.expirationTime, count, now)
+			TimerFrame_Display(frame, aura.expirationTime, count, now, hideCountdown)
 		end
 	elseif timerFrames[self] then
 		timerFrames[self]:Hide()
@@ -496,16 +497,16 @@ local function ActionButton_UpdateState_Hook(self)
 	if spell and self.actionType == 'macro' then
 		spell = GetMacroSpell(spell)
 	end
-	local aura, color, hideStack
+	local aura, color, hideStack, hideCountdown
 	if spell then
 		local auraType
-		aura, auraType, hideStack = GetAuraToDisplay(spell)
+		aura, auraType, hideStack, hideCountdown = GetAuraToDisplay(spell)
 		if aura then
 			color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
 		end
 	end
 	UpdateHighlight(self, aura, color)
-	UpdateTimer(self, aura, hideStack)
+	UpdateTimer(self, aura, hideStack, hideCountdown)
 end
 
 local function ActionButton_Update_Hook(self)

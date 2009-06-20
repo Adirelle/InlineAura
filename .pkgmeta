@@ -29,5 +29,8 @@ externals:
     tag: latest
 
 move-folders:
-    InlineAura/Config: InlineAura_Config
+  InlineAura/Config: InlineAura_Config
+
+ignore:
+  - UpdateLocalization.lua
 

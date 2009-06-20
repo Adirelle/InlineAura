@@ -19,7 +19,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ------------------------------------------------------------------------------
 -- Per class defaults
 ------------------------------------------------------------------------------
+if not InlineAura then return end
 
+local InlineAura = InlineAura
 local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 
 -- Get the spell name, throwing error if not found

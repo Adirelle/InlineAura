@@ -683,6 +683,8 @@ function InlineAura:ADDON_LOADED(event, name)
 	db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
 	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
 	self.db = db
+	
+	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
 
 	-- Setup
 	self.bigCountdown = true

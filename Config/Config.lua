@@ -633,7 +633,9 @@ AceConfig:RegisterOptionsTable('InlineAura-main', options)
 AceConfig:RegisterOptionsTable('InlineAura-spells', spellOptions)
 
 -- Register profile options
-AceConfig:RegisterOptionsTable('InlineAura-profiles', LibStub('AceDBOptions-3.0'):GetOptionsTable(InlineAura.db))
+local dbOptions = LibStub('AceDBOptions-3.0'):GetOptionsTable(InlineAura.db)
+LibStub('LibDualSpec-1.0'):EnhanceOptions(dbOptions, InlineAura.db)
+AceConfig:RegisterOptionsTable('InlineAura-profiles', dbOptions)
 
 -- Create Blizzard AddOn option frames
 local mainTitle = L['Inline Aura']

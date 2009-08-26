@@ -19,6 +19,7 @@
 libs\LibStub\LibStub.lua
 libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
 libs\AceDB-3.0\AceDB-3.0.xml
+libs\AceTimer-3.0\AceTimer-3.0.xml
 libs\LibSharedMedia-3.0\lib.xml
 libs\LibDualSpec-1.0\LibDualSpec-1.0.lua
 #@end-no-lib-strip@

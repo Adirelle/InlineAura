@@ -53,15 +53,17 @@ local configUpdated = false
 local inVehicle = false
 
 ------------------------------------------------------------------------------
--- Constants
+-- Libraries
 ------------------------------------------------------------------------------
 
-local UPDATE_PERIOD = {
-	[false] = 1.0, -- "unprecise" countdown, update every second
-	[true] = 0.1, -- precise countdown, update every tenth of second
-}
-
+local AceTimer = LibStub('AceTimer-3.0')
 local LSM = LibStub('LibSharedMedia-3.0')
+
+AceTimer:Embed(InlineAura)
+
+------------------------------------------------------------------------------
+-- Constants
+------------------------------------------------------------------------------
 local FONTMEDIA = LSM.MediaType.FONT
 
 local FONT_NAME = LSM:GetDefault(FONTMEDIA)
@@ -298,19 +300,30 @@ function TimerFrame_Skin(self)
 	stackText:SetJustifyV(stackBorder)
 end
 
-function TimerFrame_OnUpdate(self)
-	local now = GetTime()
-	if now >= self.expirationTime then
-		self:Hide()
-	elseif now >= self.nextUpdate then
-		TimerFrame_UpdateCountdown(self, now)
+local function TimerFrame_CancelTimer(self)
+	--@debug@
+	if self.timerHandle then
+		print('InlineAura, cancelling update', tostring(self:GetParent():GetName()) or tostring(self))
 	end
+	--@end-debug@
+	self:CancelTimer(self.timerHandle, true)
+	self.timerHandle = nil
+end
+
+function TimerFrame_OnUpdate(self)
+	TimerFrame_UpdateCountdown(self, GetTime())
 end
 
 function TimerFrame_UpdateCountdown(self, now)
-	local displayTime, delay = GetCountdownText(self.expirationTime - now, db.profile.preciseCountdown)
+	local timeLeft = self.expirationTime - now
+	local displayTime, delay = GetCountdownText(timeLeft, db.profile.preciseCountdown)
 	self.countdownText:SetText(displayTime)
-	self.nextUpdate = now + delay
+	if delay < timeLeft then
+	--@debug@
+		print('InlineAura, timed update', tostring(self:GetParent():GetName()) or tostring(self), delay)
+	--@end-debug@
+		self.timerHandle = self:ScheduleTimer(TimerFrame_OnUpdate, delay, self)
+	end
 end
 
 function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
@@ -327,7 +340,6 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 	if not hideCountdown then
 		local countdownText = self.countdownText
 		self.expirationTime = expirationTime
-		self:SetScript('OnUpdate', TimerFrame_OnUpdate)
 		TimerFrame_UpdateCountdown(self, now)		
 		countdownText:Show()
 		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
@@ -337,7 +349,7 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 			countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
 		end
 	else
-		self:SetScript('OnUpdate', nil)
+		TimerFrame_CancelTimer(self)
 		self.countdownText:Hide()
 	end
 end
@@ -349,6 +361,8 @@ local function CreateTimerFrame(button)
 	timer:SetAllPoints(cooldown)
 	timer:SetToplevel(true)
 	timer:Hide()
+	AceTimer:Embed(timer)
+	timer:SetScript('OnHide', TimerFrame_CancelTimer)
 	timerFrames[button] = timer
 
 	local countdownText = timer:CreateFontString(nil, "OVERLAY")
@@ -488,7 +502,10 @@ end
 ------------------------------------------------------------------------------
 
 local function ActionButton_OnLoad_Hook(self)
-	InlineAura.buttons[self] = true
+	if not InlineAura.buttons[self] then
+		InlineAura.buttons[self] = true
+		needUpdate = true
+	end
 end
 
 local function ActionButton_UpdateState_Hook(self)
@@ -549,10 +566,11 @@ end
 
 InlineAura.buttons = {}
 
-local centralTimer = 0
-InlineAura:SetScript('OnUpdate', function(self, elapsed)
-	-- Handle updates once per frame
+function InlineAura:OnUpdate()
 	if needUpdate or configUpdated then
+		--@debug@
+		print('InlineAura:OnUpdate', needUpdate, configUpdated)
+		--@end-debug@
 
 		if configUpdated then
 			-- Update event listening
@@ -576,12 +594,12 @@ InlineAura:SetScript('OnUpdate', function(self, elapsed)
 		-- Update buttons
 		for button in pairs(self.buttons) do
 			if button:IsVisible() and HasAction(button.action) then
-				ActionButton_UpdateState(button)
+				ActionButton_Update(button)
 			end
 		end
 		needUpdate = false
 	end
-end)
+end
 
 function InlineAura:RequireUpdate(config)
 	configUpdated = config
@@ -591,8 +609,9 @@ end
 function InlineAura:RegisterButtons(prefix, count)
 	for id = 1, count do
 		local button = _G[prefix .. id]
-		if button then
+		if button and not self.buttons[button] then
 			self.buttons[button] = true
+			needUpdate = true
 		end
 	end
 end
@@ -624,6 +643,9 @@ function InlineAura:UNIT_PET(event, unit)
 end
 
 function InlineAura:PLAYER_ENTERING_WORLD()
+	--@debug@
+	print('PLAYER_ENTERING_WORLD')
+	--@end-debug@
 	inVehicle = not not UnitControllingVehicle('player')
 	for unit in pairs(enabledUnits) do
 		UpdateUnitAuras(unit)
@@ -641,6 +663,9 @@ function InlineAura:PLAYER_TARGET_CHANGED()
 end
 
 function InlineAura:VARIABLES_LOADED()
+	--@debug@
+	print('VARIABLES_LOADED')
+	--@end-debug@
 	self.VARIABLES_LOADED = nil
 	-- ButtonFacade support
 	local LBF = LibStub('LibButtonFacade', true)
@@ -667,7 +692,13 @@ function InlineAura:VARIABLES_LOADED()
 	end
 
 	-- Refresh everything
-	configUpdated = true
+	self:RequireUpdate(true)
+	self:ScheduleRepeatingTimer("OnUpdate", 0.1)
+	
+	-- Scan unit in case of delayed loading
+	if IsLoggedIn() then
+		self:PLAYER_ENTERING_WORLD()
+	end
 end
 
 function InlineAura:ADDON_LOADED(event, name)
@@ -719,14 +750,17 @@ end
 -- Event handler
 InlineAura:SetScript('OnEvent', function(self, event, ...)
 	if type(self[event]) == 'function' then
+		--@debug@
+		print('InlineAura', event, ...)
+		--@end-debug@
 		local success, msg = pcall(self[event], self, event, ...)
 		if not success then
 			geterrorhandler()(msg)
 		end
---@debug@
+	--@debug@
 	else
 		print('InlineAura: registered event has no handler: '..event)
---@end-debug@
+	--@end-debug@
 	end
 end)
 

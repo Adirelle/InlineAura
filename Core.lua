@@ -53,13 +53,23 @@ local configUpdated = false
 local inVehicle = false
 
 ------------------------------------------------------------------------------
--- Libraries
+-- Libraries and helpers
 ------------------------------------------------------------------------------
 
 local AceTimer = LibStub('AceTimer-3.0')
 local LSM = LibStub('LibSharedMedia-3.0')
 
 AceTimer:Embed(InlineAura)
+
+--@debug@
+local dprint
+do
+	local dframe = CreateFrame("Frame")
+	local t = GetTime() 
+	dframe:SetScript('OnUpdate', function() t = GetTime() end)
+	dprint = function(...) return print('InlineAura', t, tostringall(...)) end
+end
+--@end-debug@
 
 ------------------------------------------------------------------------------
 -- Constants
@@ -251,25 +261,29 @@ local ceil = math.ceil
 
 local function GetPreciseCountdownText(timeLeft)
 	if timeLeft >= 3600 then
-		return L["%dh"]:format(floor(timeLeft/3600)), timeLeft % 3600
+		return L["%dh"]:format(floor(timeLeft/3600)), 1 + floor(timeLeft % 3600)
 	elseif timeLeft >= 600 then
-		return L["%dm"]:format(floor(timeLeft/60)), timeLeft % 60
+		return L["%dm"]:format(floor(timeLeft/60)), 1 + floor(timeLeft % 60)
 	elseif timeLeft >= 60 then
-		return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
+		return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1 + 0.09
 	elseif timeLeft >= 10 then
-		return tostring(floor(timeLeft)), timeLeft % 1
+		return tostring(floor(timeLeft)), timeLeft % 1 + 0.09
+	elseif timeLeft >= 0 then
+		return ("%.1f"):format(floor(timeLeft*10+0.5)/10), timeLeft % 0.1 + 0.01
 	else
-		return ("%.1f"):format(floor(timeLeft*10)/10), timeLeft % 0.1
+		return "0"
 	end
 end
 
 local function GetImpreciseCountdownText(timeLeft)
 	if timeLeft >= 3600 then
-		return L["%dh"]:format(ceil(timeLeft/3600)), timeLeft % 3600
+		return L["%dh"]:format(ceil(timeLeft/3600)), ceil(timeLeft) % 3600
 	elseif timeLeft >= 60 then
-		return L["%dm"]:format(ceil(timeLeft/60)), timeLeft % 60
+		return L["%dm"]:format(ceil(timeLeft/60)), ceil(timeLeft) % 60
+	elseif timeLeft > 0 then
+		return tostring(floor(timeLeft)), timeLeft % 1 + 0.09
 	else
-		return tostring(floor(timeLeft)), timeLeft % 1
+		return "0"
 	end
 end
 
@@ -301,13 +315,10 @@ function TimerFrame_Skin(self)
 end
 
 local function TimerFrame_CancelTimer(self)
-	--@debug@
 	if self.timerHandle then
-		print('InlineAura, cancelling update', tostring(self:GetParent():GetName()) or tostring(self))
+		self:CancelTimer(self.timerHandle, true)
+		self.timerHandle = nil
 	end
-	--@end-debug@
-	self:CancelTimer(self.timerHandle, true)
-	self.timerHandle = nil
 end
 
 function TimerFrame_OnUpdate(self)
@@ -318,10 +329,8 @@ function TimerFrame_UpdateCountdown(self, now)
 	local timeLeft = self.expirationTime - now
 	local displayTime, delay = GetCountdownText(timeLeft, db.profile.preciseCountdown)
 	self.countdownText:SetText(displayTime)
-	if delay < timeLeft then
-	--@debug@
-		print('InlineAura, timed update', tostring(self:GetParent():GetName()) or tostring(self), delay)
-	--@end-debug@
+	if delay and delay < timeLeft then
+		TimerFrame_CancelTimer(self)
 		self.timerHandle = self:ScheduleTimer(TimerFrame_OnUpdate, delay, self)
 	end
 end
@@ -643,9 +652,6 @@ function InlineAura:UNIT_PET(event, unit)
 end
 
 function InlineAura:PLAYER_ENTERING_WORLD()
-	--@debug@
-	print('PLAYER_ENTERING_WORLD')
-	--@end-debug@
 	inVehicle = not not UnitControllingVehicle('player')
 	for unit in pairs(enabledUnits) do
 		UpdateUnitAuras(unit)
@@ -663,9 +669,6 @@ function InlineAura:PLAYER_TARGET_CHANGED()
 end
 
 function InlineAura:VARIABLES_LOADED()
-	--@debug@
-	print('VARIABLES_LOADED')
-	--@end-debug@
 	self.VARIABLES_LOADED = nil
 	-- ButtonFacade support
 	local LBF = LibStub('LibButtonFacade', true)
@@ -750,16 +753,13 @@ end
 -- Event handler
 InlineAura:SetScript('OnEvent', function(self, event, ...)
 	if type(self[event]) == 'function' then
-		--@debug@
-		print('InlineAura', event, ...)
-		--@end-debug@
 		local success, msg = pcall(self[event], self, event, ...)
 		if not success then
 			geterrorhandler()(msg)
 		end
 	--@debug@
 	else
-		print('InlineAura: registered event has no handler: '..event)
+		dprint('InlineAura: registered event has no handler: '..event)
 	--@end-debug@
 	end
 end)

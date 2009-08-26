@@ -62,6 +62,7 @@ local LSM = LibStub('LibSharedMedia-3.0')
 AceTimer:Embed(InlineAura)
 
 --@debug@
+--[=[
 local dprint
 do
 	local dframe = CreateFrame("Frame")
@@ -69,6 +70,8 @@ do
 	dframe:SetScript('OnUpdate', function() t = GetTime() end)
 	dprint = function(...) return print('InlineAura', t, tostringall(...)) end
 end
+--]=]
+function dprint() end
 --@end-debug@
 
 ------------------------------------------------------------------------------
@@ -578,7 +581,7 @@ InlineAura.buttons = {}
 function InlineAura:OnUpdate()
 	if needUpdate or configUpdated then
 		--@debug@
-		print('InlineAura:OnUpdate', needUpdate, configUpdated)
+		dprint('InlineAura:OnUpdate', needUpdate, configUpdated)
 		--@end-debug@
 
 		if configUpdated then

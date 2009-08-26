@@ -9,11 +9,11 @@
 ## X-Date: @project-date-iso@
 
 #@no-lib-strip@
-libs\AceGUI-3.0\AceGUI-3.0.xml
-libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
-libs\AceConfig-3.0\AceConfig-3.0.xml
-libs\AceDBOptions-3.0\AceDBOptions-3.0.xml
+..\InlineAura\libs\AceGUI-3.0\AceGUI-3.0.xml
+..\InlineAura\libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
+..\InlineAura\libs\AceConfig-3.0\AceConfig-3.0.xml
+..\InlineAura\libs\AceDBOptions-3.0\AceDBOptions-3.0.xml
 #@end-no-lib-strip@
 
-Config.lua
+..\InlineAura\Config.lua
 

@@ -59,7 +59,6 @@ InlineAura.buttons = buttons
 -- Libraries and helpers
 ------------------------------------------------------------------------------
 
-local AceTimer = LibStub('AceTimer-3.0')
 local LSM = LibStub('LibSharedMedia-3.0')
 
 --@debug@
@@ -257,20 +256,19 @@ end
 -- Countdown formatting
 ------------------------------------------------------------------------------
 
-local floor = math.floor
-local ceil = math.ceil
+local floor, ceil = math.floor, math.ceil
 
 local function GetPreciseCountdownText(timeLeft)
 	if timeLeft >= 3600 then
-		return L["%dh"]:format(floor(timeLeft/3600)), 1 + floor(timeLeft % 3600)
+		return L["%dh"]:format(floor(timeLeft/3600)), 1 + floor(timeLeft) % 3600
 	elseif timeLeft >= 600 then
-		return L["%dm"]:format(floor(timeLeft/60)), 1 + floor(timeLeft % 60)
+		return L["%dm"]:format(floor(timeLeft/60)), 1 + floor(timeLeft) % 60
 	elseif timeLeft >= 60 then
-		return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1 + 0.09
+		return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
 	elseif timeLeft >= 10 then
-		return tostring(floor(timeLeft)), timeLeft % 1 + 0.09
+		return tostring(floor(timeLeft)), timeLeft % 1
 	elseif timeLeft >= 0 then
-		return ("%.1f"):format(floor(timeLeft*10+0.5)/10), timeLeft % 0.1 + 0.01
+		return ("%.1f"):format(floor(timeLeft*10)/10), 0
 	else
 		return "0"
 	end
@@ -282,7 +280,7 @@ local function GetImpreciseCountdownText(timeLeft)
 	elseif timeLeft >= 60 then
 		return L["%dm"]:format(ceil(timeLeft/60)), ceil(timeLeft) % 60
 	elseif timeLeft > 0 then
-		return tostring(floor(timeLeft)), timeLeft % 1 + 0.09
+		return tostring(floor(timeLeft)), timeLeft % 1
 	else
 		return "0"
 	end
@@ -290,6 +288,62 @@ end
 
 local function GetCountdownText(timeLeft, precise)
 	return (precise and GetPreciseCountdownText or GetImpreciseCountdownText)(timeLeft)
+end
+
+------------------------------------------------------------------------------
+-- Home-made bucketed timers
+------------------------------------------------------------------------------
+
+local ScheduleTimer, CancelTimer, FireTimers, TimerCallback
+do
+	local ceil, floor = math.ceil, math.floor
+	local BUCKETS = 131
+	local HZ = 10
+	local buckets = {}
+	local targets = {}
+	for i = 1, BUCKETS do buckets[i] = {} end
+	
+	local lastIndex = floor(GetTime()*HZ)
+	
+	function ScheduleTimer(target, delay)
+		assert(target and type(delay) == "number" and delay >= 0)
+		if targets[target] then
+			buckets[targets[target]][target] = nil
+		end
+		local when = GetTime() + delay
+		local index = floor(when*HZ) + 1
+		local bucketNum = 1 + (index % BUCKETS)
+		buckets[bucketNum][target] = when
+		targets[target] = bucketNum
+	end
+	
+	function CancelTimer(target)
+		assert(target)
+		local bucketNum = targets[target]
+		if bucketNum then
+			buckets[bucketNum][target] = nil
+			targets[target] = nil
+		end
+	end
+	
+	function ProcessTimers()
+		local now = GetTime()
+		local newIndex = floor(now*HZ)
+		for index = lastIndex + 1, newIndex do	
+			local bucketNum = 1 + (index % BUCKETS)
+			local bucket = buckets[bucketNum]
+			if next(bucket) then
+				for target, when in pairs(bucket) do
+					if when <= now then
+						bucket[target] = nil
+						targets[target] = nil
+						TimerCallback(target)
+					end
+				end
+			end
+		end		
+		lastIndex = newIndex
+	end
 end
 
 ------------------------------------------------------------------------------
@@ -315,24 +369,20 @@ function TimerFrame_Skin(self)
 	stackText:SetJustifyV(stackBorder)
 end
 
-local function TimerFrame_CancelTimer(self)
-	if self.timerHandle then
-		self:CancelTimer(self.timerHandle, true)
-		self.timerHandle = nil
-	end
-end
-
 function TimerFrame_OnUpdate(self)
 	TimerFrame_UpdateCountdown(self, GetTime())
 end
+
+-- Compat
+TimerFrame_CancelTimer = CancelTimer
+TimerCallback = TimerFrame_OnUpdate
 
 function TimerFrame_UpdateCountdown(self, now)
 	local timeLeft = self.expirationTime - now
 	local displayTime, delay = GetCountdownText(timeLeft, db.profile.preciseCountdown)
 	self.countdownText:SetText(displayTime)
-	if delay and delay < timeLeft then
-		TimerFrame_CancelTimer(self)
-		self.timerHandle = self:ScheduleTimer(TimerFrame_OnUpdate, delay, self)
+	if delay then
+		ScheduleTimer(self, math.min(delay, timeLeft))
 	end
 end
 
@@ -371,7 +421,6 @@ local function CreateTimerFrame(button)
 	timer:SetAllPoints(cooldown)
 	timer:SetToplevel(true)
 	timer:Hide()
-	AceTimer:Embed(timer)
 	timer:SetScript('OnHide', TimerFrame_CancelTimer)
 	timerFrames[button] = timer
 
@@ -595,6 +644,7 @@ function InlineAura:OnUpdate()
 		end
 		needUpdate = false
 	end
+	ProcessTimers()
 end
 
 function InlineAura:RequireUpdate(config)

@@ -52,6 +52,9 @@ local needUpdate = false
 local configUpdated = false
 local inVehicle = false
 
+local buttons = {}
+InlineAura.buttons = buttons
+
 ------------------------------------------------------------------------------
 -- Libraries and helpers
 ------------------------------------------------------------------------------
@@ -59,10 +62,7 @@ local inVehicle = false
 local AceTimer = LibStub('AceTimer-3.0')
 local LSM = LibStub('LibSharedMedia-3.0')
 
-AceTimer:Embed(InlineAura)
-
 --@debug@
---[=[
 local dprint
 do
 	local dframe = CreateFrame("Frame")
@@ -70,8 +70,6 @@ do
 	dframe:SetScript('OnUpdate', function() t = GetTime() end)
 	dprint = function(...) return print('InlineAura', t, tostringall(...)) end
 end
---]=]
-function dprint() end
 --@end-debug@
 
 ------------------------------------------------------------------------------
@@ -514,14 +512,13 @@ end
 ------------------------------------------------------------------------------
 
 local function ActionButton_OnLoad_Hook(self)
-	if not InlineAura.buttons[self] then
-		InlineAura.buttons[self] = true
+	if not buttons[self] then
+		buttons[self] = true
 		needUpdate = true
 	end
 end
 
 local function ActionButton_UpdateState_Hook(self)
-	InlineAura.buttons[self] = true
 	local spell = self.actionName
 	if spell and self.actionType == 'macro' then
 		spell = GetMacroSpell(spell)
@@ -539,30 +536,29 @@ local function ActionButton_UpdateState_Hook(self)
 end
 
 local function ActionButton_Update_Hook(self)
-	self.actionName, self.actionType = nil, nil
+	local actionName, actionType
 	if self.action then
-		local type, arg1, arg2, arg3 = GetActionInfo(ActionButton_GetPagedID(self))
-
-		self.actionType = type
-		if type == 'spell' then
+		local arg1, arg2, arg3
+		actionType, arg1, arg2, arg3 = GetActionInfo(ActionButton_GetPagedID(self))
+		if actionType == 'spell' then
 			if arg1 and arg2 and arg1 > 0 then
-				self.actionName = GetSpellName(arg1, arg2)
+				actionName = GetSpellName(arg1, arg2)
 			elseif arg3 then
-				self.actionName = GetSpellInfo(arg3)
+				actionName = GetSpellInfo(arg3)
 			end
-		elseif type == 'item' then
-			self.actionName = GetItemSpell(arg1)
+		elseif actionType == 'item' then
+			actionName = GetItemSpell(arg1)
 		else
-			self.actionName = arg1
+			actionName = arg1
 		end
-	else
-		self.actionName, self.actionType = nil, nil
 	end
+	self.actionName, self.actionType = actionName, actionType
 	ActionButton_UpdateState_Hook(self)
+	buttons[self] = self:IsVisible() and actionName or nil
 end
 
 ------------------------------------------------------------------------------
--- Button update
+-- Button updates
 ------------------------------------------------------------------------------
 
 local function IsUnitEnabled(unit, event)
@@ -576,38 +572,26 @@ local function IsUnitEnabled(unit, event)
 	WipeAuras(unitAuras[unit])
 end
 
-InlineAura.buttons = {}
-
 function InlineAura:OnUpdate()
-	if needUpdate or configUpdated then
-		--@debug@
-		dprint('InlineAura:OnUpdate', needUpdate, configUpdated)
-		--@end-debug@
-
-		if configUpdated then
-			-- Update event listening
-			for unit, event in pairs(UNIT_EVENTS) do
-				enabledUnits[unit] = IsUnitEnabled(unit, event)
-			end
-
-			-- Update all auras
-			for unit in pairs(enabledUnits) do
-				UpdateUnitAuras(unit)
-			end
-
-			-- Update timers
-			for button, timerFrame in pairs(timerFrames) do
-				TimerFrame_Skin(timerFrame)
-			end
-
-			configUpdated = false
+	if configUpdated then
+		-- Update event listening
+		for unit, event in pairs(UNIT_EVENTS) do
+			enabledUnits[unit] = IsUnitEnabled(unit, event)
 		end
-
+		-- Update all auras
+		for unit in pairs(enabledUnits) do
+			UpdateUnitAuras(unit)
+		end
+		-- Update timer skins
+		for button, timerFrame in pairs(timerFrames) do
+			TimerFrame_Skin(timerFrame)
+		end
+		configUpdated = false
+	end
+	if needUpdate or configUpdated then
 		-- Update buttons
-		for button in pairs(self.buttons) do
-			if button:IsVisible() and HasAction(button.action) then
-				ActionButton_Update(button)
-			end
+		for button in pairs(buttons) do
+			ActionButton_UpdateState_Hook(button)
 		end
 		needUpdate = false
 	end
@@ -621,8 +605,8 @@ end
 function InlineAura:RegisterButtons(prefix, count)
 	for id = 1, count do
 		local button = _G[prefix .. id]
-		if button and not self.buttons[button] then
-			self.buttons[button] = true
+		if button and not buttons[button] then
+			buttons[button] = true
 			needUpdate = true
 		end
 	end
@@ -699,7 +683,15 @@ function InlineAura:VARIABLES_LOADED()
 
 	-- Refresh everything
 	self:RequireUpdate(true)
-	self:ScheduleRepeatingTimer("OnUpdate", 0.1)
+	
+	-- Force a full refresh on first frame
+	self:SetScript('OnUpdate', function(self, ...)
+		for button in pairs(buttons) do
+			ActionButton_Update_Hook(button)
+		end
+		self:SetScript('OnUpdate', self.OnUpdate)
+		return self:OnUpdate(...)
+	end)
 	
 	-- Scan unit in case of delayed loading
 	if IsLoggedIn() then

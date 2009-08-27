@@ -296,9 +296,8 @@ end
 
 local ScheduleTimer, CancelTimer, FireTimers, TimerCallback
 do
-	local ceil, floor = math.ceil, math.floor
 	local BUCKETS = 131
-	local HZ = 10
+	local HZ = 20
 	local buckets = {}
 	local targets = {}
 	for i = 1, BUCKETS do buckets[i] = {} end
@@ -332,13 +331,11 @@ do
 		for index = lastIndex + 1, newIndex do	
 			local bucketNum = 1 + (index % BUCKETS)
 			local bucket = buckets[bucketNum]
-			if next(bucket) then
-				for target, when in pairs(bucket) do
-					if when <= now then
-						bucket[target] = nil
-						targets[target] = nil
-						TimerCallback(target)
-					end
+			for target, when in pairs(bucket) do
+				if when <= now then
+					bucket[target] = nil
+					targets[target] = nil
+					TimerCallback(target)
 				end
 			end
 		end		
@@ -568,6 +565,7 @@ local function ActionButton_OnLoad_Hook(self)
 end
 
 local function ActionButton_UpdateState_Hook(self)
+	if not self:IsVisible() then return end
 	local spell = self.actionName
 	if spell and self.actionType == 'macro' then
 		spell = GetMacroSpell(spell)

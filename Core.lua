@@ -89,6 +89,7 @@ local DEFAULT_OPTIONS = {
 		hideStack = false,
 		showStackAtTop = false,
 		preciseCountdown = false,
+		decimalCountdownThreshold = 10,
 		fontName = FONT_NAME,
 		smallFontSize = FONT_SIZE_SMALL,
 		largeFontSize = FONT_SIZE_LARGE,
@@ -258,14 +259,14 @@ end
 
 local floor, ceil = math.floor, math.ceil
 
-local function GetPreciseCountdownText(timeLeft)
+local function GetPreciseCountdownText(timeLeft, threshold)
 	if timeLeft >= 3600 then
 		return L["%dh"]:format(floor(timeLeft/3600)), 1 + floor(timeLeft) % 3600
 	elseif timeLeft >= 600 then
 		return L["%dm"]:format(floor(timeLeft/60)), 1 + floor(timeLeft) % 60
 	elseif timeLeft >= 60 then
 		return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
-	elseif timeLeft >= 10 then
+	elseif timeLeft >= threshold then
 		return tostring(floor(timeLeft)), timeLeft % 1
 	elseif timeLeft >= 0 then
 		return ("%.1f"):format(floor(timeLeft*10)/10), 0
@@ -286,8 +287,8 @@ local function GetImpreciseCountdownText(timeLeft)
 	end
 end
 
-local function GetCountdownText(timeLeft, precise)
-	return (precise and GetPreciseCountdownText or GetImpreciseCountdownText)(timeLeft)
+local function GetCountdownText(timeLeft, precise, threshold)
+	return (precise and GetPreciseCountdownText or GetImpreciseCountdownText)(timeLeft, threshold)
 end
 
 ------------------------------------------------------------------------------
@@ -376,7 +377,7 @@ TimerCallback = TimerFrame_OnUpdate
 
 function TimerFrame_UpdateCountdown(self, now)
 	local timeLeft = self.expirationTime - now
-	local displayTime, delay = GetCountdownText(timeLeft, db.profile.preciseCountdown)
+	local displayTime, delay = GetCountdownText(timeLeft, db.profile.preciseCountdown, db.profile.decimalCountdownThreshold)
 	self.countdownText:SetText(displayTime)
 	if delay then
 		ScheduleTimer(self, math.min(delay, timeLeft))

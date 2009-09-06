@@ -115,6 +115,17 @@ local options = {
 			disabled = function(info) return InlineAura.db.profile.hideCountdown end,
 			order = 45,
 		},
+		decimalCountdownThreshold = {
+			name = L['Decimal countdown threshold'],
+			desc = L['Select the remaining time threshold under which tenths of second are displayed.'],
+			type = 'range',
+			min = 1,
+			max = 10,
+			step = 0.5,			
+			arg = 'decimalCountdownThreshold',
+			disabled = function(info) return InlineAura.db.profile.hideCountdown or not InlineAura.db.profile.preciseCountdown end,
+			order = 46,
+		},
 		showStackAtTop = {
 			name = L['Application count alignment'],
 			desc = L['Select where the application count is displayed.'],

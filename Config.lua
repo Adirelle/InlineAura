@@ -69,6 +69,29 @@ function handler:Get(info)
 	end
 end
 
+local positions = {
+	TOPLEFT = L['Top left'],
+	TOP = L['Top'],
+	TOPRIGHT = L['Top right'],
+	LEFT = L['Left'],
+	CENTER = L['Center'],
+	RIGHT = L['Right'],
+	BOTTOMLEFT = L['Bottom left'],
+	BOTTOM = L['Bottom'],
+	BOTTOMRIGHT = L['Bottom right'],
+}
+local tmp = {}
+function handler:ListTextPositions(info, exclude)
+	local exclude2 = InlineAura.bigCountdown or 'CENTER'
+	wipe(tmp)
+	for pos, label in pairs(positions) do
+		if pos ~= exclude and pos ~= exclude2 then
+			tmp[pos] = label
+		end
+	end
+	return tmp
+end
+
 -----------------------------------------------------------------------------
 -- Main options
 -----------------------------------------------------------------------------
@@ -125,23 +148,6 @@ local options = {
 			arg = 'decimalCountdownThreshold',
 			disabled = function(info) return InlineAura.db.profile.hideCountdown or not InlineAura.db.profile.preciseCountdown end,
 			order = 46,
-		},
-		showStackAtTop = {
-			name = L['Application count alignment'],
-			desc = L['Select where the application count is displayed.'],
-			type = 'select',
-			arg = 'showStackAtTop',
-			values = {
-				["false"] = L['Bottom'],
-				["true"] = L['Top'],
-			},
-			get = function(info)
-				return tostring(info.handler:Get(info))
-			end,
-			set = function(info, value)
-				info.handler:Set(info, value == 'true')
-			end,
-			order = 47,			
 		},
 		colors = {
 			name = L['Border highlight colors'],
@@ -236,6 +242,46 @@ local options = {
 					arg = 'colorStack',
 					hasAlpha = true,
 					order = 50,
+				},
+			},
+		},
+		layout = {
+			name = L['Text Position'],
+			type = 'group',
+			inline = true,
+			order = 70,
+			args = {
+				_desc = {
+					type = 'description',
+					name = L['Select where to display countdown and application count in the button. When only one value is displayed, the "single value position" is used instead of the regular one.'],
+					order = 10,
+				},
+				twoTextFirst = {
+					name = L['Countdown position'],
+					desc = L['Select where to place the countdown text when both values are shown.'],
+					type = 'select', 
+					arg = 'twoTextFirstPosition',
+					values = function(info) return info.handler:ListTextPositions(info, InlineAura.db.profile.twoTextSecondPosition) end,
+					disabled = function(info) return InlineAura.db.profile.hideCountdown or InlineAura.db.profile.hideStack end,
+					order = 20,
+				},
+				twoTextSecond = {
+					name = L['Application count position'],
+					desc = L['Select where to place the application count text when both values are shown.'],
+					type = 'select', 
+					arg = 'twoTextSecondPosition',
+					values = function(info) return info.handler:ListTextPositions(info, InlineAura.db.profile.twoTextFirstPosition) end,
+					disabled = function(info) return InlineAura.db.profile.hideCountdown or InlineAura.db.profile.hideStack end,
+					order = 30,
+				},
+				oneText = {
+					name = L['Single value position'],
+					desc = L['Select where to place a single value.'],
+					type = 'select', 
+					arg = 'singleTextPosition',
+					values = "ListTextPositions",
+					disabled = function(info) return InlineAura.db.profile.hideCountdown and InlineAura.db.profile.hideStack end,
+					order = 40,
 				},
 			},
 		},

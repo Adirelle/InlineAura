@@ -90,6 +90,9 @@ local DEFAULT_OPTIONS = {
 		showStackAtTop = false,
 		preciseCountdown = false,
 		decimalCountdownThreshold = 10,
+		singleTextPosition = 'BOTTOM',
+		twoTextFirstPosition = 'BOTTOMLEFT',
+		twoTextSecondPosition = 'BOTTOMRIGHT',
 		fontName = FONT_NAME,
 		smallFontSize = FONT_SIZE_SMALL,
 		largeFontSize = FONT_SIZE_LARGE,
@@ -350,21 +353,37 @@ end
 
 local TimerFrame_OnUpdate, TimerFrame_Skin, TimerFrame_Display, TimerFrame_UpdateCountdown
 
+local function SetTextPosition(text, position)
+	text:SetJustifyH(position:match('LEFT') or position:match('RIGHT') or 'MIDDLE')
+	text:SetJustifyV(position:match('TOP') or position:match('BOTTOM') or 'CENTER')
+end
+
+function TimerFrame_UpdateTextLayout(self)
+	local stackText, countdownText = self.stackText, self.countdownText
+	if countdownText:IsShown() and stackText:IsShown() then
+		SetTextPosition(countdownText, InlineAura.db.profile.twoTextFirstPosition)
+		SetTextPosition(stackText, InlineAura.db.profile.twoTextSecondPosition)
+	elseif countdownText:IsShown() then
+		SetTextPosition(countdownText, InlineAura.db.profile.singleTextPosition)
+	elseif stackText:IsShown() then
+		SetTextPosition(stackText, InlineAura.db.profile.singleTextPosition)
+	end
+end
+
 function TimerFrame_Skin(self)
 	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
-	local stackBorder = db.profile.showStackAtTop and 'TOP' or 'BOTTOM'
 
 	local countdownText = self.countdownText
 	countdownText.fontName = font
 	countdownText.baseFontSize = db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
 	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
 	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
-	countdownText:SetJustifyV(InlineAura.bigCountdown and 'CENTER' or stackBorder)
-
+	
 	local stackText = self.stackText
 	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
 	stackText:SetTextColor(unpack(db.profile.colorStack))
-	stackText:SetJustifyV(stackBorder)
+	
+	TimerFrame_UpdateTextLayout(self)
 end
 
 function TimerFrame_OnUpdate(self)
@@ -401,7 +420,6 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 		TimerFrame_UpdateCountdown(self, now)		
 		countdownText:Show()
 		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
-		countdownText:SetJustifyH(count and not InlineAura.bigCountdown and 'LEFT' or 'CENTER')
 		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
 		if sizeRatio > 1 then
 			countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
@@ -410,6 +428,8 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 		TimerFrame_CancelTimer(self)
 		self.countdownText:Hide()
 	end
+	
+	TimerFrame_UpdateTextLayout(self)
 end
 
 local function CreateTimerFrame(button)
@@ -429,7 +449,6 @@ local function CreateTimerFrame(button)
 
 	local stackText = timer:CreateFontString(nil, "OVERLAY")
 	stackText:SetAllPoints(timer)
-	stackText:SetJustifyH("RIGHT")
 	timer.stackText = stackText
 
 	TimerFrame_Skin(timer)

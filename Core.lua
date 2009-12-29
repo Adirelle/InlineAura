@@ -16,20 +16,20 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 --]]
 
+local addonName, ns = ...
+
 ------------------------------------------------------------------------------
 -- Our main frame
 ------------------------------------------------------------------------------
 
-InlineAura = CreateFrame('Frame')
-local InlineAura = InlineAura
+local InlineAura = CreateFrame('Frame', 'InlineAura')
 
 ------------------------------------------------------------------------------
 -- Retrieve the localization table
 ------------------------------------------------------------------------------
 
-local L = InlineAura_L
+local L = ns.L
 InlineAura.L = L
-InlineAura_L = nil
 
 ------------------------------------------------------------------------------
 -- Locals
@@ -61,15 +61,16 @@ InlineAura.buttons = buttons
 
 local LSM = LibStub('LibSharedMedia-3.0')
 
+local function dprint() end
 --@debug@
-local dprint
-do
-	local dframe = CreateFrame("Frame")
-	local t = GetTime() 
-	dframe:SetScript('OnUpdate', function() t = GetTime() end)
-	dprint = function(...) return print('InlineAura', t, tostringall(...)) end
+if tekDebug then
+	local frame = tekDebug:GetFrame(addonName)
+	dprint = function(...)
+		return frame:AddMessage(string.join(", ", tostringall(...)):gsub("([:=]), ", "%1"))
+	end
 end
 --@end-debug@
+InlineAura.dprint = dprint
 
 ------------------------------------------------------------------------------
 -- Constants
@@ -185,75 +186,133 @@ local function WipeAuras(auras)
 	end
 end
 
-local serial = 0
+local auraScanners = {}
+InlineAura.auraScanners = auraScanners
 
-local function UpdateUnitAuras(unit)
-	local auras, filter
-	if inVehicle then
-		unit = 'vehicle'
-		auras = unitAuras.player
-	else
-		auras = unitAuras[unit]
-	end
-	if UnitIsBuffable(unit) then
-		filter = 'HELPFUL'
-	elseif UnitIsDebuffable(unit) then
-		filter = 'HARMFUL'
-	else
-		return WipeAuras(auras)
-	end
-	serial = (serial + 1) % 100000
-
-	-- Scan all auras
-	for i = 1,255 do
-		local name, _, _, count, _, duration, expirationTime, isMine = UnitAura(unit, i, filter)
-		if not name then
-			break
+local UpdateUnitAuras
+do
+	local serial = 0
+	local callbacks = setmetatable({}, {__mode='k'})
+	function UpdateUnitAuras(unit, event)
+		local auras, filter
+		if inVehicle then
+			unit = 'vehicle'
+			auras = unitAuras.player
 		else
-			local data = auras[name]
-			if not data then
-				data = new()
-				auras[name] = data
-				needUpdate = true
-			elseif data.serial == serial and data.isMine and not isMine then
-				-- Do not overwrite player's auras by others' auras when they have already seen during this scan
-				data = nil
-			elseif expirationTime ~= data.expirationTime or count ~= data.count or isMine ~= data.isMine then
-				needUpdate = true
-			end
-			if data then
-				data.serial = serial
-				data.count = count
-				data.duration = duration
-				data.expirationTime = expirationTime
-				data.isMine = isMine
-			end
+			auras = unitAuras[unit]
 		end
-	end
-	-- Handle tracking as self buff
-	if unit == 'player' then
-		for i = 1, GetNumTrackingTypes() do
-			local name, _, active, category = GetTrackingInfo(i)
-			if active and category == 'spell' then
+		if UnitIsBuffable(unit) then
+			filter = 'HELPFUL'
+		elseif UnitIsDebuffable(unit) then
+			filter = 'HARMFUL'
+		else
+			return WipeAuras(auras)
+		end
+		serial = (serial + 1) % 1000000
+
+		-- Avoid recreating callback on every call
+		local now = GetTime()
+		local callback = callbacks[auras]
+		if not callback then
+			callback = function(name, count, duration, expirationTime, isMine)
+				if not count or count == 0 then
+					count = nil
+				end
+				duration, expirationTime, isMine = tonumber(duration) or 0, tonumber(expirationTime) or 0, not not isMine
+				if expirationTime > 0 and expirationTime < now then return end
 				local data = auras[name]
 				if not data then
 					data = new()
 					auras[name] = data
 					needUpdate = true
+					--@debug@
+					dprint('New aura', unit, name)
+					--@end-debug@
+				elseif data.serial == serial and data.isMine and not isMine then
+					-- Do not overwrite player's auras by others' auras when they have already seen during this scan
+					data = nil
+				elseif expirationTime ~= data.expirationTime or count ~= data.count or isMine ~= data.isMine then
+					needUpdate = true
+					--@debug@
+					dprint('Updating aura', unit, name)
+					--@end-debug@
 				end
-				data.serial = serial
-				data.count = 0
-				data.isMine = true
+				if data then
+					data.serial = serial
+					data.count = count
+					data.duration = duration
+					data.expirationTime = expirationTime
+					data.isMine = isMine
+				end
+			end
+			callbacks[auras] = callback
+		end
+
+		-- Give every scanner a try
+		for index, scan in ipairs(auraScanners) do
+			local ok, msg = pcall(scan, callback, unit, filter)
+			if not ok then
+				geterrorhandler()(msg)
+			end
+		end
+
+		-- Remove auras that have faded out
+		for name, data in pairs(auras) do
+			if data.serial ~= serial then
+				auras[name] = del(auras[name])
+				needUpdate = true
+				--@debug@
+				dprint('Removing aura', unit, name)
+				--@end-debug@
 			end
 		end
 	end
-	-- Remove auras that have faded out
-	for name, data in pairs(auras) do
-		if data.serial ~= serial then
-			auras[name] = del(auras[name])
-			needUpdate = true
+	InlineAura.UpdateUnitAuras = UpdateUnitAuras
+end
+
+-- This scanner scans all auras
+tinsert(auraScanners, function(callback, unit, filter)
+	for i = 1, 255 do
+		local name, _, _, count, _, duration, expirationTime, isMine = UnitAura(unit, i, filter)
+		if not name then
+			break
+		else
+			callback(name, count, duration, expirationTime, isMine)
 		end
 	end
+end)
+
+-- This scanner handles tracking as player self buff
+tinsert(auraScanners, function(callback, unit, filter)
+	if unit ~= 'player' or filter ~= 'HELPFUL' then return end
+	for i = 1, GetNumTrackingTypes() do
+		local name, _, active, category = GetTrackingInfo(i)
+		if active and category == 'spell' then
+			callback(name, 0, nil, nil, true)
+		end
+	end
+end)
+function InlineAura:MINIMAP_UPDATE_TRACKING()
+	UpdateUnitAuras("player", 'MINIMAP_UPDATE_TRACKING')
+end
+InlineAura:RegisterEvent('MINIMAP_UPDATE_TRACKING')
+
+-- Shaman totem support
+if select(2, UnitClass("player")) == "SHAMAN" then
+	tinsert(auraScanners, function(callback, unit, filter)
+		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
+		for i = 1, MAX_TOTEMS do
+			local haveTotem, name, startTime, duration = GetTotemInfo(i)
+			if haveTotem then
+				callback(name, 0, duration, startTime+duration, true)
+			end
+		end
+	end)
+
+	function InlineAura:PLAYER_TOTEM_UPDATE()
+		UpdateUnitAuras("player", 'PLAYER_TOTEM_UPDATE')
+	end
+	InlineAura:RegisterEvent('PLAYER_TOTEM_UPDATE')
 end
 
 ------------------------------------------------------------------------------
@@ -297,6 +356,7 @@ end
 ------------------------------------------------------------------------------
 -- Home-made bucketed timers
 ------------------------------------------------------------------------------
+-- This is mainly a simplified version of AceTimer-3.0, credits goes to Ace3 authors
 
 local ScheduleTimer, CancelTimer, FireTimers, TimerCallback
 do
@@ -305,9 +365,9 @@ do
 	local buckets = {}
 	local targets = {}
 	for i = 1, BUCKETS do buckets[i] = {} end
-	
+
 	local lastIndex = floor(GetTime()*HZ)
-	
+
 	function ScheduleTimer(target, delay)
 		assert(target and type(delay) == "number" and delay >= 0)
 		if targets[target] then
@@ -319,7 +379,7 @@ do
 		buckets[bucketNum][target] = when
 		targets[target] = bucketNum
 	end
-	
+
 	function CancelTimer(target)
 		assert(target)
 		local bucketNum = targets[target]
@@ -328,11 +388,11 @@ do
 			targets[target] = nil
 		end
 	end
-	
+
 	function ProcessTimers()
 		local now = GetTime()
 		local newIndex = floor(now*HZ)
-		for index = lastIndex + 1, newIndex do	
+		for index = lastIndex + 1, newIndex do
 			local bucketNum = 1 + (index % BUCKETS)
 			local bucket = buckets[bucketNum]
 			for target, when in pairs(bucket) do
@@ -342,7 +402,7 @@ do
 					TimerCallback(target)
 				end
 			end
-		end		
+		end
 		lastIndex = newIndex
 	end
 end
@@ -378,11 +438,11 @@ function TimerFrame_Skin(self)
 	countdownText.baseFontSize = db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
 	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
 	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
-	
+
 	local stackText = self.stackText
 	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
 	stackText:SetTextColor(unpack(db.profile.colorStack))
-	
+
 	TimerFrame_UpdateTextLayout(self)
 end
 
@@ -413,11 +473,11 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 	else
 		self.stackText:Hide()
 	end
-	
+
 	if not hideCountdown then
 		local countdownText = self.countdownText
 		self.expirationTime = expirationTime
-		TimerFrame_UpdateCountdown(self, now)		
+		TimerFrame_UpdateCountdown(self, now)
 		countdownText:Show()
 		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
 		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
@@ -428,7 +488,7 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 		TimerFrame_CancelTimer(self)
 		self.countdownText:Hide()
 	end
-	
+
 	TimerFrame_UpdateTextLayout(self)
 end
 
@@ -554,7 +614,7 @@ local function UpdateHighlight(self, aura, color)
 		SetVertexColor(texture, unpack(color))
 		self:SetChecked(true)
 	else
-		local action = self.action  
+		local action = self.action
 		texture:SetVertexColor(1, 1, 1)
 		self:SetChecked(IsCurrentAction(action) or IsAutoRepeatAction(action))
 	end
@@ -687,7 +747,7 @@ end
 function InlineAura:UNIT_ENTERED_VEHICLE(event, unit)
 	if unit == 'player' then
 		inVehicle = (event == 'UNIT_ENTERED_VEHICLE')
-		UpdateUnitAuras('player')
+		UpdateUnitAuras('player', event)
 	end
 end
 
@@ -695,31 +755,31 @@ InlineAura.UNIT_EXITED_VEHICLE = InlineAura.UNIT_ENTERED_VEHICLE
 
 function InlineAura:UNIT_AURA(event, unit)
 	if enabledUnits[unit] or (unit == 'vehicle' and inVehicle) then
-		UpdateUnitAuras(unit)
+		UpdateUnitAuras(unit, event)
 	end
 end
 
 function InlineAura:UNIT_PET(event, unit)
 	if unit == 'player' then
-		UpdateUnitAuras('pet')
+		UpdateUnitAuras('pet', event)
 		needUpdate = true
 	end
 end
 
-function InlineAura:PLAYER_ENTERING_WORLD()
+function InlineAura:PLAYER_ENTERING_WORLD(event)
 	inVehicle = not not UnitControllingVehicle('player')
 	for unit in pairs(enabledUnits) do
-		UpdateUnitAuras(unit)
+		UpdateUnitAuras(unit, event)
 	end
 end
 
-function InlineAura:PLAYER_FOCUS_CHANGED()
-	UpdateUnitAuras('focus')
+function InlineAura:PLAYER_FOCUS_CHANGED(event)
+	UpdateUnitAuras('focus', event)
 	needUpdate = true
 end
 
-function InlineAura:PLAYER_TARGET_CHANGED()
-	UpdateUnitAuras('target')
+function InlineAura:PLAYER_TARGET_CHANGED(event)
+	UpdateUnitAuras('target', event)
 	needUpdate = true
 end
 
@@ -751,7 +811,7 @@ function InlineAura:VARIABLES_LOADED()
 
 	-- Refresh everything
 	self:RequireUpdate(true)
-	
+
 	-- Force a full refresh on first frame
 	self:SetScript('OnUpdate', function(self, ...)
 		for button in pairs(buttons) do
@@ -760,7 +820,7 @@ function InlineAura:VARIABLES_LOADED()
 		self:SetScript('OnUpdate', self.OnUpdate)
 		return self:OnUpdate(...)
 	end)
-	
+
 	-- Scan unit in case of delayed loading
 	if IsLoggedIn() then
 		self:PLAYER_ENTERING_WORLD()
@@ -768,9 +828,7 @@ function InlineAura:VARIABLES_LOADED()
 end
 
 function InlineAura:ADDON_LOADED(event, name)
-	if name:lower() ~= 'inlineaura' then
-		return
-	end
+	if name ~= addonName then return end
 	self:UnregisterEvent('ADDON_LOADED')
 	self.ADDON_LOADED = nil
 
@@ -780,7 +838,7 @@ function InlineAura:ADDON_LOADED(event, name)
 	db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
 	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
 	self.db = db
-	
+
 	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
 
 	-- Setup

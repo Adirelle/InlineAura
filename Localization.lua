@@ -16,6 +16,8 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 --]]
 
+local _, ns = ...
+
 local locale = GetLocale()
 local L = setmetatable({}, {__index = function(self, key)
 	if key ~= nil then
@@ -26,7 +28,7 @@ local L = setmetatable({}, {__index = function(self, key)
 	--@end-debug@
 	return tostring(key)
 end})
-InlineAura_L = L
+ns.L = L
 
 --------------------------------------------------------------------------------
 -- default: enUS

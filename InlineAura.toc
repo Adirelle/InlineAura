@@ -13,7 +13,7 @@
 ## X-LoadOn-Always: delayed
 
 ## SavedVariables: InlineAuraDB
-## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0, ButtonFacade, Bartender4, Dominos, OmniCC, CooldownCount
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0, ButtonFacade, Bartender4, Dominos, OmniCC, CooldownCount, tekDebug
 
 #@no-lib-strip@
 libs\LibStub\LibStub.lua

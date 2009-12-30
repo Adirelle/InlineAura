@@ -303,7 +303,7 @@ if select(2, UnitClass("player")) == "SHAMAN" then
 		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
 		for i = 1, MAX_TOTEMS do
 			local haveTotem, name, startTime, duration = GetTotemInfo(i)
-			if haveTotem and name ~= "" then
+			if haveTotem and name and name ~= "" then
 				name = name:gsub("%s[IV]-$", "")
 				callback(name, 0, duration, startTime+duration, true)
 			end
@@ -617,7 +617,9 @@ local function UpdateHighlight(self, aura, color)
 	else
 		local action = self.action
 		texture:SetVertexColor(1, 1, 1)
-		self:SetChecked(IsCurrentAction(action) or IsAutoRepeatAction(action))
+		if action then
+			self:SetChecked(IsCurrentAction(action) or IsAutoRepeatAction(action))
+		end
 	end
 end
 
@@ -714,14 +716,13 @@ function InlineAura:OnUpdate()
 		for button, timerFrame in pairs(timerFrames) do
 			TimerFrame_Skin(timerFrame)
 		end
-		configUpdated = false
 	end
 	if needUpdate or configUpdated then
 		-- Update buttons
 		for button in pairs(buttons) do
 			ActionButton_UpdateState_Hook(button)
 		end
-		needUpdate = false
+		needUpdate, configUpdated = false, false
 	end
 	ProcessTimers()
 end
@@ -795,7 +796,8 @@ function InlineAura:VARIABLES_LOADED()
 	end
 	-- Miscellanous addon support
 	if Dominos then
-		self:RegisterButtons("DominosActionButton", 48)
+		self:RegisterButtons("DominosActionButton", 72)
+		hooksecurefunc(Dominos.ActionButton, "Skin", ActionButton_OnLoad_Hook)
 		if LBF then
 			LBF:RegisterSkinCallback("Dominos", LBF_Callback)
 		end

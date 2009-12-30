@@ -303,7 +303,8 @@ if select(2, UnitClass("player")) == "SHAMAN" then
 		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
 		for i = 1, MAX_TOTEMS do
 			local haveTotem, name, startTime, duration = GetTotemInfo(i)
-			if haveTotem then
+			if haveTotem and name ~= "" then
+				name = name:gsub("%s[IV]-$", "")
 				callback(name, 0, duration, startTime+duration, true)
 			end
 		end

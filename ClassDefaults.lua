@@ -26,7 +26,15 @@ local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 
 -- Get the spell name, throwing error if not found
 local function GetSpellName(id)
-	local name = GetSpellInfo(id)
+	local name
+	local rawId = tonumber(string.match(id, "^#(%d+)$"))
+	if rawId then
+		if GetSpellInfo(rawId) then
+			name = '#'..rawId
+		end
+	else
+		name = GetSpellInfo(id)
+	end
 	if not name then
 		geterrorhandler()("Invalid spell id "..tostring(id))
 	end
@@ -308,6 +316,10 @@ elseif class == 'DRUID' then
 	
 	GroupDebuffs(  339) -- Entangling Roots
 	GroupDebuffs(33786) -- Cyclone
+	
+	-- Eclipse
+	SelfTalentProc(5176, '#48517') -- Wrath damage increase 
+	SelfTalentProc(2912, '#48518') -- Starfire crit increase
 
 	-- Contributed by pusikas2
 	GroupDebuffs(48564, 48566) -- Mangle - Bear, Mangle - Cat

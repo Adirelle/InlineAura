@@ -158,18 +158,16 @@ InlineAura.new, InlineAura.del = new, del
 
 local UnitCanAssist, UnitCanAttack, UnitIsUnit = UnitCanAssist, UnitCanAttack, UnitIsUnit
 
-local UnitIsMine = function(unit)
-	return unit and (UnitIsUnit(unit, 'player') or UnitIsUnit(unit, 'pet') or UnitIsUnit(unit, 'vehicle'))
-end
+local MY_UNITS = { player = true, pet = true, vehicle = true }
 
 -- These two functions return nil when unit does not exist
-local UnitIsBuffable = function(unit) return UnitIsMine(unit) or UnitCanAssist('player', unit) end
+local UnitIsBuffable = function(unit) return MY_UNITS[unit] or UnitCanAssist('player', unit) end
 local UnitIsDebuffable = function(unit) return UnitCanAttack('player', unit) end
 
-local origUnitAura, UnitIsUnit = _G.UnitAura, _G.UnitIsUnit
+local origUnitAura = _G.UnitAura
 local UnitAura = function(...)
-	local name, rank, icon, count, debuffType, duration, expirationTime, caster, isStealable = origUnitAura(...)
-	return name, rank, icon, count, debuffType, duration, expirationTime, UnitIsMine(caster), isStealable
+	local name, rank, icon, count, debuffType, duration, expirationTime, caster, isStealable, shouldConsolidate, spellId = origUnitAura(...)
+	return name, rank, icon, count, debuffType, duration, expirationTime, MY_UNITS[caster or "none"], isStealable, shouldConsolidate, spellId
 end
 
 ------------------------------------------------------------------------------
@@ -214,7 +212,7 @@ do
 		local now = GetTime()
 		local callback = callbacks[auras]
 		if not callback then
-			callback = function(name, count, duration, expirationTime, isMine)
+			callback = function(name, count, duration, expirationTime, isMine, spellId)
 				if not count or count == 0 then
 					count = nil
 				end
@@ -243,6 +241,9 @@ do
 					data.duration = duration
 					data.expirationTime = expirationTime
 					data.isMine = isMine
+					if spellId then
+						auras['#'..spellId] = data
+					end
 				end
 			end
 			callbacks[auras] = callback
@@ -258,7 +259,7 @@ do
 
 		-- Remove auras that have faded out
 		for name, data in pairs(auras) do
-			if data.serial ~= serial then
+			if not data.serial or data.serial ~= serial then
 				auras[name] = del(auras[name])
 				needUpdate = true
 				--@debug@
@@ -273,11 +274,11 @@ end
 -- This scanner scans all auras
 tinsert(auraScanners, function(callback, unit, filter)
 	for i = 1, 255 do
-		local name, _, _, count, _, duration, expirationTime, isMine = UnitAura(unit, i, filter)
+		local name, _, _, count, _, duration, expirationTime, isMine, _, _, spellId = UnitAura(unit, i, filter)
 		if not name then
 			break
 		else
-			callback(name, count, duration, expirationTime, isMine)
+			callback(name, count, duration, expirationTime, isMine, spellId)
 		end
 	end
 end)
@@ -292,8 +293,8 @@ tinsert(auraScanners, function(callback, unit, filter)
 		end
 	end
 end)
-function InlineAura:MINIMAP_UPDATE_TRACKING()
-	UpdateUnitAuras("player", 'MINIMAP_UPDATE_TRACKING')
+function InlineAura:MINIMAP_UPDATE_TRACKING(event)
+	UpdateUnitAuras("player", event)
 end
 InlineAura:RegisterEvent('MINIMAP_UPDATE_TRACKING')
 
@@ -310,8 +311,8 @@ if select(2, UnitClass("player")) == "SHAMAN" then
 		end
 	end)
 
-	function InlineAura:PLAYER_TOTEM_UPDATE()
-		UpdateUnitAuras("player", 'PLAYER_TOTEM_UPDATE')
+	function InlineAura:PLAYER_TOTEM_UPDATE(event)
+		UpdateUnitAuras("player", event)
 	end
 	InlineAura:RegisterEvent('PLAYER_TOTEM_UPDATE')
 end

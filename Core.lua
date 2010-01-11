@@ -95,14 +95,15 @@ local DEFAULT_OPTIONS = {
 		twoTextFirstPosition = 'BOTTOMLEFT',
 		twoTextSecondPosition = 'BOTTOMRIGHT',
 		fontName = FONT_NAME,
-		smallFontSize = FONT_SIZE_SMALL,
-		largeFontSize = FONT_SIZE_LARGE,
-		colorBuffMine = { 0.0, 1.0, 0.0, 1.0 },
-		colorBuffOthers = { 0.0, 1.0, 1.0, 1.0 },
-		colorDebuffMine = { 1.0, 0.0, 0.0, 1.0 },
+		smallFontSize     = FONT_SIZE_SMALL,
+		largeFontSize     = FONT_SIZE_LARGE,
+		colorBuffMine     = { 0.0, 1.0, 0.0, 1.0 },
+		colorBuffOthers   = { 0.0, 1.0, 1.0, 1.0 },
+		colorDebuffMine   = { 1.0, 0.0, 0.0, 1.0 },
 		colorDebuffOthers = { 1.0, 1.0, 0.0, 1.0 },
-		colorCountdown = { 1.0, 1.0, 1.0, 1.0 },
-		colorStack = { 1.0, 1.0, 0.0, 1.0 },
+		colorCountdown    = { 1.0, 1.0, 1.0, 1.0 },
+		colorStack        = { 1.0, 1.0, 0.0, 1.0 },
+		colorAlternate    = { 1.0, 0.0, 1.0, 1.0 },
 		spells = {
 			['**'] = {
 				disabled = false,
@@ -573,7 +574,7 @@ local function GetAuraToDisplay(spell)
 		end
 		for i, unit in pairs(UNIT_SCAN_ORDER) do
 			if units[unit] and buffTest(unit) then
-				return LookupAura(unitAuras[unit], spell, specific.aliases, auraType, onlyMine, hideStack, hideCountdown)
+				return LookupAura(unitAuras[unit], spell, specific.aliases, auraType, onlyMine, hideStack, hideCountdown, specific.alternateColor)
 			end
 		end
 	else
@@ -657,9 +658,13 @@ local function ActionButton_UpdateState_Hook(self)
 	local aura, color, hideStack, hideCountdown
 	if spell then
 		local auraType
-		aura, auraType, hideStack, hideCountdown = GetAuraToDisplay(spell)
+		aura, auraType, hideStack, hideCountdown, alternateColor = GetAuraToDisplay(spell)
 		if aura then
-			color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
+			if alternateColor then
+				color = db.profile.colorAlternate
+			else
+				color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
+			end 
 		end
 	end
 	UpdateHighlight(self, aura, color)

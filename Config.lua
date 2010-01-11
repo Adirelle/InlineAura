@@ -184,6 +184,14 @@ local options = {
 					arg = 'colorDebuffOthers',
 					order = 40,
 				},
+				alternate = {
+					name = L['Alternate color'],
+					desc = L['Select the color to use for alternate highlights, typically talent procs.'],
+					type = 'color',
+					arg = 'colorAlternate',
+					hasAlpha = true,
+					order = 50,
+				},
 			},
 		},
 		text = {
@@ -433,6 +441,14 @@ local spellOptions = {
 					disabled = 'IsSpellDisabled',
 					order = 40,
 				},
+				alternateColor = {
+					name = L['Use alternate color'],
+					desc = L['Check to use the alternate color. This is typically used to display talent proc.'],
+					type = 'toggle',
+					arg = 'alternateColor',
+					disabled = 'IsSpellDisabled',
+					order = 50,
+				},
 				aliases = {
 					name = L['Auras to look up'],
 					desc = L['Enter additional aura names to check. This allows to check for alternative or equivalent auras. Some spells also apply auras that do not have the same name as the spell.'],
@@ -444,7 +460,7 @@ local spellOptions = {
 					get = 'GetAliases',
 					set = 'SetAliases',
 					validate = 'ValidateAliases',
-					order = 50,
+					order = 60,
 				},
 			},
 		},

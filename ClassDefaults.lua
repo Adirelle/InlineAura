@@ -88,6 +88,7 @@ local function SelfTalentProc(spellId, talentId)
 	local talent = GetSpellName(talentId)
 	defaults.auraType = 'buff'
 	defaults.unitsToScan = SELF_BUFF_UNITS
+	defaults.alternateColor = true
 	if defaults.aliases then
 		for i, alias in pairs(defaults.aliases) do
 			if alias == talent then
@@ -281,13 +282,8 @@ elseif class == 'PRIEST' then
 	
 	SelfTalentProc( 585, 33151) -- Smite => Surge of Light
 	SelfTalentProc(2061, 33151) -- Flash Heal => Surge of Light
-
-	local _, buildNumber = GetBuildInfo()
-	if tonumber(buildNumber) >= 9658 then
-	  -- Serendipity changed in 3.1 
-		SelfTalentProc( 596, 63731) -- Prayer of Healing => Serendipity
-	  SelfTalentProc(2060, 63731) -- Greater Heal => Serendipity
-	end 
+	SelfTalentProc( 596, 63731) -- Prayer of Healing => Serendipity
+  SelfTalentProc(2060, 63731) -- Greater Heal => Serendipity
 	
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then

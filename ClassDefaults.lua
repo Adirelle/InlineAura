@@ -239,6 +239,10 @@ elseif class == 'MAGE' then
 	
 	-- Polymorphs
 	GroupDebuffs(118, 28272, 28271, 61025, 61305)
+	
+	-- Firestarter proc
+	SelfTalentProc(11113, 54741) -- Blast Wave => Firestarter
+	SelfTalentProc(31661, 54741) -- Dragon's Breath => Firestarter
 
 	-- Contributed by FlareCDE
 	Aliases('debuff', 42859, 22959) -- Scorch => Improved Scorch

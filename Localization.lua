@@ -20,13 +20,12 @@ local _, ns = ...
 
 local locale = GetLocale()
 local L = setmetatable({}, {__index = function(self, key)
-	if key ~= nil then
-		self[key] = tostring(key)
-	end
+	local value = tostring(key)
+	if key ~= nil then self[key] = value end
 	--@debug@
-	print("InlineAura: missing locale:", key)
+	InlineAura.dprint("Missing locale:", value)
 	--@end-debug@
-	return tostring(key)
+	return value
 end})
 ns.L = L
 

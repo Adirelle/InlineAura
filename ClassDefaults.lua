@@ -258,10 +258,14 @@ elseif class == 'DEATHKNIGHT' then
 ------------------------------------------------------------------------------
 	
 	GroupBuffs(57330) -- Horn of Winter
-
+	
 	-- Contributed by jexxlc
 	Aliases('debuff', 45462, 55078) -- Plague Strike => Blood Plague
 	Aliases('debuff', 45477, 55095) -- Icy Touch => Frost Fever
+
+	-- Reported by shine2009
+	SelfTalentProc(49895, 49194) -- Death Coil => Unholy Blight
+	SelfTalentProc(45902, 66803) -- Blood Strike => Desolation
 
 ------------------------------------------------------------------------------
 elseif class == 'PRIEST' then

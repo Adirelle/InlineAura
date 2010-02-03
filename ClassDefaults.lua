@@ -365,7 +365,10 @@ elseif class == 'PALADIN' then
 	-- they have different effects so we only show one.
 	SelfTalentProc(  635, 31834) -- Holy Light => Light's Grace
 	SelfTalentProc(19750, 53672) -- Flash of Light => Infusion of Light
+	
+	-- Art of War
 	SelfTalentProc(19750, 53489) -- Flash of Light => Art of War
+	SelfTalentProc(  879, 53489) -- Exorcism => Art of War
 
 	-- Blessings
 	GroupBuffs(19740, 25782) -- Blessing of Might, Greater Blessing of Might

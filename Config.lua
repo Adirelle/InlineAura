@@ -675,7 +675,7 @@ do
 				result = GetSpellInfo(key) or GetItemInfo(key)
 				if not result then
 					local id = rawget(self, '__id') or 0
-					while id < 70000 do -- Arbitrary high spell id
+					while id < 80000 do -- Arbitrary high spell id
 						local name = GetSpellInfo(id)
 						id = id + 1
 						if name then

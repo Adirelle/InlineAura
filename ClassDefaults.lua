@@ -226,8 +226,16 @@ elseif class == 'SHAMAN' then
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
-	Aliases('debuff', 980, 603, 1714, 702, 1490) 	-- One curse per warlock
-	Aliases('debuff', 172, 27243) -- Corruption *or* Seed of Corruption
+	-- You can only apply one curse at a time on a single target
+	Aliases('debuff',  603,  702,  980, 1490, 1714)
+	Aliases('debuff',  702,  603,  980, 1490, 1714)
+	Aliases('debuff',  980,  702,  603, 1490, 1714)
+	Aliases('debuff', 1490,  702,  980,  603, 1714)
+	Aliases('debuff', 1714,  702,  980, 1490,  603)
+
+	-- Corruption or Seed of Corruption
+	Aliases('debuff',   172, 27243) 
+	Aliases('debuff', 27243,   172)
 
 	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
 	

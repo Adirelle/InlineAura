@@ -226,9 +226,16 @@ elseif class == 'SHAMAN' then
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
-	Aliases('debuff', 686, 17794) -- Shadow Bolt => Shadow Mastery
+	Aliases('debuff', 980, 603, 1714, 702, 1490) 	-- One curse per warlock
+	Aliases('debuff', 172, 27243) -- Corruption *or* Seed of Corruption
+
+	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
 	
-	GroupDebuffs(47865) -- Curse of the Elements
+	-- Glyph of Life Tap
+	SelfTalentProc( 1454, 63321) -- Life Tap => Life Tap
+	SelfTalentProc(18220, 63321) -- Dark Pact => Life Tap
+	
+	--GroupDebuffs(1490) -- Curse of the Elements
 	GroupDebuffs(710) -- Banish
 
 ------------------------------------------------------------------------------

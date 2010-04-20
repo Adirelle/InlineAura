@@ -238,7 +238,9 @@ elseif class == 'WARLOCK' then
 	Aliases('debuff', 27243,   172)
 
 	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
-	
+	SelfTalentProc(  686, 34936) -- Shadow Bolt => Backlash
+	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
+
 	-- Glyph of Life Tap
 	SelfTalentProc( 1454, 63321) -- Life Tap => Life Tap
 	SelfTalentProc(18220, 63321) -- Dark Pact => Life Tap

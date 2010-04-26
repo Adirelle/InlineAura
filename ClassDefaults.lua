@@ -226,26 +226,19 @@ elseif class == 'SHAMAN' then
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
-	-- You can only apply one curse at a time on a single target
-	Aliases('debuff',  603,  702,  980, 1490, 1714)
-	Aliases('debuff',  702,  603,  980, 1490, 1714)
-	Aliases('debuff',  980,  702,  603, 1490, 1714)
-	Aliases('debuff', 1490,  702,  980,  603, 1714)
-	Aliases('debuff', 1714,  702,  980, 1490,  603)
-
-	-- Corruption or Seed of Corruption
-	Aliases('debuff',   172, 27243) 
-	Aliases('debuff', 27243,   172)
-
 	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
 	SelfTalentProc(  686, 34936) -- Shadow Bolt => Backlash
+	
 	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
+	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
+
+	SelfTalentProc(6353, 63165) -- Soul Fire => Decimation
 
 	-- Glyph of Life Tap
 	SelfTalentProc( 1454, 63321) -- Life Tap => Life Tap
 	SelfTalentProc(18220, 63321) -- Dark Pact => Life Tap
 	
-	--GroupDebuffs(1490) -- Curse of the Elements
+	GroupDebuffs(1490) -- Curse of the Elements
 	GroupDebuffs(710) -- Banish
 
 ------------------------------------------------------------------------------
@@ -264,6 +257,9 @@ elseif class == 'MAGE' then
 
 	-- Contributed by FlareCDE
 	Aliases('debuff', 42859, 22959) -- Scorch => Improved Scorch
+	
+	-- Improved Scorch is actually a target talent proc
+	GetSpellDefaults(42859).alternateColor = true
 
 	-- Contributed by sun
 	SelfTalentProc(11366, 44445) -- Pyroblast => Hot Streak

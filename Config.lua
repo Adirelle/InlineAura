@@ -319,9 +319,19 @@ local spellOptions = {
 			desc = L['Enter the name of the spell for which you want to add specific settings. Non-existent spell or item names are rejected.'],
 			type = 'input',
 			get = function(info) return spellToAdd end,
-			set = function(info, value) spellToAdd = ValidateName(value) end,
+			set = function(info, value)
+				if value and value:trim() ~= "" then
+					spellToAdd = ValidateName(value) 
+				else
+					spellToAdd = nil
+				end
+			end,
 			validate = function(info, value)			
-				return ValidateName(value) and true or L["Unknown spell: %s"]:format(tostring(value))
+				if not value or value:trim() == "" then
+					return true
+				else
+					return ValidateName(value) and true or L["Unknown spell: %s"]:format(tostring(value))
+				end
 			end,
 			order = 10,
 		},
@@ -338,6 +348,7 @@ local spellOptions = {
 				end
 				spellToAdd = nil
 			end,
+			disabled = function() return not spellToAdd end,
 		},
 		editList = {
 			name = L['Spell to edit'],

@@ -306,7 +306,7 @@ if select(2, UnitClass("player")) == "SHAMAN" then
 		for i = 1, MAX_TOTEMS do
 			local haveTotem, name, startTime, duration = GetTotemInfo(i)
 			if haveTotem and name and name ~= "" then
-				name = name:gsub("%s[IV]-$", "")
+				name = name:gsub("%s[IVX]-$", "") -- Whoever proposed to use roman numerals in enchant names should be shot
 				callback(name, 0, duration, startTime+duration, true)
 			end
 		end

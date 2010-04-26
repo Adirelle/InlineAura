@@ -231,6 +231,7 @@ elseif class == 'WARLOCK' then
 	
 	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
+	SelfTalentProc(29722, 54274) -- Incinerate => Backdraft
 
 	SelfTalentProc(6353, 63165) -- Soul Fire => Decimation
 

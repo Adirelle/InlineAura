@@ -288,8 +288,9 @@ elseif class == 'PRIEST' then
 	-- Contributed by brotherhobbes
 	SelfBuffs(
 		  588, -- Inner Fire
+		15286,  -- Vampiric Embrace
 		15473, -- Shadowform
-		47585  -- Dispersion
+		47585 -- Dispersion
 	)
 	
 	GroupBuffs( 1243, 21562) -- Power Word: Fortitude, Prayer of Fortitude

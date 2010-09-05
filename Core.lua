@@ -18,6 +18,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 local addonName, ns = ...
 
+if tonumber(select(4, GetBuildInfo())) >= 40000 then
+	ns.hasCata = true
+end
+local hasCata = ns.hasCata
+
 ------------------------------------------------------------------------------
 -- Our main frame
 ------------------------------------------------------------------------------
@@ -677,11 +682,14 @@ local function ActionButton_Update_Hook(self)
 		local arg1, arg2, arg3
 		actionType, arg1, arg2, arg3 = GetActionInfo(ActionButton_GetPagedID(self))
 		if actionType == 'spell' then
-			if arg1 and arg2 and arg1 > 0 then
+			if hasCata and type(arg1) == "number" and arg2 == BOOKTYPE_SPELL then	
+				actionName = GetSpellInfo(arg1)
+			elseif arg1 and arg2 and arg1 > 0 then
 				actionName = GetSpellName(arg1, arg2)
 			elseif arg3 then
 				actionName = GetSpellInfo(arg3)
 			end
+			
 		elseif actionType == 'item' then
 			actionName = GetItemSpell(arg1)
 		else

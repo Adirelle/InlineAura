@@ -37,8 +37,10 @@ local function GetSpellName(id)
 	end
 	if not name then
 		geterrorhandler()("Invalid spell id "..tostring(id))
+		return "Unknown spell #"..tostring(id)
+	else
+		return name
 	end
-	return name
 end
 
 -- Get the spell defaults, creating the table if need be

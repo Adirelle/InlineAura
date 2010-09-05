@@ -682,7 +682,7 @@ local function ActionButton_Update_Hook(self)
 		local arg1, arg2, arg3
 		actionType, arg1, arg2, arg3 = GetActionInfo(ActionButton_GetPagedID(self))
 		if actionType == 'spell' then
-			if hasCata and type(arg1) == "number" and arg2 == BOOKTYPE_SPELL then	
+			if hasCata and type(arg1) == "number" then	
 				actionName = GetSpellInfo(arg1)
 			elseif arg1 and arg2 and arg1 > 0 then
 				actionName = GetSpellName(arg1, arg2)

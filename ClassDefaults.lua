@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ------------------------------------------------------------------------------
 if not InlineAura then return end
 
+local addonName, ns = ...
+
 local InlineAura = InlineAura
 local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 
@@ -36,7 +38,9 @@ local function GetSpellName(id)
 		name = GetSpellInfo(id)
 	end
 	if not name then
-		geterrorhandler()("Invalid spell id "..tostring(id))
+		if not ns.hasCata then
+			geterrorhandler()("Invalid spell id "..tostring(id))
+		end
 		return "Unknown spell #"..tostring(id)
 	else
 		return name

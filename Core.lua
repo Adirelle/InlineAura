@@ -18,11 +18,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 local addonName, ns = ...
 
-if tonumber(select(4, GetBuildInfo())) >= 40000 then
-	ns.hasCata = true
-end
-local hasCata = ns.hasCata
-
 ------------------------------------------------------------------------------
 -- Our main frame
 ------------------------------------------------------------------------------
@@ -656,6 +651,11 @@ end
 
 local function ActionButton_UpdateState_Hook(self)
 	if not self:IsVisible() then return end
+	if self.__LAB_Version then
+		-- Do not mess with LibActionButton yet
+		buttons[self] = nil
+		return
+	end
 	local spell = self.actionName
 	if spell and self.actionType == 'macro' then
 		spell = GetMacroSpell(spell)
@@ -677,12 +677,17 @@ local function ActionButton_UpdateState_Hook(self)
 end
 
 local function ActionButton_Update_Hook(self)
+	if self.__LAB_Version then
+		-- Do not mess with LibActionButton yet
+		buttons[self] = nil
+		return
+	end
 	local actionName, actionType
 	if self.action then
 		local arg1, arg2, arg3
 		actionType, arg1, arg2, arg3 = GetActionInfo(ActionButton_GetPagedID(self))
 		if actionType == 'spell' then
-			if hasCata and type(arg1) == "number" then	
+			if type(arg1) == "number" then	
 				actionName = GetSpellInfo(arg1)
 			elseif arg1 and arg2 and arg1 > 0 then
 				actionName = GetSpellName(arg1, arg2)
@@ -816,12 +821,14 @@ function InlineAura:VARIABLES_LOADED()
 			LBF:RegisterSkinCallback("Dominos", LBF_Callback)
 		end
 	end
+	--[[
 	if Bartender4 then
 		self:RegisterButtons("BT4Button", 120)
 		if LBF then
 			LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
 		end
 	end
+	--]]
 	if OmniCC or CooldownCount then
 		InlineAura.bigCountdown = false
 	end

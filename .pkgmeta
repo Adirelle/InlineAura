@@ -34,6 +34,3 @@ externals:
 move-folders:
   InlineAura/InlineAura_Config: InlineAura_Config
 
-ignore:
-  - UpdateLocalization.lua
-

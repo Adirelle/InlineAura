@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ------------------------------------------------------------------------------
 if not InlineAura then return end
 
-return -- Not default has of now
+do return end -- Not default has of now
 
 local addonName, ns = ...
 

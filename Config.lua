@@ -672,33 +672,38 @@ end
 -----------------------------------------------------------------------------
 
 do
+	local keywords = InlineAura.keywords
 	local GetSpellInfo, GetItemInfo = GetSpellInfo, GetItemInfo
 	local validNames = setmetatable({}, {
 		__mode = 'kv',
 		__index = function(self, key)
-			local rawId = tonumber(string.match(tostring(key), '^#(%d+)$'))
 			local result = false
-			if rawId then
-				if GetSpellInfo(rawId) then
-					result = '#'..rawId
-				end
+			if keywords[key] then
+				result = key
 			else
-				result = GetSpellInfo(key) or GetItemInfo(key)
-				if not result then
-					local id = rawget(self, '__id') or 0
-					while id < 100000 do -- Arbitrary high spell id
-						local name = GetSpellInfo(id)
-						id = id + 1
-						if name then
-							if name:lower() == key:lower() then
-								result = name
-								break
-							else
-								self[name] = name
+				local rawId = tonumber(string.match(tostring(key), '^#(%d+)$'))
+				if rawId then
+					if GetSpellInfo(rawId) then
+						result = '#'..rawId
+					end
+				else
+					result = GetSpellInfo(key) or GetItemInfo(key)
+					if not result then
+						local id = rawget(self, '__id') or 0
+						while id < 100000 do -- Arbitrary high spell id
+							local name = GetSpellInfo(id)
+							id = id + 1
+							if name then
+								if name:lower() == key:lower() then
+									result = name
+									break
+								else
+									self[name] = name
+								end
 							end
 						end
+						self.__id = id
 					end
-					self.__id = id
 				end
 			end
 			self[key] = result

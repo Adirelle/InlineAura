@@ -300,8 +300,18 @@ function InlineAura:MINIMAP_UPDATE_TRACKING(event)
 end
 InlineAura:RegisterEvent('MINIMAP_UPDATE_TRACKING')
 
+local keywords = {}
+InlineAura.keywords = keywords
+
+local _, playerClass = UnitClass("player")
+
 -- Shaman totem support
-if select(2, UnitClass("player")) == "SHAMAN" then
+if playerClass == "SHAMAN" then
+	--@debug@
+	dprint("watching totems")
+	--@end-debug@
+	local GetTotemInfo = GetTotemInfo
+
 	tinsert(auraScanners, function(callback, unit, filter)
 		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
 		for i = 1, MAX_TOTEMS do
@@ -317,6 +327,94 @@ if select(2, UnitClass("player")) == "SHAMAN" then
 		UpdateUnitAuras("player", event)
 	end
 	InlineAura:RegisterEvent('PLAYER_TOTEM_UPDATE')
+
+-- Warlock Soul Shards and Paladin Holy Power
+elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
+	local UnitPower = UnitPower
+	
+	local POWER_TYPE, POWER_NAME
+	if playerClass == "WARLOCK" then
+		POWER_TYPE, POWER_NAME = SPELL_POWER_SOUL_SHARDS, "SOUL_SHARDS"
+	else
+		POWER_TYPE, POWER_NAME = SPELL_POWER_HOLY_POWER, "HOLY_POWER"
+	end
+	keywords[POWER_NAME] = true
+	--@debug@
+	dprint("watching", POWER_NAME)
+	--@end-debug@
+	
+	tinsert(auraScanners, function(callback, unit, filter)
+		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
+		-- name, count, duration, expirationTime, isMine, spellId
+		callback(POWER_NAME, UnitPower("player", POWER_TYPE), nil, nil, true)
+	end)
+
+	function InlineAura:UNIT_POWER(event, unit, type)
+		if unit == "player" and type == POWER_NAME then
+			return UpdateUnitAuras("player", event)
+		end
+	end	
+	InlineAura:RegisterEvent('UNIT_POWER')
+end
+	
+-- Rogue and Kitty combo points
+if playerClass == "ROGUE" or playerClass == "DRUID" then
+	--@debug@
+	dprint("watching combo points")
+	--@end-debug@
+	local GetComboPoints = GetComboPoints
+	keywords.COMBO_POINTS = true
+
+	tinsert(auraScanners, function(callback, unit, filter)
+		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
+		-- name, count, duration, expirationTime, isMine, spellId
+		callback("COMBO_POINTS", GetComboPoints("player"), nil, nil, true)
+	end)
+		
+	function InlineAura:PLAYER_COMBO_POINTS(event, unit)
+		return UpdateUnitAuras("player", event)
+	end	
+	InlineAura:RegisterEvent('PLAYER_COMBO_POINTS')
+end
+
+-- Moonkin eclipse points
+if playerClass == "DRUID" then
+	--@debug@
+	dprint("watching eclipse enery")
+	--@end-debug@
+	local SPELL_POWER_ECLIPSE = SPELL_POWER_ECLIPSE
+	local UnitPower, UnitPowerMax = UnitPower, UnitPowerMax
+	local GetEclipseDirection = GetEclipseDirection
+	local GetPrimaryTalentTree = GetPrimaryTalentTree
+	keywords.LUNAR_ENERGY = true
+	keywords.SOLAR_ENERGY = true
+
+	tinsert(auraScanners, function(callback, unit, filter)
+		if unit ~= 'player' or filter ~= 'HELPFUL' or GetPrimaryTalentTree() ~= 1 then return end		
+		-- name, count, duration, expirationTime, isMine, spellId
+		local power, direction = 100 * UnitPower(unit, SPELL_POWER_ECLIPSE) / UnitPowerMax(unit, SPELL_POWER_ECLIPSE), GetEclipseDirection()
+		dprint("eclipse power", power, direction)
+		if direction == "moon" then
+			callback("LUNAR_ENERGY", -power, nil, nil, true)
+		else
+			callback("SOLAR_ENERGY", power, nil, nil, true)
+		end
+	end)
+	function InlineAura:UNIT_POWER(event, unit, type)
+		if unit == "player" and type == "ECLIPSE" then
+			return UpdateUnitAuras("player", event)	
+		end
+	end
+	function InlineAura:PLAYER_TALENT_UPDATE(event, unit)
+		return UpdateUnitAuras("player", event)	
+	end
+	InlineAura.UPDATE_SHAPESHIFT_FORM = PLAYER_TALENT_UPDATE
+	InlineAura.ECLIPSE_DIRECTION_CHANGE = PLAYER_TALENT_UPDATE
+
+	InlineAura:RegisterEvent('UNIT_POWER')
+	InlineAura:RegisterEvent('ECLIPSE_DIRECTION_CHANGE')
+	InlineAura:RegisterEvent('PLAYER_TALENT_UPDATE')
+	InlineAura:RegisterEvent('UPDATE_SHAPESHIFT_FORM')	
 end
 
 ------------------------------------------------------------------------------
@@ -478,7 +576,7 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 		self.stackText:Hide()
 	end
 
-	if not hideCountdown then
+	if not hideCountdown and expirationTime then
 		local countdownText = self.countdownText
 		self.expirationTime = expirationTime
 		TimerFrame_UpdateCountdown(self, now)
@@ -598,10 +696,17 @@ end
 local function UpdateTimer(self, aura, hideStack, hideCountdown)
 	if aura and aura.serial and not (hideCountdown and hideStack) then
 		local now = GetTime()
-		if aura.expirationTime and aura.expirationTime > now then
-			local count = not hideStack and aura.count and aura.count > 0 and aura.count
+		local expirationTime = aura.expirationTime
+		if expirationTime and expirationTime <= now then
+			expirationTime = nil
+		end
+		local count = not hideStack and aura.count
+		if count and count == 0 then
+			count = nil
+		end
+		if expirationTime or count then
 			local frame = timerFrames[self] or CreateTimerFrame(self)
-			TimerFrame_Display(frame, aura.expirationTime, count, now, hideCountdown)
+			TimerFrame_Display(frame, expirationTime, count, now, hideCountdown)
 		end
 	elseif timerFrames[self] then
 		timerFrames[self]:Hide()
@@ -616,7 +721,7 @@ local function UpdateHighlight(self, aura, color)
 	local texture = self:GetCheckedTexture()
 	if aura then
 		SetVertexColor(texture, unpack(color))
-		self:__IA_SetChecked(true)
+		self:__IA_SetChecked(aura.expirationTime and aura.expirationTime > GetTime())
 	else
 		local action = self.action
 		texture:SetVertexColor(1, 1, 1)
@@ -662,11 +767,11 @@ end
 
 local function UpdateButton(self)
 	if not self:IsVisible() or not buttons[self] then return end
-	local spell = GetSpellId(self:__IA_GetAction())
+	local spell = GetSpellInfo(GetSpellId(self:__IA_GetAction()))
 	local aura, color, hideStack, hideCountdown
 	if spell then
 		local auraType
-		aura, auraType, hideStack, hideCountdown, alternateColor = GetAuraToDisplay(spell)
+		aura, auraType, hideStack, hideCountdown, alternateColor = GetAuraToDisplay(spell)		
 		if aura then
 			if alternateColor then
 				color = db.profile.colorAlternate
@@ -770,9 +875,6 @@ function InlineAura:RegisterButtons(prefix, count)
 	for id = 1, count do
 		local button = _G[prefix .. id]
 		if button and not buttons[button] and not newbuttons[button] then
-			--@debug@
-			dprint("Found button", button:GetName())
-			--@end-debug@
 			newbuttons[button] = true
 			needUpdate = true
 		end

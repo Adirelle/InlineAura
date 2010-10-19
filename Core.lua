@@ -719,22 +719,41 @@ end
 local IsSpellOverlayed = IsSpellOverlayed
 local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
 local ActionButton_HideOverlayGlow = ActionButton_HideOverlayGlow
-local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow
+
+local function GetSpellId(type, data)
+	if type == 'action' then
+		type, data = GetActionInfo(data)
+	end
+	if type == 'spell' then
+		return data
+	elseif type == 'macro' then
+		return GetMacroSpell(data)
+	elseif type == 'item' then
+		return GetItemSpell(data)
+	end
+end
+
+local function SafeUpdateOverlayGlow(self)
+	local spellId = GetSpellId(self:__IA_GetAction())
+	if tonumber(spellId) and IsSpellOverlayed(spellId) then
+		ActionButton_ShowOverlayGlow(self)
+		return true
+	else
+		ActionButton_HideOverlayGlow(self)
+	end
+end
 
 local function UpdateHighlight(self, aura, color, alternate)
 	local texture = self:GetCheckedTexture()
 	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
 		if alternate then
 			ActionButton_ShowOverlayGlow(self)
-		else
-			ActionButton_UpdateOverlayGlow(self)
-			if not self.overlay then
-				SetVertexColor(texture, unpack(color))
-				self:__IA_SetChecked(true)
-			end
+		elseif not SafeUpdateOverlayGlow(self) then
+			SetVertexColor(texture, unpack(color))
+			self:__IA_SetChecked(true)
 		end
 	else
-		ActionButton_UpdateOverlayGlow(self)
+		SafeUpdateOverlayGlow(self)
 		texture:SetVertexColor(1, 1, 1)
 		local type, data = self:__IA_GetAction()
 		if type == "action" and data then
@@ -769,23 +788,6 @@ local spellNames = setmetatable({}, {__index = function(t, id)
 	end
 end})
 
-local function GetSpellId(type, data)
-	if type == 'action' then
-		type, data = GetActionInfo(data)
-	end
-	if type == 'spell' then
-		return data
-	elseif type == 'macro' then
-		return GetMacroSpell(data)
-	elseif type == 'item' then
-		return GetItemSpell(data)
-	end
-end
-
-local function Blizzard_GetAction(self)
-	return 'action', ActionButton_GetPagedID(self)
-end
-
 local function UpdateButton(self)
 	if not self:IsVisible() or not buttons[self] then return end
 	local spell = spellNames[GetSpellId(self:__IA_GetAction())]
@@ -802,6 +804,10 @@ local function UpdateButton(self)
 	end
 	UpdateHighlight(self, aura, color, alternateColor)
 	UpdateTimer(self, aura, hideStack, hideCountdown)
+end
+
+local function Blizzard_GetAction(self)
+	return 'action', ActionButton_GetPagedID(self)
 end
 
 local function InitializeButton(self)

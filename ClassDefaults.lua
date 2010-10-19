@@ -26,9 +26,16 @@ local addonName, ns = ...
 local InlineAura = InlineAura
 local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 
+local _, class = UnitClass('player')
+local version = GetAddOnMetadata(addonName, "Version")
+local reported = {}
+
 -- Get the spell name, throwing error if not found
-local function GetSpellName(id)
+local function GetSpellName(id, level)
 	local name
+	if InlineAura.keywords[name] then
+		return name
+	end
 	local rawId = tonumber(string.match(id, "^#(%d+)$"))
 	if rawId then
 		if GetSpellInfo(rawId) then
@@ -38,7 +45,11 @@ local function GetSpellName(id)
 		name = GetSpellInfo(id)
 	end
 	if not name then
-		geterrorhandler()("Invalid spell id "..tostring(id))
+		if not reported[id] then
+			local source = debugstack((level or 0)+2, 1,0):match(":(%d+)")
+			geterrorhandler()(format("Wrong spell id. Please report this error with the following information: id=%d, class=%s, version=%s, line=%s", id, class, version, source or "?"))
+			reported[id] = true
+		end
 		return "Unknown spell #"..tostring(id)
 	else
 		return name
@@ -46,8 +57,8 @@ local function GetSpellName(id)
 end
 
 -- Get the spell defaults, creating the table if need be
-local function GetSpellDefaults(id)
-	local name = GetSpellName(id)
+local function GetSpellDefaults(id, level)
+	local name = GetSpellName(id, (level or 0) + 1)
 	if not SPELL_DEFAULTS[name] then
 		SPELL_DEFAULTS[name] = {}
 	end
@@ -60,7 +71,7 @@ local function MakeAliases(origId, ...)
 	for i = 1,select('#', ...) do
 		local id = select(i, ...)
 		if id ~= origId then
-			table.insert(aliases, GetSpellName(id))
+			table.insert(aliases, GetSpellName(id, 2))
 		end
 	end
 	if #aliases > 0 then
@@ -70,7 +81,7 @@ end
 
 -- Defines spell type and aliases
 local function Aliases(auraType, id, ...)
-	local defaults = GetSpellDefaults(id)
+	local defaults = GetSpellDefaults(id, 1)
 	defaults.auraType = auraType
 	defaults.aliases = MakeAliases(id, ...)
 end
@@ -88,8 +99,8 @@ end
 
 -- Defines auras that appear on the player and modify another spell
 local function SelfTalentProc(spellId, talentId)
-	local defaults = GetSpellDefaults(spellId)
-	local talent = GetSpellName(talentId)
+	local defaults = GetSpellDefaults(spellId, 1)
+	local talent = GetSpellName(talentId, 1)
 	defaults.auraType = 'buff'
 	defaults.unitsToScan = SELF_BUFF_UNITS
 	defaults.alternateColor = true
@@ -109,7 +120,7 @@ end
 local function GroupBuffs(...) 
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
-		local defaults = GetSpellDefaults(id)
+		local defaults = GetSpellDefaults(id, 1)
 		defaults.auraType = 'buff'
 		defaults.onlyMine = false
 		defaults.aliases = MakeAliases(id, ...)
@@ -120,14 +131,12 @@ end
 local function GroupDebuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
-		local defaults = GetSpellDefaults(id)
+		local defaults = GetSpellDefaults(id, 1)
 		defaults.auraType = 'debuff'
 		defaults.onlyMine = false
 		defaults.aliases = MakeAliases(id, ...)
 	end
 end
-
-local _, class = UnitClass('player')
 
 ------------------------------------------------------------------------------
 if class == 'HUNTER' then
@@ -312,7 +321,7 @@ elseif class == 'PRIEST' then
 elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
 
-	GroupBuffs(1126, 21849) -- Mark of the Wild, Gift of the Wild
+	GroupBuffs(1126) -- Mark of the Wild
 
 	SelfBuffs(
 		  768, -- Cat Form
@@ -323,7 +332,6 @@ elseif class == 'DRUID' then
 		 5225, -- Track Humanoids
 		 5229, -- Enrage
 		 5487, -- Bear Form
-		 9634, -- Dire Bear Form
 		16689, -- Nature's Grasp
 		17116, -- Nature's Swiftness
 		22812, -- Barkskin
@@ -344,8 +352,9 @@ elseif class == 'DRUID' then
 	SelfTalentProc(5176, '#48517') -- Wrath damage increase 
 	SelfTalentProc(2912, '#48518') -- Starfire crit increase
 
+	GroupDebuffs(33917) -- Mangle
+
 	-- Contributed by pusikas2
-	GroupDebuffs(48564, 48566) -- Mangle - Bear, Mangle - Cat
 	GroupDebuffs(  770, 16857) -- Faerie Fire, Faerie Fire (Feral)
 
 ------------------------------------------------------------------------------

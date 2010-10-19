@@ -719,14 +719,14 @@ end
 
 local function UpdateHighlight(self, aura, color)
 	local texture = self:GetCheckedTexture()
-	if aura then
+	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
 		SetVertexColor(texture, unpack(color))
-		self:__IA_SetChecked(aura.expirationTime and aura.expirationTime > GetTime())
+		self:__IA_SetChecked(true)
 	else
-		local action = self.action
 		texture:SetVertexColor(1, 1, 1)
-		if action then
-			self:__IA_SetChecked(IsCurrentAction(action) or IsAutoRepeatAction(action))
+		local type, data = self:__IA_GetAction()
+		if type == "action" and data then
+			self:__IA_SetChecked(IsCurrentAction(data) or IsAutoRepeatAction(data))
 		end
 	end
 end
@@ -748,6 +748,15 @@ end
 -- Our core
 ------------------------------------------------------------------------------
 
+local spellNames = setmetatable({}, {__index = function(t, id)
+	local numId = tonumber(id)
+	local name = numId and GetSpellInfo(numId)
+	if name then
+		t[id] = name
+		return name
+	end
+end})
+
 local function GetSpellId(type, data)
 	if type == 'action' then
 		type, data = GetActionInfo(data)
@@ -767,7 +776,7 @@ end
 
 local function UpdateButton(self)
 	if not self:IsVisible() or not buttons[self] then return end
-	local spell = GetSpellInfo(GetSpellId(self:__IA_GetAction()))
+	local spell = spellNames[GetSpellId(self:__IA_GetAction())]
 	local aura, color, hideStack, hideCountdown
 	if spell then
 		local auraType

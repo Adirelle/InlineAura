@@ -184,14 +184,6 @@ local options = {
 					arg = 'colorDebuffOthers',
 					order = 40,
 				},
-				alternate = {
-					name = L['Alternate color'],
-					desc = L['Select the color to use for alternate highlights, typically talent procs.'],
-					type = 'color',
-					arg = 'colorAlternate',
-					hasAlpha = true,
-					order = 50,
-				},
 			},
 		},
 		text = {
@@ -453,8 +445,8 @@ local spellOptions = {
 					order = 40,
 				},
 				alternateColor = {
-					name = L['Use alternate color'],
-					desc = L['Check to use the alternate color. This is typically used to display talent proc.'],
+					name = L['Use animated glow'],
+					desc = L['Check to use the animated glow that is used for reactive abilities instead of coloring the button border.'],
 					type = 'toggle',
 					arg = 'alternateColor',
 					disabled = 'IsSpellDisabled',

@@ -45,7 +45,6 @@ ns.L = L
 
 -- Config.lua
 L["Add spell"] = true
-L["Alternate color"] = true
 L["Application count position"] = true
 L["Application text color"] = true
 L["Aura type"] = true
@@ -64,7 +63,7 @@ L["Check to ignore buffs cast by other characters."] = true
 L["Check to ignore debuffs cast by other characters."] = true
 L["Check to only show aura you applied. Uncheck to always show aura, even when applied by others. Leave grayed to use default settings."] = true
 L["Check to totally disable this spell. No border highlight nor text is displayed for disabled spells."] = true
-L["Check to use the alternate color. This is typically used to display talent proc."] = true
+L["Check to use the built-in animated glow that is used for reactive abilities instead of coloring the button border."] = true
 L["Check which units you want to be scanned for the aura. Auras of the first existing unit are shown, using this order: focus, target, pet and then player."] = true
 L["Click to create specific settings for the spell."] = true
 L["Countdown position"] = true
@@ -106,7 +105,6 @@ L["Restore default settings of the selected spell."] = true
 L["Restore defaults"] = true
 L["Right"] = true
 L["Select the aura type of this spell. This helps to look up the aura."] = true
-L["Select the color to use for alternate highlights, typically talent procs."] = true
 L["Select the color to use for the buffs cast by other characters."] = true
 L["Select the color to use for the buffs you cast."] = true
 L["Select the color to use for the debuffs cast by other characters."] = true
@@ -133,7 +131,7 @@ L["Top right"] = true
 L["Top"] = true
 L["Units to scan"] = true
 L["Unknown spell: %s"] = true
-L["Use alternate color"] = true
+L["Use animated glow"] = true
 
 -- Core.lua
 L["%dh"] = true
@@ -235,7 +233,6 @@ elseif locale == 'deDE' then
 L["%dh"] = "%dh"
 L["%dm"] = "%dm"
 L["Add spell"] = "Zauber hinzufügen"
-L["Alternate color"] = "Ersatzfarbe"
 L["Application count position"] = "Zählerposition"
 L["Application text color"] = "Textfarbe der Applikation"
 L["Aura type"] = "Auratyp"
@@ -254,7 +251,6 @@ L["Check to ignore buffs cast by other characters."] = "Überprüfung zum Ignori
 L["Check to ignore debuffs cast by other characters."] = "Überprüfung zum Ignorieren der gecasteten Debuffs anderer Charaktere"
 L["Check to only show aura you applied. Uncheck to always show aura, even when applied by others. Leave grayed to use default settings."] = "Aktivieren zur Anzeige eigener Auras. Deaktivierung zur Anzeige der Aura unabhängig vom Caster. Für die Standarteinstellungen grau lassen."
 L["Check to totally disable this spell. No border highlight nor text is displayed for disabled spells."] = "Aktivieren zum völligen Ignorieren dieses Zaubers. Weder der Hintergrund noch der Text werden bei deaktivieren Zaubern angezeigt."
-L["Check to use the alternate color. This is typically used to display talent proc."] = "Auswahl der Ersatzfarbe. Diese wird normalerweise zur Anzeige von Talentprocs genutzt. "
 L["Check which units you want to be scanned for the aura. Auras of the first existing unit are shown, using this order: focus, target, pet and then player."] = "Audswahl der Targets, welche nach Auras gescannt werden. Die erste gefundene Aura wird in der Reihenfolge: Focus, Target, Pet und Spieler angezeigt. "
 L["Click to create specific settings for the spell."] = "Klicken um spezifische Einstellungen für den Zauber vorzunehmen."
 L["Countdown position"] = "Position des Cooldowns"
@@ -290,11 +286,12 @@ L["Precise countdown"] = "Präziser Countdown"
 L["Profiles"] = "Profile"
 L["Remove spell"] = "Zauber entfernen"
 L["Remove spell specific settings."] = "Zauber-spezifische Einstellungen entfernen."
+L["Reset settings"] = "Rücksetzen der Einstellungen"
+L["Reset settings to global defaults."] = "Rücksetzen der Einstellungen auf globale Grundeinstellungen"
 L["Restore default settings of the selected spell."] = "Wiederherstellung der Standarteinstllungen des ausgewählten Zaubers."
 L["Restore defaults"] = "Standarteinstellungen wiederherstellen. "
 L["Right"] = "Rechts"
 L["Select the aura type of this spell. This helps to look up the aura."] = "Auswahl des Auratyps des Zaubers. "
-L["Select the color to use for alternate highlights, typically talent procs."] = "Auswahl der Ersatzfarbe für alternative Ereignisse, normalerweise Talentprocs."
 L["Select the color to use for the buffs cast by other characters."] = "Auswahl der Farbe für die gecasteten Buffs anderer Charaktere"
 L["Select the color to use for the buffs you cast."] = "Auswahl der Farbe für die eigenen gecasteten Buffs"
 L["Select the color to use for the debuffs cast by other characters."] = "Auswahl der Farbe für die gecasteten Debuffs anderer Charaktere"
@@ -321,7 +318,6 @@ L["Top left"] = "Oben Links"
 L["Top right"] = "Oben Rechts"
 L["Units to scan"] = "Targets zum überprüfen. "
 L["Unknown spell: %s"] = "Unbekannter Zauber: %s"
-L["Use alternate color"] = "Ersatzfarbe benutzen"
 
 ------------------------ esMX ------------------------
 -- no translation
@@ -545,7 +541,6 @@ elseif locale == 'koKR' then
 L["%dh"] = "%dh"
 L["%dm"] = "%dm"
 L["Add spell"] = "주문 추가"
-L["Alternate color"] = "대체색"
 L["Application count position"] = "효과 카운트 위치"
 L["Application text color"] = "효과 글자색"
 L["Aura type"] = "오라 형태"
@@ -557,8 +552,8 @@ L["Bottom right"] = "오른쪽 아래"
 L["Buff"] = "강화 효과"
 L["Center"] = "가운데"
 L["Check to have a more accurate countdown display instead of default Blizzard rounding."] = "기본 블리자드 어림수 대신 더 정확한 카운트다운을 표시하려면 체크합니다."
-L["Check to hide the aura application count (charges or stacks)."] = "오라 효과 카운트(중첩이나 사용 여부)를 숨기려면 체크."
-L["Check to hide the aura countdown."] = "오라 카운트다운을 숨기려면 체크."
+L["Check to hide the aura application count (charges or stacks)."] = "오라 효과 카운트 (중첩이나 사용 여부)을(를) 숨기려면 체크."
+L["Check to hide the aura countdown."] = "오라 카운트 다운을 숨기려면 체크."
 L["Check to hide the aura duration countdown."] = "오라 지속시간 카운트다운을 숨기려면 체크."
 L["Check to ignore buffs cast by other characters."] = "다른 캐릭터가 시전한 강화 효과를 무시하려면 체크."
 L["Check to ignore debuffs cast by other characters."] = "다른 캐릭터가 시전한 약화 효과를 무시하려면 체크."
@@ -598,6 +593,8 @@ L["Precise countdown"] = "정밀한 카운트다운"
 L["Profiles"] = "프로필"
 L["Remove spell"] = "주문 제거"
 L["Remove spell specific settings."] = "주문 특정 설정 제거."
+L["Reset settings"] = "초기화 설정"
+L["Reset settings to global defaults."] = "기본값으로 재설정"
 L["Restore default settings of the selected spell."] = "선택한 주문의 기본 설정값을 불러옵니다."
 L["Restore defaults"] = "기본값 불러오기"
 L["Right"] = "오른쪽"
@@ -627,7 +624,6 @@ L["Top left"] = "왼쪽 위"
 L["Top right"] = "오른쪽 위"
 L["Units to scan"] = "검색할 단위"
 L["Unknown spell: %s"] = "알 수 없는 주문: %s"
-L["Use alternate color"] = "대체색 사용"
 end
 
 -- @noloc]]

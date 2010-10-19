@@ -104,7 +104,6 @@ local DEFAULT_OPTIONS = {
 		colorDebuffOthers = { 1.0, 1.0, 0.0, 1.0 },
 		colorCountdown    = { 1.0, 1.0, 1.0, 1.0 },
 		colorStack        = { 1.0, 1.0, 0.0, 1.0 },
-		colorAlternate    = { 1.0, 0.0, 1.0, 1.0 },
 		spells = {
 			['**'] = {
 				disabled = false,
@@ -717,12 +716,25 @@ local function SetVertexColor(texture, r, g, b, a)
 	texture:SetVertexColor(r, g, b, a)
 end
 
-local function UpdateHighlight(self, aura, color)
+local IsSpellOverlayed = IsSpellOverlayed
+local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
+local ActionButton_HideOverlayGlow = ActionButton_HideOverlayGlow
+local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow
+
+local function UpdateHighlight(self, aura, color, alternate)
 	local texture = self:GetCheckedTexture()
 	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
-		SetVertexColor(texture, unpack(color))
-		self:__IA_SetChecked(true)
+		if alternate then
+			ActionButton_ShowOverlayGlow(self)
+		else
+			ActionButton_UpdateOverlayGlow(self)
+			if not self.overlay then
+				SetVertexColor(texture, unpack(color))
+				self:__IA_SetChecked(true)
+			end
+		end
 	else
+		ActionButton_UpdateOverlayGlow(self)
 		texture:SetVertexColor(1, 1, 1)
 		local type, data = self:__IA_GetAction()
 		if type == "action" and data then
@@ -777,9 +789,8 @@ end
 local function UpdateButton(self)
 	if not self:IsVisible() or not buttons[self] then return end
 	local spell = spellNames[GetSpellId(self:__IA_GetAction())]
-	local aura, color, hideStack, hideCountdown
+	local aura, auraType, color, hideStack, hideCountdown, alternateColor
 	if spell then
-		local auraType
 		aura, auraType, hideStack, hideCountdown, alternateColor = GetAuraToDisplay(spell)		
 		if aura then
 			if alternateColor then
@@ -789,7 +800,7 @@ local function UpdateButton(self)
 			end
 		end
 	end
-	UpdateHighlight(self, aura, color)
+	UpdateHighlight(self, aura, color, alternateColor)
 	UpdateTimer(self, aura, hideStack, hideCountdown)
 end
 
@@ -1032,6 +1043,8 @@ function InlineAura:ADDON_LOADED(event, name)
 	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
 	hooksecurefunc('ActionButton_UpdateState', UpdateButton)
 	hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
+	hooksecurefunc('ActionButton_ShowOverlayGlow', UpdateButton)
+	hooksecurefunc('ActionButton_HideOverlayGlow', UpdateButton)
 end
 
 -- Event handler

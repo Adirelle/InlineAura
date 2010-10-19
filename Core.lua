@@ -53,6 +53,7 @@ local configUpdated = false
 local inVehicle = false
 
 local buttons = {}
+local newbuttons = {}
 InlineAura.buttons = buttons
 
 ------------------------------------------------------------------------------
@@ -615,12 +616,12 @@ local function UpdateHighlight(self, aura, color)
 	local texture = self:GetCheckedTexture()
 	if aura then
 		SetVertexColor(texture, unpack(color))
-		self:SetChecked(true)
+		self:__IA_SetChecked(true)
 	else
 		local action = self.action
 		texture:SetVertexColor(1, 1, 1)
 		if action then
-			self:SetChecked(IsCurrentAction(action) or IsAutoRepeatAction(action))
+			self:__IA_SetChecked(IsCurrentAction(action) or IsAutoRepeatAction(action))
 		end
 	end
 end
@@ -639,27 +640,29 @@ local function LBF_Callback()
 end
 
 ------------------------------------------------------------------------------
--- Button hooks
+-- Our core
 ------------------------------------------------------------------------------
 
-local function ActionButton_OnLoad_Hook(self)
-	if not buttons[self] then
-		buttons[self] = true
-		needUpdate = true
+local function GetSpellId(type, data)
+	if type == 'action' then
+		type, data = GetActionInfo(data)
+	end
+	if type == 'spell' then
+		return data
+	elseif type == 'macro' then
+		return GetMacroSpell(data)
+	elseif type == 'item' then
+		return GetItemSpell(data)
 	end
 end
 
-local function ActionButton_UpdateState_Hook(self)
-	if not self:IsVisible() then return end
-	if self.__LAB_Version then
-		-- Do not mess with LibActionButton yet
-		buttons[self] = nil
-		return
-	end
-	local spell = self.actionName
-	if spell and self.actionType == 'macro' then
-		spell = GetMacroSpell(spell)
-	end
+local function Blizzard_GetAction(self)
+	return 'action', ActionButton_GetPagedID(self)
+end
+
+local function UpdateButton(self)
+	if not self:IsVisible() or not buttons[self] then return end
+	local spell = GetSpellId(self:__IA_GetAction())
 	local aura, color, hideStack, hideCountdown
 	if spell then
 		local auraType
@@ -669,41 +672,46 @@ local function ActionButton_UpdateState_Hook(self)
 				color = db.profile.colorAlternate
 			else
 				color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
-			end 
+			end
 		end
 	end
 	UpdateHighlight(self, aura, color)
 	UpdateTimer(self, aura, hideStack, hideCountdown)
 end
 
-local function ActionButton_Update_Hook(self)
+local function InitializeButton(self)
+	if buttons[self] then return end
+	buttons[self] = true
+	self.__IA_SetChecked = self.SetChecked
 	if self.__LAB_Version then
-		-- Do not mess with LibActionButton yet
-		buttons[self] = nil
+		--@debug@
+		dprint("Initializing LAB button", self:GetName(), "v", self.__LAB_Version)
+		--@end-debug@
+		self.__IA_GetAction = self.GetAction
+		hooksecurefunc(self, 'SetChecked', UpdateButton)
+	else
+		self.__IA_GetAction = Blizzard_GetAction
+	end
+end
+
+------------------------------------------------------------------------------
+-- Button hooks
+------------------------------------------------------------------------------
+
+local function ActionButton_OnLoad_Hook(self)
+	if not buttons[self] and not newbuttons[self] then
+		newbuttons[self] = true
+		needUpdate = true
+	end
+end
+
+local function ActionButton_Update_Hook(self)
+	if not buttons[self] then
+		newbuttons[self] = true
 		return
+	else
+		return UpdateButton(self)
 	end
-	local actionName, actionType
-	if self.action then
-		local arg1, arg2, arg3
-		actionType, arg1, arg2, arg3 = GetActionInfo(ActionButton_GetPagedID(self))
-		if actionType == 'spell' then
-			if type(arg1) == "number" then	
-				actionName = GetSpellInfo(arg1)
-			elseif arg1 and arg2 and arg1 > 0 then
-				actionName = GetSpellName(arg1, arg2)
-			elseif arg3 then
-				actionName = GetSpellInfo(arg3)
-			end
-			
-		elseif actionType == 'item' then
-			actionName = GetItemSpell(arg1)
-		else
-			actionName = arg1
-		end
-	end
-	self.actionName, self.actionType = actionName, actionType
-	ActionButton_UpdateState_Hook(self)
-	buttons[self] = self:IsVisible() and actionName or nil
 end
 
 ------------------------------------------------------------------------------
@@ -737,9 +745,16 @@ function InlineAura:OnUpdate()
 		end
 	end
 	if needUpdate or configUpdated then
+		if next(newbuttons) then
+			-- Handle new buttons
+			for button in pairs(newbuttons) do
+				InitializeButton(button)
+			end
+			wipe(newbuttons)
+		end
 		-- Update buttons
 		for button in pairs(buttons) do
-			ActionButton_UpdateState_Hook(button)
+			UpdateButton(button)
 		end
 		needUpdate, configUpdated = false, false
 	end
@@ -754,8 +769,11 @@ end
 function InlineAura:RegisterButtons(prefix, count)
 	for id = 1, count do
 		local button = _G[prefix .. id]
-		if button and not buttons[button] then
-			buttons[button] = true
+		if button and not buttons[button] and not newbuttons[button] then
+			--@debug@
+			dprint("Found button", button:GetName())
+			--@end-debug@
+			newbuttons[button] = true
 			needUpdate = true
 		end
 	end
@@ -821,16 +839,26 @@ function InlineAura:VARIABLES_LOADED()
 			LBF:RegisterSkinCallback("Dominos", LBF_Callback)
 		end
 	end
-	--[[
 	if Bartender4 then
 		self:RegisterButtons("BT4Button", 120)
 		if LBF then
 			LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
 		end
 	end
-	--]]
 	if OmniCC or CooldownCount then
 		InlineAura.bigCountdown = false
+	end
+	local LAB, LAB_version = LibStub("LibActionButton-1.0", true)
+	if LAB then
+		--@debug@
+		dprint("Found LibActionButton-1.0 version", LAB_version)
+		--@end-debug@
+		hooksecurefunc(LAB, "CreateButton", function(_, id, name, header, config)
+			local button = name and _G[name]
+			if button then
+				ActionButton_OnLoad_Hook(button)
+			end
+		end)
 	end
 
 	-- Refresh everything
@@ -891,7 +919,7 @@ function InlineAura:ADDON_LOADED(event, name)
 
 	-- Hooks
 	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
-	hooksecurefunc('ActionButton_UpdateState', ActionButton_UpdateState_Hook)
+	hooksecurefunc('ActionButton_UpdateState', UpdateButton)
 	hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
 end
 
@@ -929,4 +957,3 @@ end
 
 -- InterfaceOptionsFrame spy
 CreateFrame("Frame", nil, InterfaceOptionsFrameAddOns):SetScript('OnShow', LoadConfigGUI)
-

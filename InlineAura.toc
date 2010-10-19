@@ -2,9 +2,9 @@
 ## X-Compatible-With: 40000
 
 ## Title: Inline Aura
-## Notes: Display aura information inside action buttons 
+## Notes: Display aura information inside action buttons
 ## Author: Adirelle
-## Version: @project-version@ 
+## Version: @project-version@
 ## X-Date: @project-date-iso@
 ## X-Category: Buffs & Debuffs, Action Bars
 ## X-License: GPL v2
@@ -14,7 +14,7 @@
 ## X-LoadOn-Always: delayed
 
 ## SavedVariables: InlineAuraDB
-## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0, ButtonFacade, Bartender4, Dominos, OmniCC, CooldownCount, tekDebug
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0, ButtonFacade, Bartender4, Dominos, OmniCC, CooldownCount, tekDebug, LibActionButton-1.0
 
 #@no-lib-strip@
 libs\LibStub\LibStub.lua

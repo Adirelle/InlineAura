@@ -91,7 +91,7 @@ local SELF_BUFF_UNITS = { player = true, pet = false, focus = false, target = fa
 local function SelfBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
-		local defaults = GetSpellDefaults(id)
+		local defaults = GetSpellDefaults(id, 1)
 		defaults.auraType = 'buff'
 		defaults.unitsToScan = SELF_BUFF_UNITS
 	end
@@ -146,6 +146,8 @@ if class == 'HUNTER' then
 	Aliases('debuff',  1499,  3355, 60210) -- Freezing Trap => Freezing Trap Effect and Freezing Arrow Effect
 	Aliases('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	Aliases('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
+	
+	Aliases('buff', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...	
 
 	SelfBuffs(
 		13161, -- Aspect of the Beast
@@ -164,12 +166,13 @@ if class == 'HUNTER' then
 		19884, -- Track Undead
 		 3045, -- Rapid Fire
 		19263, -- Deterrence
-		 5384  -- Feign Death
+		 5384, -- Feign Death
+		53224, -- Improved Steady Shot
+		82692  -- Focus Fire
 	)
 	
 	GroupBuffs(20043) -- Aspect of the Wild
 	GroupBuffs(13159) -- Aspect of the Pack
-	GroupBuffs(19506) -- Trueshot Aura
 	
 	GroupDebuffs(1130) -- Hunter's Mark
 
@@ -361,53 +364,23 @@ elseif class == 'DRUID' then
 elseif class == 'PALADIN' then
 ------------------------------------------------------------------------------
 
-	local _, race = UnitRace('player')
-
 	SelfBuffs(
 		  498, -- Divine Protection
 		  642, -- Divine Shield
 		20164, -- Seal of Justice
 		20165, -- Seal of Light
-		20166, -- Seal of Wisdom
-		20216, -- Divine Favor
-		21084, -- Seal of Righteousness
 		25780, -- Righteous Fury
 		31842, -- Divine Illumination
 		31884, -- Avenging Wrath
 		53651  -- Beacon of Light buff name on player is Light's Beacon
 	)
 
-	if race == 'BloodElf' then
-		SelfBuffs(
-			31892, -- Seal of Blood
-			53736  -- Seal of Corruption
-		)
-	else
-		SelfBuffs(
-			53720, -- Seal of the Martyr
-			31801  -- Seal of Vengeance
-		)
-	end
+	SelfTalentProc(635, 54149) -- Holy Light => Infusion of Light
 	
-	-- Holy Light is modified both by Infusion of Light and Light's Grace but
-	-- they have different effects so we only show one.
-	SelfTalentProc(  635, 31834) -- Holy Light => Light's Grace
-	SelfTalentProc(19750, 53672) -- Flash of Light => Infusion of Light
-	
-	-- Art of War
-	SelfTalentProc(19750, 53489) -- Flash of Light => Art of War
-	SelfTalentProc(  879, 53489) -- Exorcism => Art of War
-
 	-- Blessings
-	GroupBuffs(19740, 25782) -- Blessing of Might, Greater Blessing of Might
-	GroupBuffs(19742, 25894) -- Blessing of Wisdom, Greater Blessing of Wisdom
-	GroupBuffs(20911, 25899) -- Blessing of Sanctuary, Greater Blessing of Sanctuary
-	GroupBuffs(20217, 25898) -- Blessing of Kings, Greater Blessing of Kings
-	
-	GroupDebuffs(20271) -- Judgement of Light
-	GroupDebuffs(53407) -- Judgement of Justice
-	GroupDebuffs(53408) -- Judgement of Wisdom
-	
+	GroupBuffs(19740) -- Blessing of Might
+	GroupBuffs(20217) -- Blessing of Kings
+
 	GroupDebuffs(20066) -- Repentance
 	GroupDebuffs(10326) -- Turn Evil
 

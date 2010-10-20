@@ -379,11 +379,6 @@ elseif class == 'WARRIOR' then
 		55694  -- Enraged Regeneration
 	)
 
-	SelfTalentProc( 1464, 46916) -- Slam => Bloodsurge
-	SelfTalentProc(23922, 46951) -- Shield Slam => Sword and Board
-	SelfTalentProc( 7384, 60503) -- Overpower => Taste for Blood
-	SelfTalentProc( 5308, 52437) -- Execute => Sudden Death
-
 ------------------------------------------------------------------------------
 elseif class == 'SHAMAN' then
 ------------------------------------------------------------------------------
@@ -398,29 +393,20 @@ elseif class == 'SHAMAN' then
 		55198  -- Tidal Force
 	)
 
-	SelfTalentProc( 331, 53390) -- Healing Wave => Tidal Waves
-	SelfTalentProc(8004, 53390) -- Lesser Healing Wave => Tidal Waves
-	
 	GroupDebuffs(51514) -- Hex
 	
 ------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
-	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
-	SelfTalentProc(  686, 34936) -- Shadow Bolt => Backlash
-	
-	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
-	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
-	SelfTalentProc(29722, 54274) -- Incinerate => Backdraft
+	-- Display soul shard count on Soulburn
+	Aliases(74434, 'SOUL_SHARDS')
 
+	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
 	SelfTalentProc(6353, 63165) -- Soul Fire => Decimation
 
-	-- Glyph of Life Tap
-	SelfTalentProc( 1454, 63321) -- Life Tap => Life Tap
-	SelfTalentProc(18220, 63321) -- Dark Pact => Life Tap
-	
 	GroupDebuffs(710) -- Banish
+	GroupDebuffs(5782) -- Fear
 
 ------------------------------------------------------------------------------
 elseif class == 'MAGE' then
@@ -428,21 +414,6 @@ elseif class == 'MAGE' then
 
 	-- Polymorphs
 	GroupDebuffs(118, 28272, 28271, 61025, 61305)
-	
-	-- Firestarter proc
-	SelfTalentProc(11113, 54741) -- Blast Wave => Firestarter
-	SelfTalentProc(31661, 54741) -- Dragon's Breath => Firestarter
-
-	-- Contributed by FlareCDE
-	Aliases('debuff', 42859, 22959) -- Scorch => Improved Scorch
-	
-	-- Improved Scorch is actually a target talent proc
-	GetSpellDefaults(42859).alternateColor = true
-
-	-- Contributed by sun
-	SelfTalentProc(11366, 44445) -- Pyroblast => Hot Streak
-	SelfTalentProc( 5143,	44404) -- Arcane Missiles => Missile Barrage
-	SelfTalentProc(  133, 57761) -- Fireball => Brain Freeze (buff named "Fireball!")
 
 ------------------------------------------------------------------------------
 elseif class == 'DEATHKNIGHT' then
@@ -451,10 +422,6 @@ elseif class == 'DEATHKNIGHT' then
 	-- Contributed by jexxlc
 	Aliases('debuff', 45462, 55078) -- Plague Strike => Blood Plague
 	Aliases('debuff', 45477, 55095) -- Icy Touch => Frost Fever
-
-	-- Reported by shine2009
-	SelfTalentProc(49895, 49194) -- Death Coil => Unholy Blight
-	SelfTalentProc(45902, 66803) -- Blood Strike => Desolation
 
 ------------------------------------------------------------------------------
 elseif class == 'PRIEST' then
@@ -470,15 +437,14 @@ elseif class == 'PRIEST' then
 	GroupBuffs(976) -- Shadow Protection
 
 	GroupDebuffs(9484) -- Shackle Undead
-	
-	SelfTalentProc( 585, 33151) -- Smite => Surge of Light
-	SelfTalentProc(2061, 33151) -- Flash Heal => Surge of Light
-	SelfTalentProc( 596, 63731) -- Prayer of Healing => Serendipity
-  SelfTalentProc(2060, 63731) -- Greater Heal => Serendipity
-	
+
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
+
+	-- Display eclipse energy
+	Aliases(5176, "LUNAR_ENERGY") -- Wrath
+	Aliases(2912, "SOLAR_ENERGY") -- Starfire
 
 	SelfBuffs(
 		  768, -- Cat Form
@@ -526,8 +492,6 @@ elseif class == 'PALADIN' then
 	Aliases(53385, "HOLY_POWER") -- Divine Storm
 	Aliases(53600, "HOLY_POWER") -- Shield of the Righteous
 	Aliases(84963, "HOLY_POWER") -- Inquisition
-
-	SelfTalentProc(635, 54149) -- Holy Light => Infusion of Light
 
 	GroupDebuffs(20066) -- Repentance
 	GroupDebuffs(10326) -- Turn Evil

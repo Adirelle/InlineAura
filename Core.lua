@@ -171,8 +171,11 @@ local UnitAura = function(...)
 	return name, rank, icon, count, debuffType, duration, expirationTime, MY_UNITS[caster or "none"], isStealable, shouldConsolidate, spellId
 end
 
+-- This is meant to be hooked by conditional parts
+function InlineAura:SetupHook() end
+
 ------------------------------------------------------------------------------
--- Aura monitoring
+-- Aura monitoring core
 ------------------------------------------------------------------------------
 
 local function WipeAuras(auras)
@@ -271,6 +274,10 @@ do
 	end
 	InlineAura.UpdateUnitAuras = UpdateUnitAuras
 end
+
+------------------------------------------------------------------------------
+-- Aura scanners
+------------------------------------------------------------------------------
 
 -- This scanner scans all auras
 tinsert(auraScanners, function(callback, unit, filter)
@@ -403,7 +410,18 @@ if playerClass == "DRUID" then
 			local newPower = math.ceil(100 * UnitPower("player", SPELL_POWER_ECLIPSE) / UnitPowerMax("player", SPELL_POWER_ECLIPSE))
 			if newPower ~= power then
 				power = newPower
-				return UpdateUnitAuras("player", event)	
+				if event == "UNIT_POWER" then
+					return UpdateUnitAuras("player", event)	
+				end
+			end
+		end
+	end
+	function InlineAura:ECLIPSE_DIRECTION_CHANGE(event)
+		local newDirection = GetEclipseDirection()
+		if newDirection ~= direction then
+			direction = newDirection
+			if event == "ECLIPSE_DIRECTION_CHANGE" then
+				return UpdateUnitAuras("player", event)			
 			end
 		end
 	end
@@ -411,20 +429,23 @@ if playerClass == "DRUID" then
 		local newIsMoonkin = (GetPrimaryTalentTree() == 1)
 		if isMoonkin ~= newIsMoonkin then
 			isMoonkin = newIsMoonkin
+			if isMoonkin then
+				self:RegisterEvent('UNIT_POWER')
+				self:RegisterEvent('ECLIPSE_DIRECTION_CHANGE')
+				self:ECLIPSE_DIRECTION_CHANGE(event)
+				self:UNIT_POWER(event, "player", "ECLIPSE")
+			else
+				self:UnregisterEvent('UNIT_POWER')
+				self:UnregisterEvent('ECLIPSE_DIRECTION_CHANGE')
+			end
 			return UpdateUnitAuras("player", event)	
 		end
 	end
-	function InlineAura:ECLIPSE_DIRECTION_CHANGE(event)
-		local newDirection = GetEclipseDirection()
-		if newDirection ~= direction then
-			direction = newDirection
-			return UpdateUnitAuras("player", event)			
-		end
-	end
 
-	InlineAura:RegisterEvent('UNIT_POWER')
-	InlineAura:RegisterEvent('ECLIPSE_DIRECTION_CHANGE')
-	InlineAura:RegisterEvent('PLAYER_TALENT_UPDATE')
+	InlineAura:RegisterEvent('PLAYER_TALENT_UPDATE')	
+	hooksecurefunc(InlineAura, "SetupHook", function(self)
+		self:PLAYER_TALENT_UPDATE('SetupHook')
+	end)
 end
 
 ------------------------------------------------------------------------------
@@ -1004,6 +1025,9 @@ function InlineAura:VARIABLES_LOADED()
 			end
 		end)
 	end
+	
+	-- Do nothing, unless it's been hooked
+	self:SetupHook()
 
 	-- Refresh everything
 	self:RequireUpdate(true)

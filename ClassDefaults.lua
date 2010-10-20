@@ -33,8 +33,8 @@ local reported = {}
 -- Get the spell name, throwing error if not found
 local function GetSpellName(id, level)
 	local name
-	if InlineAura.keywords[name] then
-		return name
+	if InlineAura.keywords[id] then
+		return id
 	end
 	local rawId = tonumber(string.match(id, "^#(%d+)$"))
 	if rawId then
@@ -47,7 +47,7 @@ local function GetSpellName(id, level)
 	if not name then
 		if not reported[id] then
 			local source = debugstack((level or 0)+2, 1,0):match(":(%d+)")
-			geterrorhandler()(format("Wrong spell id. Please report this error with the following information: id=%d, class=%s, version=%s, line=%s", id, class, version, source or "?"))
+			geterrorhandler()(format("Wrong spell id. Please report this error with the following information: id=%s, class=%s, version=%s, line=%s", tostringall(id, class, version, source)))
 			reported[id] = true
 		end
 		return "Unknown spell #"..tostring(id)
@@ -313,20 +313,15 @@ GroupAuras("debuff",
 if class == 'HUNTER' then
 ------------------------------------------------------------------------------
 
-	Aliases('debuff', 60192, 60210,  3355) -- Freezing Arrow => Freezing Arrow Effect and Freezing Trap Effect
-	Aliases('debuff',  1499,  3355, 60210) -- Freezing Trap => Freezing Trap Effect and Freezing Arrow Effect
+	Aliases('debuff',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
 	Aliases('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	Aliases('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
 	
 	Aliases('buff', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...	
 
 	SelfBuffs(
-		13161, -- Aspect of the Beast
 		 5118, -- Aspect of the Cheetah
-		61846, -- Aspect of the Dragonhawk
 		13165, -- Aspect of the Hawk
-		13163, -- Aspect of the Monkey
-		34074, -- Aspect of the Viper
 		 1494, -- Track Beast
 		19878, -- Track Demons
 		19879, -- Track Dragonkin

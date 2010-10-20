@@ -138,6 +138,177 @@ local function GroupDebuffs(...)
 	end
 end
 
+-- Declare group (de)buffs that are brought by several classes
+local GroupAuras
+do
+	local t = {}
+	function GroupAuras(auraType, ...)
+		wipe(t)
+		for i = 2, select('#', ...), 2 do
+			tinsert(t, (select(i, ...)))
+		end
+		for i = 1, select('#', ...), 2 do
+			local spellClass, spellId = select(i, ...)
+			if spellClass == class then
+				local defaults = GetSpellDefaults(spellId, 1)
+				defaults.auraType = auraType
+				defaults.onlyMine = false
+				defaults.aliases = MakeAliases(spellId, unpack(t))
+			end
+		end
+	end
+end
+
+------------------------------------------------------------------------------
+-- Group (de)buffs 
+------------------------------------------------------------------------------
+--[[
+Do not list the (de)buffs that are all auras, procs, passive or come with the normal combat rotation.
+
+Fully passive (de)buffs:
+- Increased Damage (3%)
+- Increased Critical Chance (5%)
+- Increased Spell Power (10%)
+- Physical Damage Taken (4%)
+- Spell Crit Taken (5%)
+- Reduced Attack Speed (20%)
+- Reduced Physical Damage Done (10%)
+]]
+
+--- Buffs ---
+
+-- Increased Stats (5%)
+GroupAuras("buff", 
+	"PALADIN", 20217, -- Blessing of Kings
+	"DRUID",    1126, -- Mark of the Wild
+	"HUNTER",  90363  -- Embrace of the Shale Spider (exotic pet ability)
+)
+
+-- Increased Attack Power (10%)
+GroupAuras("buff",
+	"PALADIN",     19740, -- Blessing of Might
+	"DEATHKNIGHT", 53138, -- Abomination's Might (passive)
+	"HUNTER",      19506, -- Trueshot Aura (passive)
+	"SHAMAN",      30808  -- Unleashed Rage (passive)
+)
+
+-- Increased Spell Power (6%)
+GroupAuras("buff",
+	"MAGE",   1459, -- Arcane Brillance
+	"SHAMAN", 8227  -- Flametongue Totem
+)
+
+-- Increased Physical Haste (10%)
+GroupAuras("buff",
+	"DEATHKNIGHT", 55610, -- Improved Icy Talons (passive)
+	"HUNTER",      53290, -- Hunting Party (passive)
+	"SHAMAN",       8512  -- Windfury Totem
+)
+
+-- Increased Spell Haste (5%)
+GroupAuras("buff",
+	"SHAMAN",  3738, -- Wrath of Air Totem
+	"PRIEST", 15473, -- Shadowform (passive)
+	"DRUID",  24907  -- Moonkin Aura (passive)
+)
+
+-- Burst Haste (30%)
+GroupAuras("buff",
+	"SHAMAN", (UnitFactionGroup("player") == "Horde" and 2825 or 32182), -- Bloodlust/Heroism
+	"MAGE",   80353, -- Time Warp
+	"HUNTER", 90355  -- Ancient Hysteria (exotic pet ability)
+)
+
+-- Agility & Strength bonuses
+GroupAuras("buff", 
+	"WARRIOR",      6673, -- Battle Shout
+	"SHAMAN",       8075, -- Strength of Earth Totem
+	"DEATHKNIGHT", 57330, -- Horn of Winter
+	"HUNTER",      93435  -- Roar of Courage (pet ability)
+)
+
+-- Stamina Bonus
+GroupAuras("buff",
+	"PRIEST",  21562, -- Power Word: Fortitude
+	"WARRIOR",   469, -- Commanding Shout
+	"WARLOCK",  6307, -- Blood Pact (imp ability)
+	"HUNTER",  90364  -- Qiraji Fortitude (exotic pet ability)
+)
+
+-- Armor Bonus
+GroupAuras("buff", 
+	"PALADIN",  465, -- Devotion Aura
+	"SHAMAN",  8071  -- Stoneskin Totem
+)
+
+-- Mana Bonus
+GroupAuras("buff",
+	"MAGE",     1459, -- Arcane Brillance
+	"WARLOCK", 54424  -- Fel Intelligence (felhunter ability)
+)
+
+-- Pushback Resistance
+GroupAuras("buff",
+	"PALADIN", 19746, -- Concentration Aura
+	"SHAMAN",  87718  -- Totem of Tranquil Mind
+)
+
+--- Debuffs ---
+
+-- Spell Damage Taken (8%)
+GroupAuras("debuff",
+	"WARLOCK",      1490, -- Curse of the Elements
+	"WARLOCK",     85479, -- Jinx
+	"ROGUE",       58410, -- Master Poisoner (passive)
+	"DEATHKNIGHT", 51160, -- Ebon Plaguebringer (passive)
+	"DRUID",       48506, -- Earth and Moon (passive)
+	"HUNTER",      34889, -- Fire Breath (pet ability)
+	"HUNTER",      24844  -- Lightning Breath (pet ability)
+)
+
+-- Bleed Damage Taken (30%)
+GroupAuras("debuff",
+	"DRUID",   33878, -- Mangle (bear)
+	"DRUID",   33876, -- Mangle (cat)
+	"ROGUE",   16511, -- Hemorrhage
+	"WARRIOR", 29836, -- Blood Frenzy (passive)
+	"HUNTER",  50271, -- Tendon Ripe (pet ability)
+	"HUNTER",  35290, -- Gore (pet ability)
+	"HUNTER",  57386  -- Stampede (pet ability)
+)
+
+-- Reduced Casting Speed (30%)
+GroupAuras("debuff", 
+	"WARLOCK",      1714, -- Curse of Tongues
+	"ROGUE",        5761, -- Mind-Numbing Poison
+	"MAGE",        31589, -- Slow
+	"DEATHKNIGHT", 73975, -- Necrotic Strike
+	"HUNTER",      50274, -- Spore Cloud (pet ability)
+	"HUNTER",      58604  -- Lava Breath (pet ability)
+)
+
+-- Reduced Armor (12%)
+GroupAuras("debuff",
+	"WARRIOR",  7386, -- Sunder Armor
+	"WARRIOR", 20243, -- Devastate
+	"ROGUE",    8647, -- Expose Armor
+	"DRUID",     770, -- Faerie Fire
+	"DRUID",   16857, -- Faerie Fire (feral)
+	"HUNTER",  35387, -- Corrosive Spit (pet ability)
+	"HUNTER",  50498  -- Tear Armor (pet ability)
+)
+
+-- Reduced Healing (25%)
+GroupAuras("debuff",
+	"WARRIOR", 12294, -- Mortal Strike
+	"WARRIOR", 46910, -- Furious Attacks
+	"PRIEST",  15313, -- Improved Mind Blast
+	"ROGUE",   13219, -- Wound Poison
+	"HUNTER",  82654, -- Widow Venom
+	"WARLOCK", 30213, -- Legion Strike (felguard ability)
+	"HUNTER",  54680  -- Monstrous Bite (exotic pet ability)
+)
+
 ------------------------------------------------------------------------------
 if class == 'HUNTER' then
 ------------------------------------------------------------------------------
@@ -174,7 +345,7 @@ if class == 'HUNTER' then
 	GroupBuffs(20043) -- Aspect of the Wild
 	GroupBuffs(13159) -- Aspect of the Pack
 	
-	GroupDebuffs(1130) -- Hunter's Mark
+	GroupDebuffs(1130, 53243) -- Hunter's Mark, Marked For Death
 
 	-- Pet only spells
 	local PET_UNITS = { pet = true, player = false, focus = false, target = false }
@@ -193,13 +364,7 @@ if class == 'HUNTER' then
 elseif class == 'WARRIOR' then
 ------------------------------------------------------------------------------
 
-	GroupBuffs( 469) -- Commanding Shout
-	GroupBuffs(6673) -- Battle Shout
-
 	GroupDebuffs(1160) -- Demoralizing Shout
-
-	-- Contributed by brotherhobbes
-	Aliases('debuff', 47498, 47467) -- Devastate => Sunder Armor
 
 	SelfBuffs(
 			871, -- Shield Wall
@@ -255,16 +420,12 @@ elseif class == 'WARLOCK' then
 	SelfTalentProc( 1454, 63321) -- Life Tap => Life Tap
 	SelfTalentProc(18220, 63321) -- Dark Pact => Life Tap
 	
-	GroupDebuffs(1490) -- Curse of the Elements
 	GroupDebuffs(710) -- Banish
 
 ------------------------------------------------------------------------------
 elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
 
-	-- Intellect buffs 
-	GroupBuffs(1459, 23028, 61024, 61316) -- Arcane Intellect, Arcane Brilliance, Dalaran Intellect, Dalaran Brilliance
-	
 	-- Polymorphs
 	GroupDebuffs(118, 28272, 28271, 61025, 61305)
 	
@@ -286,9 +447,7 @@ elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
 elseif class == 'DEATHKNIGHT' then
 ------------------------------------------------------------------------------
-	
-	GroupBuffs(57330) -- Horn of Winter
-	
+
 	-- Contributed by jexxlc
 	Aliases('debuff', 45462, 55078) -- Plague Strike => Blood Plague
 	Aliases('debuff', 45477, 55095) -- Icy Touch => Frost Fever
@@ -304,15 +463,12 @@ elseif class == 'PRIEST' then
 	-- Contributed by brotherhobbes
 	SelfBuffs(
 		  588, -- Inner Fire
-		15286,  -- Vampiric Embrace
-		15473, -- Shadowform
-		47585 -- Dispersion
+		15286, -- Vampiric Embrace
+		47585  -- Dispersion
 	)
 	
-	GroupBuffs( 1243, 21562) -- Power Word: Fortitude, Prayer of Fortitude
-	GroupBuffs(  976, 27683) -- Shadow Protection, Prayer of Shadow Protection
-	GroupBuffs(14752, 27681) -- Divine Spirit, Prayer of Spirit
-	
+	GroupBuffs(976) -- Shadow Protection
+
 	GroupDebuffs(9484) -- Shackle Undead
 	
 	SelfTalentProc( 585, 33151) -- Smite => Surge of Light
@@ -323,8 +479,6 @@ elseif class == 'PRIEST' then
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
-
-	GroupBuffs(1126) -- Mark of the Wild
 
 	SelfBuffs(
 		  768, -- Cat Form
@@ -350,15 +504,6 @@ elseif class == 'DRUID' then
 	
 	GroupDebuffs(  339) -- Entangling Roots
 	GroupDebuffs(33786) -- Cyclone
-	
-	-- Eclipse
-	SelfTalentProc(5176, '#48517') -- Wrath damage increase 
-	SelfTalentProc(2912, '#48518') -- Starfire crit increase
-
-	GroupDebuffs(33917) -- Mangle
-
-	-- Contributed by pusikas2
-	GroupDebuffs(  770, 16857) -- Faerie Fire, Faerie Fire (Feral)
 
 ------------------------------------------------------------------------------
 elseif class == 'PALADIN' then
@@ -372,14 +517,17 @@ elseif class == 'PALADIN' then
 		25780, -- Righteous Fury
 		31842, -- Divine Illumination
 		31884, -- Avenging Wrath
-		53651  -- Beacon of Light buff name on player is Light's Beacon
+		53651  -- Beacon of Light buff name on player is Light's Beacon		
 	)
+	
+	-- Spells that use Holy Power
+	Aliases(85673, "HOLY_POWER") -- Word of Glory
+	Aliases(85256, "HOLY_POWER") -- Templar's Verdict
+	Aliases(53385, "HOLY_POWER") -- Divine Storm
+	Aliases(53600, "HOLY_POWER") -- Shield of the Righteous
+	Aliases(84963, "HOLY_POWER") -- Inquisition
 
 	SelfTalentProc(635, 54149) -- Holy Light => Infusion of Light
-	
-	-- Blessings
-	GroupBuffs(19740) -- Blessing of Might
-	GroupBuffs(20217) -- Blessing of Kings
 
 	GroupDebuffs(20066) -- Repentance
 	GroupDebuffs(10326) -- Turn Evil

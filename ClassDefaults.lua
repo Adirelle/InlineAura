@@ -389,6 +389,7 @@ elseif class == 'SHAMAN' then
 	)
 
 	GroupDebuffs(51514) -- Hex
+	GroupDebuffs(76780) -- Bind Elemental
 	
 ------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
@@ -429,7 +430,7 @@ elseif class == 'PRIEST' then
 		47585  -- Dispersion
 	)
 	
-	GroupBuffs(976) -- Shadow Protection
+	GroupBuffs(27683) -- Shadow Protection
 
 	GroupDebuffs(9484) -- Shackle Undead
 
@@ -488,6 +489,10 @@ elseif class == 'PALADIN' then
 	Aliases(53600, "HOLY_POWER") -- Shield of the Righteous
 	Aliases(84963, "HOLY_POWER") -- Inquisition
 
+	GroupBuffs( 7294) -- Retribution Aura	
+	GroupBuffs(19891) -- Resistance Aura
+	GroupBuffs(32223) -- Crusader Aura
+	
 	GroupDebuffs(20066) -- Repentance
 	GroupDebuffs(10326) -- Turn Evil
 

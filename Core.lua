@@ -385,14 +385,13 @@ if playerClass == "DRUID" then
 	local UnitPower, UnitPowerMax = UnitPower, UnitPowerMax
 	local GetEclipseDirection = GetEclipseDirection
 	local GetPrimaryTalentTree = GetPrimaryTalentTree
+	
+	local isMoonkin, direction, power
 	keywords.LUNAR_ENERGY = true
 	keywords.SOLAR_ENERGY = true
 
 	tinsert(auraScanners, function(callback, unit, filter)
-		if unit ~= 'player' or filter ~= 'HELPFUL' or GetPrimaryTalentTree() ~= 1 then return end		
-		-- name, count, duration, expirationTime, isMine, spellId
-		local power, direction = 100 * UnitPower(unit, SPELL_POWER_ECLIPSE) / UnitPowerMax(unit, SPELL_POWER_ECLIPSE), GetEclipseDirection()
-		dprint("eclipse power", power, direction)
+		if unit ~= 'player' or filter ~= 'HELPFUL' or not isMoonkin or not direction or not power then return end		
 		if direction == "moon" then
 			callback("LUNAR_ENERGY", -power, nil, nil, true)
 		else
@@ -401,19 +400,31 @@ if playerClass == "DRUID" then
 	end)
 	function InlineAura:UNIT_POWER(event, unit, type)
 		if unit == "player" and type == "ECLIPSE" then
+			local newPower = math.ceil(100 * UnitPower("player", SPELL_POWER_ECLIPSE) / UnitPowerMax("player", SPELL_POWER_ECLIPSE))
+			if newPower ~= power then
+				power = newPower
+				return UpdateUnitAuras("player", event)	
+			end
+		end
+	end
+	function InlineAura:PLAYER_TALENT_UPDATE(event)
+		local newIsMoonkin = (GetPrimaryTalentTree() == 1)
+		if isMoonkin ~= newIsMoonkin then
+			isMoonkin = newIsMoonkin
 			return UpdateUnitAuras("player", event)	
 		end
 	end
-	function InlineAura:PLAYER_TALENT_UPDATE(event, unit)
-		return UpdateUnitAuras("player", event)	
+	function InlineAura:ECLIPSE_DIRECTION_CHANGE(event)
+		local newDirection = GetEclipseDirection()
+		if newDirection ~= direction then
+			direction = newDirection
+			return UpdateUnitAuras("player", event)			
+		end
 	end
-	InlineAura.UPDATE_SHAPESHIFT_FORM = PLAYER_TALENT_UPDATE
-	InlineAura.ECLIPSE_DIRECTION_CHANGE = PLAYER_TALENT_UPDATE
 
 	InlineAura:RegisterEvent('UNIT_POWER')
 	InlineAura:RegisterEvent('ECLIPSE_DIRECTION_CHANGE')
 	InlineAura:RegisterEvent('PLAYER_TALENT_UPDATE')
-	InlineAura:RegisterEvent('UPDATE_SHAPESHIFT_FORM')	
 end
 
 ------------------------------------------------------------------------------
@@ -781,11 +792,14 @@ end
 
 local spellNames = setmetatable({}, {__index = function(t, id)
 	local numId = tonumber(id)
-	local name = numId and GetSpellInfo(numId)
-	if name then
-		t[id] = name
-		return name
+	if numId then
+		local name = GetSpellInfo(numId)
+		if name then
+			t[id] = name
+			return name
+		end
 	end
+	return id
 end})
 
 local function UpdateButton(self)
@@ -952,6 +966,8 @@ end
 
 function InlineAura:VARIABLES_LOADED()
 	self.VARIABLES_LOADED = nil
+	self:UnregisterEvent('VARIABLES_LOADED')
+		
 	-- ButtonFacade support
 	local LBF = LibStub('LibButtonFacade', true)
 	local LBF_RegisterCallback = function() end
@@ -993,13 +1009,8 @@ function InlineAura:VARIABLES_LOADED()
 	self:RequireUpdate(true)
 
 	-- Force a full refresh on first frame
-	self:SetScript('OnUpdate', function(self, ...)
-		for button in pairs(buttons) do
-			ActionButton_Update_Hook(button)
-		end
-		self:SetScript('OnUpdate', self.OnUpdate)
-		return self:OnUpdate(...)
-	end)
+	configUpdated = true
+	self:SetScript('OnUpdate', self.OnUpdate)
 
 	-- Scan unit in case of delayed loading
 	if IsLoggedIn() then

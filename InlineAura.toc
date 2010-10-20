@@ -8,6 +8,7 @@
 ## X-Category: Buffs & Debuffs, Action Bars
 ## X-License: GPL v2
 ## X-eMail: adirelle@tagada-team.net
+## X-Embeds: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0
 
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: delayed

@@ -396,7 +396,7 @@ elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
 	-- Display soul shard count on Soulburn
-	Aliases(74434, 'SOUL_SHARDS')
+	Aliases("buff", 74434, 'SOUL_SHARDS')
 
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
 	SelfTalentProc(6353, 63165) -- Soul Fire => Decimation
@@ -439,8 +439,8 @@ elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
 
 	-- Display eclipse energy
-	Aliases(5176, "LUNAR_ENERGY") -- Wrath
-	Aliases(2912, "SOLAR_ENERGY") -- Starfire
+	Aliases("buff", 5176, "LUNAR_ENERGY") -- Wrath
+	Aliases("buff", 2912, "SOLAR_ENERGY") -- Starfire
 
 	SelfBuffs(
 		  768, -- Cat Form
@@ -483,11 +483,11 @@ elseif class == 'PALADIN' then
 	)
 	
 	-- Spells that use Holy Power
-	Aliases(85673, "HOLY_POWER") -- Word of Glory
-	Aliases(85256, "HOLY_POWER") -- Templar's Verdict
-	Aliases(53385, "HOLY_POWER") -- Divine Storm
-	Aliases(53600, "HOLY_POWER") -- Shield of the Righteous
-	Aliases(84963, "HOLY_POWER") -- Inquisition
+	Aliases("buff", 85673, "HOLY_POWER") -- Word of Glory
+	Aliases("buff", 85256, "HOLY_POWER") -- Templar's Verdict
+	Aliases("buff", 53385, "HOLY_POWER") -- Divine Storm
+	Aliases("buff", 53600, "HOLY_POWER") -- Shield of the Righteous
+	Aliases("buff", 84963, "HOLY_POWER") -- Inquisition
 
 	GroupBuffs( 7294) -- Retribution Aura	
 	GroupBuffs(19891) -- Resistance Aura

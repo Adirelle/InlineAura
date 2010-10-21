@@ -107,12 +107,7 @@ local DEFAULT_OPTIONS = {
 		spells = {
 			['**'] = {
 				disabled = false,
-				auraType = 'buff',
-				unitsToScan = {
-					target = true,
-					player = true,
-					['*'] = false,
-				}
+				auraType = 'friend',
 			},
 		},
 	},
@@ -125,8 +120,17 @@ local UNIT_EVENTS = {
 	focus = 'PLAYER_FOCUS_CHANGED',
 }
 
-local UNIT_SCAN_ORDER = { 'focus', 'target', 'pet', 'player' }
-local DEFAULT_UNITS_TO_SCAN = { target = true, player = true }
+-- Units to scan (and in which order) depending on the aura type
+local UNITS_TO_SCAN_BY_TYPE = {
+	enemy = { 'focus', 'target' },
+	friend = { 'focus', 'target', 'player' },
+	self = { 'player' },
+	special = { 'player' },
+	pet = { 'pet' },
+}
+
+-- All units we work with
+local ALL_UNITS = { 'focus', 'target', 'pet', 'player' } 
 
 ------------------------------------------------------------------------------
 -- Table recycling stub
@@ -197,19 +201,13 @@ do
 	local callbacks = setmetatable({}, {__mode='k'})
 	function UpdateUnitAuras(unit, event)
 		local auras, filter
-		if inVehicle then
+		if inVehicle and (unit == 'player' or unit == 'vehicle') then
 			unit = 'vehicle'
 			auras = unitAuras.player
 		else
 			auras = unitAuras[unit]
 		end
-		if UnitIsBuffable(unit) then
-			filter = 'HELPFUL'
-		elseif UnitIsDebuffable(unit) then
-			filter = 'HARMFUL'
-		else
-			return WipeAuras(auras)
-		end
+		local filter
 		serial = (serial + 1) % 1000000
 
 		-- Avoid recreating callback on every call
@@ -245,6 +243,7 @@ do
 					data.duration = duration
 					data.expirationTime = expirationTime
 					data.isMine = isMine
+					data.type = (filter == "HELPFUL") and "Buff" or "Debuff"
 					if spellId then
 						auras['#'..spellId] = data
 					end
@@ -255,7 +254,15 @@ do
 
 		-- Give every scanner a try
 		for index, scan in ipairs(auraScanners) do
+			-- Helpful auras
+			filter = "HELPFUL"
 			local ok, msg = pcall(scan, callback, unit, filter)
+			if not ok then
+				geterrorhandler()(msg)
+			end
+			-- HARMFUL auras
+			filter = "HARMFUL"
+			ok, msg = pcall(scan, callback, unit, filter)
 			if not ok then
 				geterrorhandler()(msg)
 			end
@@ -308,6 +315,7 @@ InlineAura:RegisterEvent('MINIMAP_UPDATE_TRACKING')
 
 local keywords = {}
 InlineAura.keywords = keywords
+local KEYWORD_EVENTS = {}
 
 local _, playerClass = UnitClass("player")
 
@@ -345,6 +353,7 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 		POWER_TYPE, POWER_NAME = SPELL_POWER_HOLY_POWER, "HOLY_POWER"
 	end
 	keywords[POWER_NAME] = true
+	KEYWORD_EVENTS[POWER_NAME] = "UNIT_POWER"
 	--@debug@
 	dprint("watching", POWER_NAME)
 	--@end-debug@
@@ -359,8 +368,7 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 		if unit == "player" and type == POWER_NAME then
 			return UpdateUnitAuras("player", event)
 		end
-	end	
-	InlineAura:RegisterEvent('UNIT_POWER')
+	end
 end
 	
 -- Rogue and Kitty combo points
@@ -370,7 +378,8 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	--@end-debug@
 	local GetComboPoints = GetComboPoints
 	keywords.COMBO_POINTS = true
-
+	KEYWORD_EVENTS.COMBO_POINTS = "PLAYER_COMBO_POINTS"
+	
 	tinsert(auraScanners, function(callback, unit, filter)
 		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
 		-- name, count, duration, expirationTime, isMine, spellId
@@ -380,7 +389,6 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	function InlineAura:PLAYER_COMBO_POINTS(event, unit)
 		return UpdateUnitAuras("player", event)
 	end	
-	InlineAura:RegisterEvent('PLAYER_COMBO_POINTS')
 end
 
 -- Moonkin eclipse points
@@ -396,7 +404,9 @@ if playerClass == "DRUID" then
 	local isMoonkin, direction, power
 	keywords.LUNAR_ENERGY = true
 	keywords.SOLAR_ENERGY = true
-
+	KEYWORD_EVENTS.LUNAR_ENERGY = "PLAYER_TALENT_UPDATE"
+	KEYWORD_EVENTS.SOLAR_ENERGY = "PLAYER_TALENT_UPDATE"
+	
 	tinsert(auraScanners, function(callback, unit, filter)
 		if unit ~= 'player' or filter ~= 'HELPFUL' or not isMoonkin or not direction or not power then return end		
 		if direction == "moon" then
@@ -441,11 +451,6 @@ if playerClass == "DRUID" then
 			return UpdateUnitAuras("player", event)	
 		end
 	end
-
-	InlineAura:RegisterEvent('PLAYER_TALENT_UPDATE')	
-	hooksecurefunc(InlineAura, "SetupHook", function(self)
-		self:PLAYER_TALENT_UPDATE('SetupHook')
-	end)
 end
 
 ------------------------------------------------------------------------------
@@ -597,17 +602,16 @@ function TimerFrame_UpdateCountdown(self, now)
 end
 
 function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
+	local stackText, countdownText = self.stackText, self.countdownText
 
 	if count then
-		local stackText = self.stackText
 		stackText:SetText(count)
 		stackText:Show()
 	else
-		self.stackText:Hide()
+		stackText:Hide()
 	end
 
 	if not hideCountdown and expirationTime then
-		local countdownText = self.countdownText
 		self.expirationTime = expirationTime
 		TimerFrame_UpdateCountdown(self, now)
 		countdownText:Show()
@@ -618,10 +622,10 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 		end
 	else
 		TimerFrame_CancelTimer(self)
-		self.countdownText:Hide()
+		countdownText:Hide()
 	end
 	
-	if stackText:IsShown() or self.countdownText:IsShown() then
+	if stackText:IsShown() or countdownText:IsShown() then
 		self:Show()
 		TimerFrame_UpdateTextLayout(self)
 	else
@@ -657,33 +661,35 @@ end
 -- Aura lookup
 ------------------------------------------------------------------------------
 
-local function CheckAura(auras, name, onlyMine)
+local function GetTristateValue(value, default)
+	if value ~= nil then
+		return value
+	else
+		return default
+	end
+end
+
+local function CheckAura(auras, name, onlyMyBuffs, onlyMyDebuffs)
 	local aura = auras[name]
-	if aura and (aura.isMine or not onlyMine) then
+	if aura and (aura.isMine or not ((aura.type == "Buff" and onlyMyBuffs) or (aura.type == "Debuff" and onlyMyDebuffs))) then
 		return aura
 	end
 end
 
-local function LookupAura(auras, spell, aliases, auraType, onlyMine, ...)
-	local aura = CheckAura(auras, spell, onlyMine)
+local function LookupAura(auras, spell, aliases, onlyMine, ...)
+	local onlyMyBuffs = GetTristateValue(onlyMine, InlineAura.db.profile.onlyMyBuffs)
+	local onlyMyDebuffs = GetTristateValue(onlyMine, InlineAura.db.profile.onlyMyDebuffs)
+	local aura = CheckAura(auras, spell, onlyMyBuffs, onlyMyDebuffs)
 	if not aura and aliases then
 		for i, alias in ipairs(aliases) do
-			aura = CheckAura(auras, alias, onlyMine)
+			aura = CheckAura(auras, alias, onlyMyBuffs, onlyMyDebuffs)
 			if aura then
 				break
 			end
 		end
 	end
 	if aura then
-		return aura, auraType, ...
-	end
-end
-
-local function GetTristateValue(value, default)
-	if value ~= nil then
-		return value
-	else
-		return default
+		return aura, aura.type, ...
 	end
 end
 
@@ -693,22 +699,21 @@ local function GetAuraToDisplay(spell)
 		if specific.disabled then
 			return
 		end
-		local units = specific.unitsToScan or DEFAULT_UNITS_TO_SCAN
-		local onlyMine, auraType, buffTest
+		local auraType = specific.auraType
 		local hideStack = GetTristateValue(specific.hideStack, db.profile.hideStack)
 		local hideCountdown = GetTristateValue(specific.hideCountdown, db.profile.hideCountdown)
-		if specific.auraType == 'debuff' then
-			onlyMine = GetTristateValue(specific.onlyMine, db.profile.onlyMyDebuffs)
-			auraType = 'Debuff'
-			buffTest = UnitIsDebuffable
-		else
-			onlyMine = GetTristateValue(specific.onlyMine, db.profile.onlyMyBuffs)
-			auraType = 'Buff'
-			buffTest = UnitIsBuffable
-		end
-		for i, unit in pairs(UNIT_SCAN_ORDER) do
-			if units[unit] and buffTest(unit) then
-				return LookupAura(unitAuras[unit], spell, specific.aliases, auraType, onlyMine, hideStack, hideCountdown, specific.alternateColor)
+		if auraType == "self" or auraType == "special" then -- Self auras or special
+			return LookupAura(unitAuras.player, spell, specific.aliases, true, (auraType == "self") and hideStack, (auraType == "self") and hideCountdown, specific.alternateColor)		
+		elseif auraType == "pet" then -- Pet auras
+			if UnitExists("pet") then
+				return LookupAura(unitAuras.pet, spell, specific.aliases, specific.onlyMine, hideStack, hideCountdown, specific.alternateColor)
+			end
+		else -- Friend or enemy
+			local buffTest = (auraType == "enemy") and UnitIsDebuffable or UnitIsBuffable
+			for i, unit in ipairs(UNITS_TO_SCAN_BY_TYPE[auraType]) do
+				if enabledUnits[unit] and buffTest(unit) then
+					return LookupAura(unitAuras[unit], spell, specific.aliases, specific.onlyMine, hideStack, hideCountdown, specific.alternateColor)
+				end
 			end
 		end
 	else
@@ -890,23 +895,86 @@ end
 -- Button updates
 ------------------------------------------------------------------------------
 
-local function IsUnitEnabled(unit, event)
-	for name, spell in pairs(db.profile.spells) do
-		if not spell.disabled and spell.unitsToScan and spell.unitsToScan[unit] then
-			InlineAura:RegisterEvent(event)
-			return true
+local UpdateUnitListeners
+do
+	local function IsEnabledUnit(unit)
+		for name, spell in pairs(db.profile.spells) do
+			if type(spell) == "table" and not spell.disabled then
+				for i, spellUnit in pairs(UNITS_TO_SCAN_BY_TYPE[spell.auraType]) do
+					if spellUnit == unit then
+						return true
+					end
+				end
+			end
 		end
 	end
-	InlineAura:UnregisterEvent(event)
-	WipeAuras(unitAuras[unit])
+	function UpdateUnitListeners()
+		for i, unit in pairs(ALL_UNITS) do
+			local event = UNIT_EVENTS[unit]
+			local found = IsEnabledUnit(unit)
+			enabledUnits[unit] = found
+			if found then
+				if event then
+					InlineAura:RegisterEvent(event)
+				end				
+			else
+				if event then
+					InlineAura:UnregisterEvent(event)
+				end				
+				WipeAuras(unitAuras[unit])
+			end
+		end
+	end
 end
 
+local UpdateKeywordListeners
+do
+	local t ={}
+	function UpdateKeywordListeners()
+		wipe(t)
+		for keyword, event in pairs(KEYWORD_EVENTS) do
+			t[event] = false
+		end
+		for name, spell in pairs(db.profile.spells) do
+			if not spell.disabled and spell.aliases then
+				for i, alias in pairs(spell.aliases) do
+					local event = KEYWORD_EVENTS[alias]
+					if event then
+						--@debug@
+						dprint("Have to listen for", event, "for keyword", alias, "for spell", name)
+						--@end-debug@
+						t[event] = true
+					end
+				end
+			end
+		end
+		for event, enabled in pairs(t) do
+			if enabled then
+				if not InlineAura:IsEventRegistered(event) then
+					--@debug@
+					dprint("Starting listening for", event)
+					--@end-debug@
+					InlineAura:RegisterEvent(event)
+					InlineAura[event](InlineAura, "UpdateKeywordListeners")
+				end
+			elseif InlineAura:IsEventRegistered(event) then
+				--@debug@
+				dprint("Stopping listening for", event)
+				--@end-debug@
+				InlineAura:UnregisterEvent(event)
+				InlineAura[event](InlineAura, "UpdateKeywordListeners")
+			end
+		end
+	end
+end
+
+local enabledEvents = {}
 function InlineAura:OnUpdate()
 	if configUpdated then
-		-- Update event listening
-		for unit, event in pairs(UNIT_EVENTS) do
-			enabledUnits[unit] = IsUnitEnabled(unit, event)
-		end
+		-- Update event listening based on units
+		UpdateUnitListeners()
+		-- Update event listening based on keywords
+		UpdateKeywordListeners()
 		-- Update all auras
 		for unit in pairs(enabledUnits) do
 			UpdateUnitAuras(unit)
@@ -1038,8 +1106,7 @@ function InlineAura:VARIABLES_LOADED()
 	-- Refresh everything
 	self:RequireUpdate(true)
 
-	-- Force a full refresh on first frame
-	configUpdated = true
+	-- Our bucket thingy
 	self:SetScript('OnUpdate', self.OnUpdate)
 
 	-- Scan unit in case of delayed loading
@@ -1053,6 +1120,9 @@ function InlineAura:ADDON_LOADED(event, name)
 	self:UnregisterEvent('ADDON_LOADED')
 	self.ADDON_LOADED = nil
 
+	-- Retrieve default spell values
+	self:LoadDefaults()
+
 	-- Saved variables setup
 	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
 	db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
@@ -1061,6 +1131,30 @@ function InlineAura:ADDON_LOADED(event, name)
 	self.db = db
 
 	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
+	
+	-- Update the database from previous versions
+	for name, spell in pairs(db.profile.spells) do
+		if type(spell) == "table" then
+			local units = spell.unitsToScan
+			if type(units) ~= "table" then units = nil end
+			local auraType = spell.auraType
+			if auraType == "buff" then
+				if units and units.pet then
+					auraType = "pet"
+				elseif units and not units.target and not units.focus then
+					auraType = "self"
+				else
+					auraType = "friend"
+				end
+			elseif auraType == "debuff" then
+				auraType = "enemy"
+			end
+			if spell.auraType ~= auraType then
+				spell.auraType = auraType
+				spell.unitsToScan = nil
+			end
+		end
+	end
 
 	-- Setup
 	self.bigCountdown = true

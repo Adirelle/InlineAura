@@ -23,8 +23,10 @@ if not InlineAura then return end
 
 local addonName, ns = ...
 
-local InlineAura = InlineAura
-local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
+function InlineAura:LoadDefaults()
+-- No identation there to avoid messing up with source control
+
+local SPELL_DEFAULTS = self.DEFAULT_OPTIONS.profile.spells
 
 local _, class = UnitClass('player')
 local version = GetAddOnMetadata(addonName, "Version")
@@ -33,7 +35,7 @@ local reported = {}
 -- Get the spell name, throwing error if not found
 local function GetSpellName(id, level)
 	local name
-	if InlineAura.keywords[id] then
+	if self.keywords[id] then
 		return id
 	end
 	local rawId = tonumber(string.match(id, "^#(%d+)$"))
@@ -92,7 +94,7 @@ local function SelfBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
 		local defaults = GetSpellDefaults(id, 1)
-		defaults.auraType = 'buff'
+		defaults.auraType = 'self'
 		defaults.unitsToScan = SELF_BUFF_UNITS
 	end
 end
@@ -101,7 +103,7 @@ end
 local function SelfTalentProc(spellId, talentId)
 	local defaults = GetSpellDefaults(spellId, 1)
 	local talent = GetSpellName(talentId, 1)
-	defaults.auraType = 'buff'
+	defaults.auraType = 'self'
 	defaults.unitsToScan = SELF_BUFF_UNITS
 	defaults.alternateColor = true
 	if defaults.aliases then
@@ -121,7 +123,7 @@ local function GroupBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
 		local defaults = GetSpellDefaults(id, 1)
-		defaults.auraType = 'buff'
+		defaults.auraType = 'friend'
 		defaults.onlyMine = false
 		defaults.aliases = MakeAliases(id, ...)
 	end
@@ -132,7 +134,7 @@ local function GroupDebuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
 		local defaults = GetSpellDefaults(id, 1)
-		defaults.auraType = 'debuff'
+		defaults.auraType = 'enemy'
 		defaults.onlyMine = false
 		defaults.aliases = MakeAliases(id, ...)
 	end
@@ -311,37 +313,37 @@ GroupAuras("debuff",
 
 -- Trying a big crowd control category (using Phanx's list)
 GroupAuras("debuff",
-  "WARLOCK",   710, -- Banish
-  "SHAMAN",  76780, -- Bind Elemental
-  "DRUID",   33786, -- Cyclone
-  "DRUID",     339, -- Entangling Roots
-  "WARLOCK",  5782, -- Fear
-  "HUNTER",   3355, -- Freezing Trap
-  "SHAMAN",  51514, -- Hex
-  "DRUID",    2637 ,-- Hibernate
-  "MAGE",      118 ,-- Polymorph
-  "MAGE",    61305 ,-- Polymorph (Black Cat)
-  "MAGE",    28272, -- Polymorph (Pig)
-  "MAGE",    61721, -- Polymorph (Rabbit)
-  "MAGE",    61780, -- Polymorph (Turkey)
-  "MAGE",    28271, -- Polymorph (Turtle)
-  "PALADIN", 20066, -- Repentance
-  "ROGUE",    6770, -- Sap
-  "WARLOCK",  6358, -- Seduction
-  "PRIEST",   9484, -- Shackle Undead
-  "PALADIN", 10326, -- Turn Evil
-  "HUNTER",  19386  -- Wyvern Sting
+	"WARLOCK",   710, -- Banish
+	"SHAMAN",  76780, -- Bind Elemental
+	"DRUID",   33786, -- Cyclone
+	"DRUID",     339, -- Entangling Roots
+	"WARLOCK",  5782, -- Fear
+	"HUNTER",   3355, -- Freezing Trap
+	"SHAMAN",  51514, -- Hex
+	"DRUID",    2637 ,-- Hibernate
+	"MAGE",      118 ,-- Polymorph
+	"MAGE",    61305 ,-- Polymorph (Black Cat)
+	"MAGE",    28272, -- Polymorph (Pig)
+	"MAGE",    61721, -- Polymorph (Rabbit)
+	"MAGE",    61780, -- Polymorph (Turkey)
+	"MAGE",    28271, -- Polymorph (Turtle)
+	"PALADIN", 20066, -- Repentance
+	"ROGUE",    6770, -- Sap
+	"WARLOCK",  6358, -- Seduction
+	"PRIEST",   9484, -- Shackle Undead
+	"PALADIN", 10326, -- Turn Evil
+	"HUNTER",  19386  -- Wyvern Sting
 )
 
 ------------------------------------------------------------------------------
 if class == 'HUNTER' then
 ------------------------------------------------------------------------------
 
-	--Aliases('debuff',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
-	Aliases('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
-	Aliases('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
+	--Aliases('enemy',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
+	Aliases('enemy', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
+	Aliases('enemy', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
 
-	Aliases('buff', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...
+	Aliases('self', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...
 
 	SelfBuffs(
 		 5118, -- Aspect of the Cheetah
@@ -371,13 +373,11 @@ if class == 'HUNTER' then
 
 	-- Mend Pet
 	local MendPet = GetSpellDefaults(136)
-	MendPet.auraType = 'buff'
-	MendPet.unitsToScan = PET_UNITS
+	MendPet.auraType = 'pet'
 
 	-- Bestial Wrath
 	local BestialWrath = GetSpellDefaults(19574)
-	BestialWrath.auraType = 'buff'
-	BestialWrath.unitsToScan = PET_UNITS
+	BestialWrath.auraType = 'pet'
 
 ------------------------------------------------------------------------------
 elseif class == 'WARRIOR' then
@@ -404,7 +404,7 @@ elseif class == 'SHAMAN' then
 	-- Contributed by brotherhobbes
 
 	SelfBuffs(
-		  324, -- Lightning Shield
+			324, -- Lightning Shield
 		 2645, -- Ghost Wolf
 		16188, -- Nature's Swiftness
 		30823, -- Shamanistic Rage
@@ -420,7 +420,7 @@ elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
 	-- Display soul shard count on Soulburn
-	Aliases("buff", 74434, 'SOUL_SHARDS')
+	Aliases("special", 74434, 'SOUL_SHARDS')
 
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
 	SelfTalentProc(6353, 63165) -- Soul Fire => Decimation
@@ -440,8 +440,8 @@ elseif class == 'DEATHKNIGHT' then
 ------------------------------------------------------------------------------
 
 	-- Contributed by jexxlc
-	Aliases('debuff', 45462, 55078) -- Plague Strike => Blood Plague
-	Aliases('debuff', 45477, 55095) -- Icy Touch => Frost Fever
+	Aliases('enemy', 45462, 55078) -- Plague Strike => Blood Plague
+	Aliases('enemy', 45477, 55095) -- Icy Touch => Frost Fever
 
 ------------------------------------------------------------------------------
 elseif class == 'PRIEST' then
@@ -449,7 +449,7 @@ elseif class == 'PRIEST' then
 
 	-- Contributed by brotherhobbes
 	SelfBuffs(
-		  588, -- Inner Fire
+			588, -- Inner Fire
 		15286, -- Vampiric Embrace
 		47585  -- Dispersion
 	)
@@ -463,12 +463,12 @@ elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
 
 	-- Display eclipse energy
-	Aliases("buff", 5176, "LUNAR_ENERGY") -- Wrath
-	Aliases("buff", 2912, "SOLAR_ENERGY") -- Starfire
+	Aliases("special", 5176, "LUNAR_ENERGY") -- Wrath
+	Aliases("special", 2912, "SOLAR_ENERGY") -- Starfire
 
 	SelfBuffs(
-		  768, -- Cat Form
-		  783, -- Travel Form
+			768, -- Cat Form
+			783, -- Travel Form
 		 1066, -- Aquatic Form
 		 1850, -- Dash
 		 5217, -- Tiger's Fury
@@ -496,8 +496,8 @@ elseif class == 'PALADIN' then
 ------------------------------------------------------------------------------
 
 	SelfBuffs(
-		  498, -- Divine Protection
-		  642, -- Divine Shield
+			498, -- Divine Protection
+			642, -- Divine Shield
 		20164, -- Seal of Justice
 		20165, -- Seal of Light
 		25780, -- Righteous Fury
@@ -507,11 +507,11 @@ elseif class == 'PALADIN' then
 	)
 
 	-- Spells that use Holy Power
-	Aliases("buff", 85673, "HOLY_POWER") -- Word of Glory
-	Aliases("buff", 85256, "HOLY_POWER") -- Templar's Verdict
-	Aliases("buff", 53385, "HOLY_POWER") -- Divine Storm
-	Aliases("buff", 53600, "HOLY_POWER") -- Shield of the Righteous
-	Aliases("buff", 84963, "HOLY_POWER") -- Inquisition
+	Aliases("special", 85673, "HOLY_POWER") -- Word of Glory
+	Aliases("special", 85256, "HOLY_POWER") -- Templar's Verdict
+	Aliases("special", 53385, "HOLY_POWER") -- Divine Storm
+	Aliases("special", 53600, "HOLY_POWER") -- Shield of the Righteous
+	Aliases("special", 84963, "HOLY_POWER") -- Inquisition
 
 	GroupBuffs( 7294) -- Retribution Aura
 	GroupBuffs(19891) -- Resistance Aura
@@ -522,3 +522,4 @@ elseif class == 'PALADIN' then
 
 end
 
+end

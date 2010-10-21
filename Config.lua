@@ -29,20 +29,6 @@ local L, new, del = InlineAura.L, InlineAura.new, InlineAura.del
 -- but it seems AceDB has some issue with it.
 local REMOVED = '**REMOVED**'
 
--- Units available to scan depending on aura type
-local UNITS_TO_SCAN = {
-	buff = {
-		player = L['Player'],
-		pet = L['Pet'],
-		target = L['Friendly target'],
-		focus = L['Friendly focus'],
-	},
-	debuff = {
-		target = L['Hostile target'],
-		focus = L['Hostile focus'],
-	},
-}
-
 local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile. spells
 
 -----------------------------------------------------------------------------
@@ -289,6 +275,21 @@ local options = {
 }
 
 -----------------------------------------------------------------------------
+-- Class specific options
+-----------------------------------------------------------------------------
+
+local _, playerClass = UnitClass("player")
+local isPetClass = (playerClass == "WARLOCK" or playerclass == "MAGE" or playerClass == "DEATHKNIGHT" or playerClass == "HUNTER")
+
+local specialValues
+if InlineAura.keywords then
+	specialValues = {}
+	for keyword in pairs(InlineAura.keywords) do
+		specialValues[keyword] = L[keyword]
+	end
+end
+
+-----------------------------------------------------------------------------
 -- Spell specific options
 -----------------------------------------------------------------------------
 
@@ -403,20 +404,33 @@ local spellOptions = {
 					arg = 'auraType',
 					disabled = 'IsSpellDisabled',
 					values = {
-						buff = L['Buff'],
-						debuff = L['Debuff'],
+						friend = L['Friend buff or debuff'],
+						enemy = L['Enemy buff or debuff'],
+						self = L['Self buff or debuff'],
+						pet = isPetClass and L['Pet buff or debuff'] or nil,
+						special = specialValues and L['Special'] or nil,
 					},
 					order = 20,
 				},
-				unitsToScan = {
-					name = L['Units to scan'],
-					desc = L['Check which units you want to be scanned for the aura. Auras of the first existing unit are shown, using this order: focus, target, pet and then player.'],
-					type = 'multiselect',
-					arg = 'unitsToScan',
+				specialAlias = specialValues and {
+					name = L['Value to display'],
+					desc = L['Select which special value should be displayed.'],
+					type = 'select',
+					arg = 'aliases',
 					disabled = 'IsSpellDisabled',
-					values = 'GetUnitList',
-					order = 25,
-				},
+					get = function(info) return info.handler.db.aliases and info.handler.db.aliases[1] end,
+					set = function(info, value)
+						if not info.handler.db.aliases then
+							info.handler.db.aliases = { value }
+						else
+							info.handler.db.aliases[1] = value
+						end
+						InlineAura:RequireUpdate(true)
+					end,
+					values = specialValues,
+					hidden = function(info) return not info.handler:IsSpecial() end,
+					order = 30,
+				} or nil,
 				onlyMine = {
 					name = L['Only show mine'],
 					desc = L['Check to only show aura you applied. Uncheck to always show aura, even when applied by others. Leave grayed to use default settings.'],
@@ -424,6 +438,7 @@ local spellOptions = {
 					arg = 'onlyMine',
 					tristate = true,
 					disabled = 'IsSpellDisabled',
+					hidden = function(info) return info.handler:IsSpecial() or info.handler.db.auraType == "self" end,
 					order = 30,
 				},
 				hideCountdown = {
@@ -433,6 +448,7 @@ local spellOptions = {
 					arg = 'hideCountdown',
 					tristate = true,
 					disabled = 'IsSpellDisabled',
+					hidden = 'IsSpecial',
 					order = 35,
 				},
 				hideStack = {
@@ -442,6 +458,7 @@ local spellOptions = {
 					arg = 'hideStack',
 					tristate = true,
 					disabled = 'IsSpellDisabled',
+					hidden = 'IsSpecial',
 					order = 40,
 				},
 				alternateColor = {
@@ -450,6 +467,7 @@ local spellOptions = {
 					type = 'toggle',
 					arg = 'alternateColor',
 					disabled = 'IsSpellDisabled',
+					hidden = 'IsSpecial',
 					order = 50,
 				},
 				aliases = {
@@ -463,6 +481,7 @@ local spellOptions = {
 					get = 'GetAliases',
 					set = 'SetAliases',
 					validate = 'ValidateAliases',
+					hidden = 'IsSpecial',
 					order = 60,
 				},
 			},
@@ -590,6 +609,10 @@ function spellSpecificHandler:IsSpellDisabled()
 	return not self.db or self.db.disabled
 end
 
+function spellSpecificHandler:IsSpecial()
+	return not self.db or self.db.auraType == "special"
+end
+
 function spellSpecificHandler:Set(info, ...)
 	if info.type == 'color' then
 		local color = self.db[info.arg]
@@ -653,10 +676,6 @@ function spellSpecificHandler:ValidateAliases(info, value)
 		end
 	end
 	return true
-end
-
-function spellSpecificHandler:GetUnitList(info)
-	return UNITS_TO_SCAN[self.db.auraType or 'debuff']
 end
 
 -----------------------------------------------------------------------------

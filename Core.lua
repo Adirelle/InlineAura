@@ -308,6 +308,7 @@ InlineAura:RegisterEvent('MINIMAP_UPDATE_TRACKING')
 
 local keywords = {}
 InlineAura.keywords = keywords
+local KEYWORD_EVENTS = {}
 
 local _, playerClass = UnitClass("player")
 
@@ -345,6 +346,7 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 		POWER_TYPE, POWER_NAME = SPELL_POWER_HOLY_POWER, "HOLY_POWER"
 	end
 	keywords[POWER_NAME] = true
+	KEYWORD_EVENTS[POWER_NAME] = "UNIT_POWER"
 	--@debug@
 	dprint("watching", POWER_NAME)
 	--@end-debug@
@@ -359,8 +361,7 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 		if unit == "player" and type == POWER_NAME then
 			return UpdateUnitAuras("player", event)
 		end
-	end	
-	InlineAura:RegisterEvent('UNIT_POWER')
+	end
 end
 	
 -- Rogue and Kitty combo points
@@ -370,7 +371,8 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	--@end-debug@
 	local GetComboPoints = GetComboPoints
 	keywords.COMBO_POINTS = true
-
+	KEYWORD_EVENTS.COMBO_POINTS = "PLAYER_COMBO_POINTS"
+	
 	tinsert(auraScanners, function(callback, unit, filter)
 		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
 		-- name, count, duration, expirationTime, isMine, spellId
@@ -380,7 +382,6 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	function InlineAura:PLAYER_COMBO_POINTS(event, unit)
 		return UpdateUnitAuras("player", event)
 	end	
-	InlineAura:RegisterEvent('PLAYER_COMBO_POINTS')
 end
 
 -- Moonkin eclipse points
@@ -396,7 +397,9 @@ if playerClass == "DRUID" then
 	local isMoonkin, direction, power
 	keywords.LUNAR_ENERGY = true
 	keywords.SOLAR_ENERGY = true
-
+	KEYWORD_EVENTS.LUNAR_ENERGY = "PLAYER_TALENT_UPDATE"
+	KEYWORD_EVENTS.SOLAR_ENERGY = "PLAYER_TALENT_UPDATE"
+	
 	tinsert(auraScanners, function(callback, unit, filter)
 		if unit ~= 'player' or filter ~= 'HELPFUL' or not isMoonkin or not direction or not power then return end		
 		if direction == "moon" then
@@ -441,11 +444,6 @@ if playerClass == "DRUID" then
 			return UpdateUnitAuras("player", event)	
 		end
 	end
-
-	InlineAura:RegisterEvent('PLAYER_TALENT_UPDATE')	
-	hooksecurefunc(InlineAura, "SetupHook", function(self)
-		self:PLAYER_TALENT_UPDATE('SetupHook')
-	end)
 end
 
 ------------------------------------------------------------------------------
@@ -597,17 +595,16 @@ function TimerFrame_UpdateCountdown(self, now)
 end
 
 function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
+	local stackText, countdownText = self.stackText, self.countdownText
 
 	if count then
-		local stackText = self.stackText
 		stackText:SetText(count)
 		stackText:Show()
 	else
-		self.stackText:Hide()
+		stackText:Hide()
 	end
 
 	if not hideCountdown and expirationTime then
-		local countdownText = self.countdownText
 		self.expirationTime = expirationTime
 		TimerFrame_UpdateCountdown(self, now)
 		countdownText:Show()
@@ -618,10 +615,10 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 		end
 	else
 		TimerFrame_CancelTimer(self)
-		self.countdownText:Hide()
+		countdownText:Hide()
 	end
 	
-	if stackText:IsShown() or self.countdownText:IsShown() then
+	if stackText:IsShown() or countdownText:IsShown() then
 		self:Show()
 		TimerFrame_UpdateTextLayout(self)
 	else
@@ -901,12 +898,56 @@ local function IsUnitEnabled(unit, event)
 	WipeAuras(unitAuras[unit])
 end
 
+local UpdateKeywordListeners
+do
+	local t ={}
+	function UpdateKeywordListeners()
+		wipe(t)
+		for keyword, event in pairs(KEYWORD_EVENTS) do
+			t[event] = false
+		end
+		for name, spell in pairs(db.profile.spells) do
+			if not spell.disabled and spell.aliases then
+				for i, alias in pairs(spell.aliases) do
+					local event = KEYWORD_EVENTS[alias]
+					if event then
+						--@debug@
+						dprint("Have to listen for", event, "for keyword", alias, "for spell", name)
+						--@end-debug@
+						t[event] = true
+					end
+				end
+			end
+		end
+		for event, enabled in pairs(t) do
+			if enabled then
+				if not InlineAura:IsEventRegistered(event) then
+					--@debug@
+					dprint("Starting listening for", event)
+					--@end-debug@
+					InlineAura:RegisterEvent(event)
+					InlineAura[event](InlineAura, "UpdateKeywordListeners")
+				end
+			elseif InlineAura:IsEventRegistered(event) then
+				--@debug@
+				dprint("Stopping listening for", event)
+				--@end-debug@
+				InlineAura:UnregisterEvent(event)
+				InlineAura[event](InlineAura, "UpdateKeywordListeners")
+			end
+		end
+	end
+end
+
+local enabledEvents = {}
 function InlineAura:OnUpdate()
 	if configUpdated then
-		-- Update event listening
+		-- Update event listening based on units
 		for unit, event in pairs(UNIT_EVENTS) do
 			enabledUnits[unit] = IsUnitEnabled(unit, event)
 		end
+		-- Update event listening based on keywords
+		UpdateKeywordListeners()
 		-- Update all auras
 		for unit in pairs(enabledUnits) do
 			UpdateUnitAuras(unit)
@@ -1038,8 +1079,7 @@ function InlineAura:VARIABLES_LOADED()
 	-- Refresh everything
 	self:RequireUpdate(true)
 
-	-- Force a full refresh on first frame
-	configUpdated = true
+	-- Our bucket thingy
 	self:SetScript('OnUpdate', self.OnUpdate)
 
 	-- Scan unit in case of delayed loading
@@ -1052,6 +1092,9 @@ function InlineAura:ADDON_LOADED(event, name)
 	if name ~= addonName then return end
 	self:UnregisterEvent('ADDON_LOADED')
 	self.ADDON_LOADED = nil
+
+	-- Retrieve default spell values
+	self:LoadDefaults()
 
 	-- Saved variables setup
 	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)

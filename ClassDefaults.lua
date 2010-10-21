@@ -23,8 +23,10 @@ if not InlineAura then return end
 
 local addonName, ns = ...
 
-local InlineAura = InlineAura
-local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
+function InlineAura:LoadDefaults()
+-- No identation there to avoid messing up with source control
+
+local SPELL_DEFAULTS = self.DEFAULT_OPTIONS.profile.spells
 
 local _, class = UnitClass('player')
 local version = GetAddOnMetadata(addonName, "Version")
@@ -33,7 +35,7 @@ local reported = {}
 -- Get the spell name, throwing error if not found
 local function GetSpellName(id, level)
 	local name
-	if InlineAura.keywords[id] then
+	if self.keywords[id] then
 		return id
 	end
 	local rawId = tonumber(string.match(id, "^#(%d+)$"))
@@ -311,26 +313,26 @@ GroupAuras("debuff",
 
 -- Trying a big crowd control category (using Phanx's list)
 GroupAuras("debuff",
-  "WARLOCK",   710, -- Banish
-  "SHAMAN",  76780, -- Bind Elemental
-  "DRUID",   33786, -- Cyclone
-  "DRUID",     339, -- Entangling Roots
-  "WARLOCK",  5782, -- Fear
-  "HUNTER",   3355, -- Freezing Trap
-  "SHAMAN",  51514, -- Hex
-  "DRUID",    2637 ,-- Hibernate
-  "MAGE",      118 ,-- Polymorph
-  "MAGE",    61305 ,-- Polymorph (Black Cat)
-  "MAGE",    28272, -- Polymorph (Pig)
-  "MAGE",    61721, -- Polymorph (Rabbit)
-  "MAGE",    61780, -- Polymorph (Turkey)
-  "MAGE",    28271, -- Polymorph (Turtle)
-  "PALADIN", 20066, -- Repentance
-  "ROGUE",    6770, -- Sap
-  "WARLOCK",  6358, -- Seduction
-  "PRIEST",   9484, -- Shackle Undead
-  "PALADIN", 10326, -- Turn Evil
-  "HUNTER",  19386  -- Wyvern Sting
+	"WARLOCK",   710, -- Banish
+	"SHAMAN",  76780, -- Bind Elemental
+	"DRUID",   33786, -- Cyclone
+	"DRUID",     339, -- Entangling Roots
+	"WARLOCK",  5782, -- Fear
+	"HUNTER",   3355, -- Freezing Trap
+	"SHAMAN",  51514, -- Hex
+	"DRUID",    2637 ,-- Hibernate
+	"MAGE",      118 ,-- Polymorph
+	"MAGE",    61305 ,-- Polymorph (Black Cat)
+	"MAGE",    28272, -- Polymorph (Pig)
+	"MAGE",    61721, -- Polymorph (Rabbit)
+	"MAGE",    61780, -- Polymorph (Turkey)
+	"MAGE",    28271, -- Polymorph (Turtle)
+	"PALADIN", 20066, -- Repentance
+	"ROGUE",    6770, -- Sap
+	"WARLOCK",  6358, -- Seduction
+	"PRIEST",   9484, -- Shackle Undead
+	"PALADIN", 10326, -- Turn Evil
+	"HUNTER",  19386  -- Wyvern Sting
 )
 
 ------------------------------------------------------------------------------
@@ -404,7 +406,7 @@ elseif class == 'SHAMAN' then
 	-- Contributed by brotherhobbes
 
 	SelfBuffs(
-		  324, -- Lightning Shield
+			324, -- Lightning Shield
 		 2645, -- Ghost Wolf
 		16188, -- Nature's Swiftness
 		30823, -- Shamanistic Rage
@@ -449,7 +451,7 @@ elseif class == 'PRIEST' then
 
 	-- Contributed by brotherhobbes
 	SelfBuffs(
-		  588, -- Inner Fire
+			588, -- Inner Fire
 		15286, -- Vampiric Embrace
 		47585  -- Dispersion
 	)
@@ -467,8 +469,8 @@ elseif class == 'DRUID' then
 	Aliases("buff", 2912, "SOLAR_ENERGY") -- Starfire
 
 	SelfBuffs(
-		  768, -- Cat Form
-		  783, -- Travel Form
+			768, -- Cat Form
+			783, -- Travel Form
 		 1066, -- Aquatic Form
 		 1850, -- Dash
 		 5217, -- Tiger's Fury
@@ -496,8 +498,8 @@ elseif class == 'PALADIN' then
 ------------------------------------------------------------------------------
 
 	SelfBuffs(
-		  498, -- Divine Protection
-		  642, -- Divine Shield
+			498, -- Divine Protection
+			642, -- Divine Shield
 		20164, -- Seal of Justice
 		20165, -- Seal of Light
 		25780, -- Righteous Fury
@@ -522,3 +524,4 @@ elseif class == 'PALADIN' then
 
 end
 
+end

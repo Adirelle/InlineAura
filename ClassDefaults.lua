@@ -117,7 +117,7 @@ local function SelfTalentProc(spellId, talentId)
 end
 
 -- Declare a category of group-wide buffs
-local function GroupBuffs(...) 
+local function GroupBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
 		local defaults = GetSpellDefaults(id, 1)
@@ -160,7 +160,7 @@ do
 end
 
 ------------------------------------------------------------------------------
--- Group (de)buffs 
+-- Group (de)buffs
 ------------------------------------------------------------------------------
 --[[
 Do not list the (de)buffs that are all auras, procs, passive or come with the normal combat rotation.
@@ -178,7 +178,7 @@ Fully passive (de)buffs:
 --- Buffs ---
 
 -- Increased Stats (5%)
-GroupAuras("buff", 
+GroupAuras("buff",
 	"PALADIN", 20217, -- Blessing of Kings
 	"DRUID",    1126, -- Mark of the Wild
 	"HUNTER",  90363  -- Embrace of the Shale Spider (exotic pet ability)
@@ -220,7 +220,7 @@ GroupAuras("buff",
 )
 
 -- Agility & Strength bonuses
-GroupAuras("buff", 
+GroupAuras("buff",
 	"WARRIOR",      6673, -- Battle Shout
 	"SHAMAN",       8075, -- Strength of Earth Totem
 	"DEATHKNIGHT", 57330, -- Horn of Winter
@@ -236,7 +236,7 @@ GroupAuras("buff",
 )
 
 -- Armor Bonus
-GroupAuras("buff", 
+GroupAuras("buff",
 	"PALADIN",  465, -- Devotion Aura
 	"SHAMAN",  8071  -- Stoneskin Totem
 )
@@ -278,7 +278,7 @@ GroupAuras("debuff",
 )
 
 -- Reduced Casting Speed (30%)
-GroupAuras("debuff", 
+GroupAuras("debuff",
 	"WARLOCK",      1714, -- Curse of Tongues
 	"ROGUE",        5761, -- Mind-Numbing Poison
 	"MAGE",        31589, -- Slow
@@ -309,15 +309,39 @@ GroupAuras("debuff",
 	"HUNTER",  54680  -- Monstrous Bite (exotic pet ability)
 )
 
+-- Trying a big crowd control category (using Phanx's list)
+GroupAuras("debuff",
+  "WARLOCK",   710, -- Banish
+  "SHAMAN",  76780, -- Bind Elemental
+  "DRUID",   33786, -- Cyclone
+  "DRUID",     339, -- Entangling Roots
+  "WARLOCK",  5782, -- Fear
+  "HUNTER",   3355, -- Freezing Trap
+  "SHAMAN",  51514, -- Hex
+  "DRUID",    2637 ,-- Hibernate
+  "MAGE",      118 ,-- Polymorph
+  "MAGE",    61305 ,-- Polymorph (Black Cat)
+  "MAGE",    28272, -- Polymorph (Pig)
+  "MAGE",    61721, -- Polymorph (Rabbit)
+  "MAGE",    61780, -- Polymorph (Turkey)
+  "MAGE",    28271, -- Polymorph (Turtle)
+  "PALADIN", 20066, -- Repentance
+  "ROGUE",    6770, -- Sap
+  "WARLOCK",  6358, -- Seduction
+  "PRIEST",   9484, -- Shackle Undead
+  "PALADIN", 10326, -- Turn Evil
+  "HUNTER",  19386  -- Wyvern Sting
+)
+
 ------------------------------------------------------------------------------
 if class == 'HUNTER' then
 ------------------------------------------------------------------------------
 
-	Aliases('debuff',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
+	--Aliases('debuff',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
 	Aliases('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	Aliases('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
-	
-	Aliases('buff', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...	
+
+	Aliases('buff', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...
 
 	SelfBuffs(
 		 5118, -- Aspect of the Cheetah
@@ -336,10 +360,10 @@ if class == 'HUNTER' then
 		53224, -- Improved Steady Shot
 		82692  -- Focus Fire
 	)
-	
+
 	GroupBuffs(20043) -- Aspect of the Wild
 	GroupBuffs(13159) -- Aspect of the Pack
-	
+
 	GroupDebuffs(1130, 53243) -- Hunter's Mark, Marked For Death
 
 	-- Pet only spells
@@ -349,7 +373,7 @@ if class == 'HUNTER' then
 	local MendPet = GetSpellDefaults(136)
 	MendPet.auraType = 'buff'
 	MendPet.unitsToScan = PET_UNITS
-	
+
 	-- Bestial Wrath
 	local BestialWrath = GetSpellDefaults(19574)
 	BestialWrath.auraType = 'buff'
@@ -388,9 +412,9 @@ elseif class == 'SHAMAN' then
 		55198  -- Tidal Force
 	)
 
-	GroupDebuffs(51514) -- Hex
-	GroupDebuffs(76780) -- Bind Elemental
-	
+	--GroupDebuffs(51514) -- Hex
+	--GroupDebuffs(76780) -- Bind Elemental
+
 ------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
@@ -401,15 +425,15 @@ elseif class == 'WARLOCK' then
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
 	SelfTalentProc(6353, 63165) -- Soul Fire => Decimation
 
-	GroupDebuffs(710) -- Banish
-	GroupDebuffs(5782) -- Fear
+	--GroupDebuffs(710) -- Banish
+	--GroupDebuffs(5782) -- Fear
 
 ------------------------------------------------------------------------------
 elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
 
 	-- Polymorphs
-	GroupDebuffs(118, 28272, 28271, 61025, 61305)
+	--GroupDebuffs(118, 28272, 28271, 61025, 61305)
 
 ------------------------------------------------------------------------------
 elseif class == 'DEATHKNIGHT' then
@@ -429,10 +453,10 @@ elseif class == 'PRIEST' then
 		15286, -- Vampiric Embrace
 		47585  -- Dispersion
 	)
-	
+
 	GroupBuffs(27683) -- Shadow Protection
 
-	GroupDebuffs(9484) -- Shackle Undead
+	--GroupDebuffs(9484) -- Shackle Undead
 
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then
@@ -460,12 +484,12 @@ elseif class == 'DRUID' then
 		33943, -- Flight Form
 		40120, -- Swift Flight Form
 		50334, -- Berserk
-		52610, -- Savage Roar		
+		52610, -- Savage Roar
 		61336  -- Survival Instincts
 	)
-	
-	GroupDebuffs(  339) -- Entangling Roots
-	GroupDebuffs(33786) -- Cyclone
+
+	--GroupDebuffs(  339) -- Entangling Roots
+	--GroupDebuffs(33786) -- Cyclone
 
 ------------------------------------------------------------------------------
 elseif class == 'PALADIN' then
@@ -479,9 +503,9 @@ elseif class == 'PALADIN' then
 		25780, -- Righteous Fury
 		31842, -- Divine Illumination
 		31884, -- Avenging Wrath
-		53651  -- Beacon of Light buff name on player is Light's Beacon		
+		53651  -- Beacon of Light buff name on player is Light's Beacon
 	)
-	
+
 	-- Spells that use Holy Power
 	Aliases("buff", 85673, "HOLY_POWER") -- Word of Glory
 	Aliases("buff", 85256, "HOLY_POWER") -- Templar's Verdict
@@ -489,12 +513,12 @@ elseif class == 'PALADIN' then
 	Aliases("buff", 53600, "HOLY_POWER") -- Shield of the Righteous
 	Aliases("buff", 84963, "HOLY_POWER") -- Inquisition
 
-	GroupBuffs( 7294) -- Retribution Aura	
+	GroupBuffs( 7294) -- Retribution Aura
 	GroupBuffs(19891) -- Resistance Aura
 	GroupBuffs(32223) -- Crusader Aura
-	
-	GroupDebuffs(20066) -- Repentance
-	GroupDebuffs(10326) -- Turn Evil
+
+	--GroupDebuffs(20066) -- Repentance
+	--GroupDebuffs(10326) -- Turn Evil
 
 end
 

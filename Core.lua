@@ -352,7 +352,7 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 	tinsert(auraScanners, function(callback, unit, filter)
 		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
 		-- name, count, duration, expirationTime, isMine, spellId
-		callback(POWER_NAME, UnitPower("player", POWER_TYPE), nil, nil, true)
+		callback(POWER_NAME, UnitPower("player", POWER_TYPE) or 0, nil, nil, true)
 	end)
 
 	function InlineAura:UNIT_POWER(event, unit, type)
@@ -597,7 +597,6 @@ function TimerFrame_UpdateCountdown(self, now)
 end
 
 function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
-	self:Show()
 
 	if count then
 		local stackText = self.stackText
@@ -621,8 +620,13 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 		TimerFrame_CancelTimer(self)
 		self.countdownText:Hide()
 	end
-
-	TimerFrame_UpdateTextLayout(self)
+	
+	if stackText:IsShown() or self.countdownText:IsShown() then
+		self:Show()
+		TimerFrame_UpdateTextLayout(self)
+	else
+		self:Hide()
+	end
 end
 
 local function CreateTimerFrame(button)
@@ -737,9 +741,10 @@ local function UpdateTimer(self, aura, hideStack, hideCountdown)
 		end
 		if expirationTime or count then
 			local frame = timerFrames[self] or CreateTimerFrame(self)
-			TimerFrame_Display(frame, expirationTime, count, now, hideCountdown)
+			return TimerFrame_Display(frame, expirationTime, count, now, hideCountdown)
 		end
-	elseif timerFrames[self] then
+	end
+	if timerFrames[self] then
 		timerFrames[self]:Hide()
 	end
 end
@@ -874,6 +879,7 @@ end
 local function ActionButton_Update_Hook(self)
 	if not buttons[self] then
 		newbuttons[self] = true
+		needUpdate = true
 		return
 	else
 		return UpdateButton(self)

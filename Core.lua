@@ -779,7 +779,7 @@ end
 
 local function UpdateHighlight(self, aura, color, alternate)
 	local texture = self:GetCheckedTexture()
-	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
+	if aura and (aura.expirationTime and aura.expirationTime > GetTime() or not aura.count) then
 		if alternate then
 			ActionButton_ShowOverlayGlow(self)
 		elseif not SafeUpdateOverlayGlow(self) then

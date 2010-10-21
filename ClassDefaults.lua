@@ -68,9 +68,11 @@ local function GetSpellDefaults(id, level)
 end
 
 -- Create a list of aliases, ignoring origId when found in ...
-local function MakeAliases(origId, ...)
-	local aliases = {}
-	for i = 1,select('#', ...) do
+local function MakeAliases(aliases, origId, ...)
+	if aliases ~= "table" then
+		aliases = {}
+	end
+	for i = 1, select('#', ...) do
 		local id = select(i, ...)
 		if id ~= origId then
 			table.insert(aliases, GetSpellName(id, 2))
@@ -85,7 +87,7 @@ end
 local function Aliases(auraType, id, ...)
 	local defaults = GetSpellDefaults(id, 1)
 	defaults.auraType = auraType
-	defaults.aliases = MakeAliases(id, ...)
+	defaults.aliases = MakeAliases(defaults.aliases, id, ...)
 end
 
 -- Defines buffs that only apply to the player
@@ -125,7 +127,7 @@ local function GroupBuffs(...)
 		local defaults = GetSpellDefaults(id, 1)
 		defaults.auraType = 'buff'
 		defaults.onlyMine = false
-		defaults.aliases = MakeAliases(id, ...)
+		defaults.aliases = MakeAliases(defaults.aliases, id, ...)
 	end
 end
 
@@ -136,7 +138,7 @@ local function GroupDebuffs(...)
 		local defaults = GetSpellDefaults(id, 1)
 		defaults.auraType = 'debuff'
 		defaults.onlyMine = false
-		defaults.aliases = MakeAliases(id, ...)
+		defaults.aliases = MakeAliases(defaults.aliases, id, ...)
 	end
 end
 
@@ -155,7 +157,7 @@ do
 				local defaults = GetSpellDefaults(spellId, 1)
 				defaults.auraType = auraType
 				defaults.onlyMine = false
-				defaults.aliases = MakeAliases(spellId, unpack(t))
+				defaults.aliases = MakeAliases(defaults.aliases, spellId, unpack(t))
 			end
 		end
 	end
@@ -294,8 +296,7 @@ GroupAuras("debuff",
 	"WARRIOR",  7386, -- Sunder Armor
 	"WARRIOR", 20243, -- Devastate
 	"ROGUE",    8647, -- Expose Armor
-	"DRUID",     770, -- Faerie Fire
-	"DRUID",   16857, -- Faerie Fire (feral)
+	"DRUID",   91565, -- Faerie Fire
 	"HUNTER",  35387, -- Corrosive Spit (pet ability)
 	"HUNTER",  50498  -- Tear Armor (pet ability)
 )
@@ -421,6 +422,9 @@ elseif class == 'SHAMAN' then
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
+	-- Soul link
+	Aliases('pet', 19028, 25228)
+
 	-- Display soul shard count on Soulburn
 	Aliases("buff", 74434, 'SOUL_SHARDS')
 
@@ -463,6 +467,10 @@ elseif class == 'PRIEST' then
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
+
+	-- Faerie Fire debuff and spell ids are different
+	Aliases("debuff", 770, 16857, 91565)
+	Aliases("debuff", 16857, 770, 91565)
 
 	-- Display eclipse energy
 	Aliases("buff", 5176, "LUNAR_ENERGY") -- Wrath

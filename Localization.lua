@@ -29,6 +29,13 @@ local L = setmetatable({}, {__index = function(self, key)
 end})
 ns.L = L
 
+-- @noloc[[
+-- Locales from GlobalStrings.lua
+L.LUNAR_ENERGY = BALANCE_NEGATIVE_ENERGY
+L.SOLAR_ENERGY = BALANCE_POSITIVE_ENERGY
+L.HOLY_POWER = HOLY_POWER
+-- @noloc]]
+
 --------------------------------------------------------------------------------
 -- Locales from localization system
 --------------------------------------------------------------------------------

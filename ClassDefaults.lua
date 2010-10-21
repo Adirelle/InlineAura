@@ -180,14 +180,14 @@ Fully passive (de)buffs:
 --- Buffs ---
 
 -- Increased Stats (5%)
-GroupAuras("buff",
+GroupAuras("friend",
 	"PALADIN", 20217, -- Blessing of Kings
 	"DRUID",    1126, -- Mark of the Wild
 	"HUNTER",  90363  -- Embrace of the Shale Spider (exotic pet ability)
 )
 
 -- Increased Attack Power (10%)
-GroupAuras("buff",
+GroupAuras("friend",
 	"PALADIN",     19740, -- Blessing of Might
 	"DEATHKNIGHT", 53138, -- Abomination's Might (passive)
 	"HUNTER",      19506, -- Trueshot Aura (passive)
@@ -195,34 +195,34 @@ GroupAuras("buff",
 )
 
 -- Increased Spell Power (6%)
-GroupAuras("buff",
+GroupAuras("friend",
 	"MAGE",   1459, -- Arcane Brillance
 	"SHAMAN", 8227  -- Flametongue Totem
 )
 
 -- Increased Physical Haste (10%)
-GroupAuras("buff",
+GroupAuras("friend",
 	"DEATHKNIGHT", 55610, -- Improved Icy Talons (passive)
 	"HUNTER",      53290, -- Hunting Party (passive)
 	"SHAMAN",       8512  -- Windfury Totem
 )
 
 -- Increased Spell Haste (5%)
-GroupAuras("buff",
+GroupAuras("friend",
 	"SHAMAN",  3738, -- Wrath of Air Totem
 	"PRIEST", 15473, -- Shadowform (passive)
 	"DRUID",  24907  -- Moonkin Aura (passive)
 )
 
 -- Burst Haste (30%)
-GroupAuras("buff",
+GroupAuras("friend",
 	"SHAMAN", (UnitFactionGroup("player") == "Horde" and 2825 or 32182), -- Bloodlust/Heroism
 	"MAGE",   80353, -- Time Warp
 	"HUNTER", 90355  -- Ancient Hysteria (exotic pet ability)
 )
 
 -- Agility & Strength bonuses
-GroupAuras("buff",
+GroupAuras("friend",
 	"WARRIOR",      6673, -- Battle Shout
 	"SHAMAN",       8075, -- Strength of Earth Totem
 	"DEATHKNIGHT", 57330, -- Horn of Winter
@@ -230,7 +230,7 @@ GroupAuras("buff",
 )
 
 -- Stamina Bonus
-GroupAuras("buff",
+GroupAuras("friend",
 	"PRIEST",  21562, -- Power Word: Fortitude
 	"WARRIOR",   469, -- Commanding Shout
 	"WARLOCK",  6307, -- Blood Pact (imp ability)
@@ -238,19 +238,19 @@ GroupAuras("buff",
 )
 
 -- Armor Bonus
-GroupAuras("buff",
+GroupAuras("friend",
 	"PALADIN",  465, -- Devotion Aura
 	"SHAMAN",  8071  -- Stoneskin Totem
 )
 
 -- Mana Bonus
-GroupAuras("buff",
+GroupAuras("friend",
 	"MAGE",     1459, -- Arcane Brillance
 	"WARLOCK", 54424  -- Fel Intelligence (felhunter ability)
 )
 
 -- Pushback Resistance
-GroupAuras("buff",
+GroupAuras("friend",
 	"PALADIN", 19746, -- Concentration Aura
 	"SHAMAN",  87718  -- Totem of Tranquil Mind
 )
@@ -258,7 +258,7 @@ GroupAuras("buff",
 --- Debuffs ---
 
 -- Spell Damage Taken (8%)
-GroupAuras("debuff",
+GroupAuras("enemy",
 	"WARLOCK",      1490, -- Curse of the Elements
 	"WARLOCK",     85479, -- Jinx
 	"ROGUE",       58410, -- Master Poisoner (passive)
@@ -269,7 +269,7 @@ GroupAuras("debuff",
 )
 
 -- Bleed Damage Taken (30%)
-GroupAuras("debuff",
+GroupAuras("enemy",
 	"DRUID",   33878, -- Mangle (bear)
 	"DRUID",   33876, -- Mangle (cat)
 	"ROGUE",   16511, -- Hemorrhage
@@ -280,7 +280,7 @@ GroupAuras("debuff",
 )
 
 -- Reduced Casting Speed (30%)
-GroupAuras("debuff",
+GroupAuras("enemy",
 	"WARLOCK",      1714, -- Curse of Tongues
 	"ROGUE",        5761, -- Mind-Numbing Poison
 	"MAGE",        31589, -- Slow
@@ -290,7 +290,7 @@ GroupAuras("debuff",
 )
 
 -- Reduced Armor (12%)
-GroupAuras("debuff",
+GroupAuras("enemy",
 	"WARRIOR",  7386, -- Sunder Armor
 	"WARRIOR", 20243, -- Devastate
 	"ROGUE",    8647, -- Expose Armor
@@ -301,7 +301,7 @@ GroupAuras("debuff",
 )
 
 -- Reduced Healing (25%)
-GroupAuras("debuff",
+GroupAuras("enemy",
 	"WARRIOR", 12294, -- Mortal Strike
 	"WARRIOR", 46910, -- Furious Attacks
 	"PRIEST",  15313, -- Improved Mind Blast
@@ -312,7 +312,7 @@ GroupAuras("debuff",
 )
 
 -- Trying a big crowd control category (using Phanx's list)
-GroupAuras("debuff",
+GroupAuras("enemy",
 	"WARLOCK",   710, -- Banish
 	"SHAMAN",  76780, -- Bind Elemental
 	"DRUID",   33786, -- Cyclone
@@ -339,7 +339,7 @@ GroupAuras("debuff",
 if class == 'HUNTER' then
 ------------------------------------------------------------------------------
 
-	--Aliases('enemy',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
+	Aliases('enemy',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
 	Aliases('enemy', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	Aliases('enemy', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
 
@@ -363,27 +363,17 @@ if class == 'HUNTER' then
 		82692  -- Focus Fire
 	)
 
-	GroupBuffs(20043) -- Aspect of the Wild
+	GroupBuffs(20043, 8184) -- Aspect of the Wild, Elemental Resistance Totem (Shaman)
 	GroupBuffs(13159) -- Aspect of the Pack
 
 	GroupDebuffs(1130, 53243) -- Hunter's Mark, Marked For Death
 
-	-- Pet only spells
-	local PET_UNITS = { pet = true, player = false, focus = false, target = false }
-
-	-- Mend Pet
-	local MendPet = GetSpellDefaults(136)
-	MendPet.auraType = 'pet'
-
-	-- Bestial Wrath
-	local BestialWrath = GetSpellDefaults(19574)
-	BestialWrath.auraType = 'pet'
+	GetSpellDefaults(136).auraType = 'pet' 	-- Mend Pet
+	GetSpellDefaults(19574).auraType = 'pet' 	-- Bestial Wrath
 
 ------------------------------------------------------------------------------
 elseif class == 'WARRIOR' then
 ------------------------------------------------------------------------------
-
-	GroupDebuffs(1160) -- Demoralizing Shout
 
 	SelfBuffs(
 			871, -- Shield Wall
@@ -411,9 +401,8 @@ elseif class == 'SHAMAN' then
 		52127, -- Water Shield
 		55198  -- Tidal Force
 	)
-
-	--GroupDebuffs(51514) -- Hex
-	--GroupDebuffs(76780) -- Bind Elemental
+	
+	GroupBuffs(8184) -- Elemental Resistance Totem
 
 ------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
@@ -425,15 +414,9 @@ elseif class == 'WARLOCK' then
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
 	SelfTalentProc(6353, 63165) -- Soul Fire => Decimation
 
-	--GroupDebuffs(710) -- Banish
-	--GroupDebuffs(5782) -- Fear
-
 ------------------------------------------------------------------------------
-elseif class == 'MAGE' then
+-- elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
-
-	-- Polymorphs
-	--GroupDebuffs(118, 28272, 28271, 61025, 61305)
 
 ------------------------------------------------------------------------------
 elseif class == 'DEATHKNIGHT' then
@@ -454,9 +437,10 @@ elseif class == 'PRIEST' then
 		47585  -- Dispersion
 	)
 
-	GroupBuffs(27683) -- Shadow Protection
+	-- This will display either the buff or the debuff	
+	Aliases('friend', 17, 6788) -- Power Word: Shield / Weakened Soul
 
-	--GroupDebuffs(9484) -- Shackle Undead
+	GroupBuffs(27683, 19891) -- Shadow Protection, Resistance Aura (Paladin)
 
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then
@@ -488,22 +472,19 @@ elseif class == 'DRUID' then
 		61336  -- Survival Instincts
 	)
 
-	--GroupDebuffs(  339) -- Entangling Roots
-	--GroupDebuffs(33786) -- Cyclone
-
 ------------------------------------------------------------------------------
 elseif class == 'PALADIN' then
 ------------------------------------------------------------------------------
 
 	SelfBuffs(
 			498, -- Divine Protection
-			642, -- Divine Shield
+		20154, -- Seal of Righteousness
 		20164, -- Seal of Justice
-		20165, -- Seal of Light
+		20165, -- Seal of Insight
 		25780, -- Righteous Fury
+		31801, -- Seal of Truth
 		31842, -- Divine Illumination
-		31884, -- Avenging Wrath
-		53651  -- Beacon of Light buff name on player is Light's Beacon
+		31884  -- Avenging Wrath
 	)
 
 	-- Spells that use Holy Power
@@ -516,9 +497,11 @@ elseif class == 'PALADIN' then
 	GroupBuffs( 7294) -- Retribution Aura
 	GroupBuffs(19891) -- Resistance Aura
 	GroupBuffs(32223) -- Crusader Aura
-
-	--GroupDebuffs(20066) -- Repentance
-	--GroupDebuffs(10326) -- Turn Evil
+		
+	Aliases("self", 642, 25771) -- Divine Shield / Forbearance
+	Aliases("friend", 1022, 25771) -- Hand of Protection / Forbearance
+	
+	Aliases("friend", 53563, 53651).onlyMine = true -- Beacon of Light => Light's Beacon
 
 end
 

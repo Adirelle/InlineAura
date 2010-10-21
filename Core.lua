@@ -346,7 +346,7 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 	
 	local POWER_TYPE, POWER_NAME
 	if playerClass == "WARLOCK" then
-		POWER_TYPE, POWER_NAME = SPELL_POWER_SOUL_SHARDS, "SOUL_SHARDS"
+		POWER_TYPE, POWER_NAME = SPELL_POWER_SOUL_SHARDS, "SOUL_SHARDS" -- L["SOUL_SHARDS"]
 	else
 		POWER_TYPE, POWER_NAME = SPELL_POWER_HOLY_POWER, "HOLY_POWER"
 	end
@@ -375,8 +375,8 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	dprint("watching combo points")
 	--@end-debug@
 	local GetComboPoints = GetComboPoints
-	keywords.COMBO_POINTS = true
-	KEYWORD_EVENTS.COMBO_POINTS = "PLAYER_COMBO_POINTS"
+	keywords.COMBO_POINTS = true -- L["COMBO_POINTS"]
+	KEYWORD_EVENTS.COMBO_POINTS = "PLAYER_COMBO_POINTS"	
 	
 	tinsert(auraScanners, function(callback, unit)
 		if unit ~= 'player' then return end
@@ -392,7 +392,7 @@ end
 -- Moonkin eclipse points
 if playerClass == "DRUID" then
 	--@debug@
-	dprint("watching eclipse enery")
+	dprint("watching eclipse energy")
 	--@end-debug@
 	local SPELL_POWER_ECLIPSE = SPELL_POWER_ECLIPSE
 	local UnitPower, UnitPowerMax = UnitPower, UnitPowerMax

@@ -78,6 +78,24 @@ function handler:ListTextPositions(info, exclude)
 	return tmp
 end
 
+local function LocUnits(glue, a, b, ...)
+	if b then
+		return L[a]..glue..LocUnits(glue, b, ...)
+	else
+		return L[a]
+	end
+end
+
+-- L["player"] L["target"] L["focus"] L["mouseover"]
+local function BuildOrderingValues(...)
+	local values = {}
+	for i = 1, select('#', ...) do
+		local key = select(i, ...)
+		values[key] = LocUnits(" > ", strsplit(',', key))
+	end
+	return values
+end
+
 -----------------------------------------------------------------------------
 -- Main options
 -----------------------------------------------------------------------------
@@ -134,6 +152,32 @@ local options = {
 			arg = 'decimalCountdownThreshold',
 			disabled = function(info) return InlineAura.db.profile.hideCountdown or not InlineAura.db.profile.preciseCountdown end,
 			order = 46,
+		},
+		unitOrdering = {
+			name = L['Unit priorities'],
+			type = 'group',
+			inline = true,
+			order = 49,
+			args = {			
+				friendOrdering = {
+					name = L['Friends'],
+					desc = L['Select in which order units should be tested to find a friendly unit. Only the the auras of the first unit are shown.'],
+					type = 'select',
+					width = 'double',
+					arg = 'friendOrdering',
+					order = 20,
+					values = BuildOrderingValues("target,mouseover,player", "target,focus,player", "target,player", "mouseover,player", "target", "focus", "mouseover"),
+				},		
+				enemyOrdering = {
+					name = L['Enemies'],
+					desc = L['Select in which order units should be tested to find a hostile unit. Only the the auras of the first unit are shown.'],
+					type = 'select',
+					order = 40,
+					width = 'double',
+					arg = 'enemyOrdering',
+					values = BuildOrderingValues("target,mouseover", "target,focus", "focus,mouseover", "focus,target", "target", "focus", "mousover"),
+				},
+			},
 		},
 		colors = {
 			name = L['Border highlight colors'],

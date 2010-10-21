@@ -200,21 +200,20 @@ do
 	local serial = 0
 	local callbacks = setmetatable({}, {__mode='k'})
 	function UpdateUnitAuras(unit, event)
-		local auras, filter
+		local auras
 		if inVehicle and (unit == 'player' or unit == 'vehicle') then
 			unit = 'vehicle'
 			auras = unitAuras.player
 		else
 			auras = unitAuras[unit]
 		end
-		local filter
 		serial = (serial + 1) % 1000000
 
 		-- Avoid recreating callback on every call
 		local now = GetTime()
 		local callback = callbacks[auras]
 		if not callback then
-			callback = function(name, count, duration, expirationTime, isMine, spellId)
+			callback = function(name, count, duration, expirationTime, isMine, filter, spellId)
 				if not count or count == 0 then
 					count = nil
 				end
@@ -243,7 +242,7 @@ do
 					data.duration = duration
 					data.expirationTime = expirationTime
 					data.isMine = isMine
-					data.type = (filter == "HELPFUL") and "Buff" or "Debuff"
+					data.type = (filter == "HARMFUL") and "Debuff" or "Buff"
 					if spellId then
 						auras['#'..spellId] = data
 					end
@@ -254,15 +253,7 @@ do
 
 		-- Give every scanner a try
 		for index, scan in ipairs(auraScanners) do
-			-- Helpful auras
-			filter = "HELPFUL"
-			local ok, msg = pcall(scan, callback, unit, filter)
-			if not ok then
-				geterrorhandler()(msg)
-			end
-			-- HARMFUL auras
-			filter = "HARMFUL"
-			ok, msg = pcall(scan, callback, unit, filter)
+			local ok, msg = pcall(scan, callback, unit)
 			if not ok then
 				geterrorhandler()(msg)
 			end
@@ -287,24 +278,31 @@ end
 ------------------------------------------------------------------------------
 
 -- This scanner scans all auras
-tinsert(auraScanners, function(callback, unit, filter)
-	for i = 1, 255 do
-		local name, _, _, count, _, duration, expirationTime, isMine, _, _, spellId = UnitAura(unit, i, filter)
-		if not name then
-			break
-		else
-			callback(name, count, duration, expirationTime, isMine, spellId)
-		end
+do
+	local function ScanAuras(callback, unit, filter)
+		local i = 1
+		repeat
+			local name, _, _, count, _, duration, expirationTime, isMine, _, _, spellId = UnitAura(unit, i, filter)
+			if name then
+				callback(name, count, duration, expirationTime, isMine, filter, spellId)
+				i = i + 1
+			end
+		until not name
 	end
-end)
+
+	tinsert(auraScanners, function(callback, unit)
+		ScanAuras(callback, unit, "HELPFUL")
+		ScanAuras(callback, unit, "HARMFUL")
+	end)
+end
 
 -- This scanner handles tracking as player self buff
-tinsert(auraScanners, function(callback, unit, filter)
-	if unit ~= 'player' or filter ~= 'HELPFUL' then return end
+tinsert(auraScanners, function(callback, unit)
+	if unit ~= 'player' then return end
 	for i = 1, GetNumTrackingTypes() do
 		local name, _, active, category = GetTrackingInfo(i)
 		if active and category == 'spell' then
-			callback(name, 0, nil, nil, true)
+			callback(name, 0, nil, nil, true, "HELPFUL")
 		end
 	end
 end)
@@ -326,13 +324,13 @@ if playerClass == "SHAMAN" then
 	--@end-debug@
 	local GetTotemInfo = GetTotemInfo
 
-	tinsert(auraScanners, function(callback, unit, filter)
-		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
+	tinsert(auraScanners, function(callback, unit)
+		if unit ~= 'player' then return end
 		for i = 1, MAX_TOTEMS do
 			local haveTotem, name, startTime, duration = GetTotemInfo(i)
 			if haveTotem and name and name ~= "" then
 				name = name:gsub("%s[IVX]-$", "") -- Whoever proposed to use roman numerals in enchant names should be shot
-				callback(name, 0, duration, startTime+duration, true)
+				callback(name, 0, duration, startTime+duration, true, "HELPFUL")
 			end
 		end
 	end)
@@ -358,10 +356,10 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 	dprint("watching", POWER_NAME)
 	--@end-debug@
 	
-	tinsert(auraScanners, function(callback, unit, filter)
-		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
+	tinsert(auraScanners, function(callback, unit)
+		if unit ~= 'player' then return end
 		-- name, count, duration, expirationTime, isMine, spellId
-		callback(POWER_NAME, UnitPower("player", POWER_TYPE) or 0, nil, nil, true)
+		callback(POWER_NAME, UnitPower("player", POWER_TYPE) or 0, nil, nil, true, "HELPFUL")
 	end)
 
 	function InlineAura:UNIT_POWER(event, unit, type)
@@ -380,10 +378,10 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	keywords.COMBO_POINTS = true
 	KEYWORD_EVENTS.COMBO_POINTS = "PLAYER_COMBO_POINTS"
 	
-	tinsert(auraScanners, function(callback, unit, filter)
-		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
+	tinsert(auraScanners, function(callback, unit)
+		if unit ~= 'player' then return end
 		-- name, count, duration, expirationTime, isMine, spellId
-		callback("COMBO_POINTS", GetComboPoints("player"), nil, nil, true)
+		callback("COMBO_POINTS", GetComboPoints("player"), nil, nil, true, "HELPFUL")
 	end)
 		
 	function InlineAura:PLAYER_COMBO_POINTS(event, unit)
@@ -407,12 +405,12 @@ if playerClass == "DRUID" then
 	KEYWORD_EVENTS.LUNAR_ENERGY = "PLAYER_TALENT_UPDATE"
 	KEYWORD_EVENTS.SOLAR_ENERGY = "PLAYER_TALENT_UPDATE"
 	
-	tinsert(auraScanners, function(callback, unit, filter)
-		if unit ~= 'player' or filter ~= 'HELPFUL' or not isMoonkin or not direction or not power then return end		
+	tinsert(auraScanners, function(callback, unit)
+		if unit ~= 'player' or not isMoonkin or not direction or not power then return end		
 		if direction == "moon" then
-			callback("LUNAR_ENERGY", -power, nil, nil, true)
+			callback("LUNAR_ENERGY", -power, nil, nil, true, "HELPFUL")
 		else
-			callback("SOLAR_ENERGY", power, nil, nil, true)
+			callback("SOLAR_ENERGY", power, nil, nil, true, "HELPFUL")
 		end
 	end)
 	function InlineAura:UNIT_POWER(event, unit, type)
@@ -702,8 +700,10 @@ local function GetAuraToDisplay(spell)
 		local auraType = specific.auraType
 		local hideStack = GetTristateValue(specific.hideStack, db.profile.hideStack)
 		local hideCountdown = GetTristateValue(specific.hideCountdown, db.profile.hideCountdown)
-		if auraType == "self" or auraType == "special" then -- Self auras or special
-			return LookupAura(unitAuras.player, spell, specific.aliases, true, (auraType == "self") and hideStack, (auraType == "self") and hideCountdown, specific.alternateColor)		
+		if auraType == "self" then -- Self auras
+			return LookupAura(unitAuras.player, spell, specific.aliases, true, hideStack, hideCountdown, specific.alternateColor)
+		elseif auraType == "special" then -- Special display
+			return LookupAura(unitAuras.player, spell, specific.aliases, true, false, false, false)		
 		elseif auraType == "pet" then -- Pet auras
 			if UnitExists("pet") then
 				return LookupAura(unitAuras.pet, spell, specific.aliases, specific.onlyMine, hideStack, hideCountdown, specific.alternateColor)
@@ -839,12 +839,8 @@ local function UpdateButton(self)
 	local aura, auraType, color, hideStack, hideCountdown, alternateColor
 	if spell then
 		aura, auraType, hideStack, hideCountdown, alternateColor = GetAuraToDisplay(spell)		
-		if aura then
-			if alternateColor then
-				color = db.profile.colorAlternate
-			else
-				color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
-			end
+		if aura and not alternateColor then
+			color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
 		end
 	end
 	UpdateHighlight(self, aura, color, alternateColor)

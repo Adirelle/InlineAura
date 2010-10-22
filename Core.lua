@@ -111,6 +111,7 @@ local DEFAULT_OPTIONS = {
 				auraType = 'friend',
 			},
 		},
+		customOrder = false,
 		friendOrdering = "target,player",
 		enemyOrdering = "target",
 	},
@@ -918,8 +919,8 @@ do
 	local ALL_UNITS = {}
 	function UpdateUnitListeners()
 		-- Rebuild friend and enemy unit list
-		FillTableWith(UNITS_TO_SCAN_BY_TYPE.friend, strsplit(",", db.profile.friendOrdering))
-		FillTableWith(UNITS_TO_SCAN_BY_TYPE.enemy, strsplit(",", db.profile.enemyOrdering))
+		FillTableWith(UNITS_TO_SCAN_BY_TYPE.friend, strsplit(",", db.profile.friendOrdering:lower()))
+		FillTableWith(UNITS_TO_SCAN_BY_TYPE.enemy, strsplit(",", db.profile.enemyOrdering:lower()))
 		--@debug@
 		dprint("friend:", db.profile.friendOrdering, "enemy:", db.profile.enemyOrdering)
 		--@end-debug@

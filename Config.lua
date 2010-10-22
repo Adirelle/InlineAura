@@ -78,6 +78,10 @@ function handler:ListTextPositions(info, exclude)
 	return tmp
 end
 
+-----------------------------------------------------------------------------
+-- Unit ordering helpers
+-----------------------------------------------------------------------------
+
 local function LocUnits(glue, a, b, ...)
 	if b then
 		return L[a]..glue..LocUnits(glue, b, ...)
@@ -94,6 +98,23 @@ local function BuildOrderingValues(...)
 		values[key] = LocUnits(" > ", strsplit(',', key))
 	end
 	return values
+end
+
+local function ValidateOrdering(order, ...)
+	local allowed = {}
+	for i = 1, select('#', ...) do
+		allowed[select(i, ...)] = true
+	end
+	local units = { strsplit(',', order:lower()) }
+	for i = #units, 1, -1 do
+		if allowed[unit] then
+			tremove(units, i)
+		end
+	end
+	if #units > 0 then
+		return format(L["Invalid unit token(s): %s"], table.concat(units, ", "))
+	end
+	return true
 end
 
 -----------------------------------------------------------------------------
@@ -148,34 +169,63 @@ local options = {
 			type = 'range',
 			min = 1,
 			max = 10,
-			step = 0.5,			
+			step = 0.5,
 			arg = 'decimalCountdownThreshold',
 			disabled = function(info) return InlineAura.db.profile.hideCountdown or not InlineAura.db.profile.preciseCountdown end,
 			order = 46,
 		},
 		unitOrdering = {
-			name = L['Unit priorities'],
+			name = L['Unit test order'],
+			desc = L['Select in which order units are tested.'],
 			type = 'group',
 			inline = true,
 			order = 49,
-			args = {			
+			args = {
+				customOrder = {
+					name = L['Custom orders'],
+					type = 'toggle',
+					order = 10,
+					arg = 'customOrder',
+				},
 				friendOrdering = {
 					name = L['Friends'],
 					desc = L['Select in which order units should be tested to find a friendly unit. Only the the auras of the first unit are shown.'],
 					type = 'select',
-					width = 'double',
 					arg = 'friendOrdering',
+					width = 'double',
 					order = 20,
-					values = BuildOrderingValues("target,mouseover,player", "target,focus,player", "target,player", "mouseover,player", "target", "focus", "mouseover"),
-				},		
+					hidden = function() return InlineAura.db.profile.customOrder end,
+					values = BuildOrderingValues("target,mouseover,player","target,focus,player", "target,player", "mouseover,player", "target", "focus", "mouseover"),
+				},
 				enemyOrdering = {
 					name = L['Enemies'],
 					desc = L['Select in which order units should be tested to find a hostile unit. Only the the auras of the first unit are shown.'],
 					type = 'select',
-					order = 40,
-					width = 'double',
 					arg = 'enemyOrdering',
+					width = 'double',
+					order = 30,
+					hidden = function() return InlineAura.db.profile.customOrder end,
 					values = BuildOrderingValues("target,mouseover", "target,focus", "focus,mouseover", "focus,target", "target", "focus", "mousover"),
+				},
+				friendCustomOrdering = {
+					name = L['Friends'],
+					desc = L['Select in which order units should be tested to find a friendly unit. Only the the auras of the first unit are shown.'],
+					type = 'input',
+					arg = 'friendOrdering',
+					width = 'double',
+					order = 20,
+					hidden = function() return not InlineAura.db.profile.customOrder end,
+					validate = function(info, value) return ValidateOrdering(value, "target", "player", "focus", "mouseover") end,
+				},
+				enemyCustomOrdering = {
+					name = L['Enemies'],
+					desc = L['Select in which order units should be tested to find a hostile unit. Only the the auras of the first unit are shown.'],
+					type = 'input',
+					arg = 'enemyOrdering',
+					width = 'double',
+					order = 30,
+					hidden = function() return not InlineAura.db.profile.customOrder end,
+					validate = function(info, value) return ValidateOrdering(value, "target", "focus", "mouseover") end,
 				},
 			},
 		},
@@ -289,7 +339,7 @@ local options = {
 				twoTextFirst = {
 					name = L['Countdown position'],
 					desc = L['Select where to place the countdown text when both values are shown.'],
-					type = 'select', 
+					type = 'select',
 					arg = 'twoTextFirstPosition',
 					values = function(info) return info.handler:ListTextPositions(info, InlineAura.db.profile.twoTextSecondPosition) end,
 					disabled = function(info) return InlineAura.db.profile.hideCountdown or InlineAura.db.profile.hideStack end,
@@ -298,7 +348,7 @@ local options = {
 				twoTextSecond = {
 					name = L['Application count position'],
 					desc = L['Select where to place the application count text when both values are shown.'],
-					type = 'select', 
+					type = 'select',
 					arg = 'twoTextSecondPosition',
 					values = function(info) return info.handler:ListTextPositions(info, InlineAura.db.profile.twoTextFirstPosition) end,
 					disabled = function(info) return InlineAura.db.profile.hideCountdown or InlineAura.db.profile.hideStack end,
@@ -307,7 +357,7 @@ local options = {
 				oneText = {
 					name = L['Single value position'],
 					desc = L['Select where to place a single value.'],
-					type = 'select', 
+					type = 'select',
 					arg = 'singleTextPosition',
 					values = "ListTextPositions",
 					disabled = function(info) return InlineAura.db.profile.hideCountdown and InlineAura.db.profile.hideStack end,
@@ -358,12 +408,12 @@ local spellOptions = {
 			get = function(info) return spellToAdd end,
 			set = function(info, value)
 				if value and value:trim() ~= "" then
-					spellToAdd = ValidateName(value) 
+					spellToAdd = ValidateName(value)
 				else
 					spellToAdd = nil
 				end
 			end,
-			validate = function(info, value)			
+			validate = function(info, value)
 				if not value or value:trim() == "" then
 					return true
 				else
@@ -404,7 +454,7 @@ local spellOptions = {
 			func = function(info)
 				info.handler:RemoveSpell(spellSpecificHandler:GetSelectedSpell())
 			end,
-			disabled = function() 
+			disabled = function()
 				return not spellPanelHandler:IsDefined(spellSpecificHandler:GetSelectedSpell())
 			end,
 			confirm = true,
@@ -423,7 +473,7 @@ local spellOptions = {
 				spellPanelHandler:RestoreDefaults(spellSpecificHandler:GetSelectedSpell())
 			end,
 			order = 45,
-		},		
+		},
 		settings = {
 			name = function(info) return spellSpecificHandler:GetSelectedSpellName() end,
 			type = 'group',

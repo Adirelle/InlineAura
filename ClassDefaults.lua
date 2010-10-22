@@ -212,7 +212,7 @@ GroupAuras("buff",
 -- Increased Spell Haste (5%)
 GroupAuras("buff",
 	"SHAMAN",  3738, -- Wrath of Air Totem
-	"PRIEST", 15473, -- Shadowform (passive)
+	"PRIEST", 49868, -- Mind Quickening (passive)
 	"DRUID",  24907  -- Moonkin Aura (passive)
 )
 

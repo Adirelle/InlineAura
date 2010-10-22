@@ -68,7 +68,7 @@ local function dprint() end
 if tekDebug then
 	local frame = tekDebug:GetFrame(addonName)
 	dprint = function(...)
-		return frame:AddMessage(string.join(", ", tostringall(...)):gsub("([:=]), ", "%1"))
+		return frame:AddMessage(strjoin(", ", tostringall(...)):gsub("([:=]), ", "%1"))
 	end
 end
 --@end-debug@
@@ -345,7 +345,7 @@ if playerClass == "SHAMAN" then
 -- Warlock Soul Shards and Paladin Holy Power
 elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 	local UnitPower = UnitPower
-	
+
 	local POWER_TYPE, POWER_NAME
 	if playerClass == "WARLOCK" then
 		POWER_TYPE, POWER_NAME = SPELL_POWER_SOUL_SHARDS, "SOUL_SHARDS" -- L["SOUL_SHARDS"]
@@ -357,7 +357,7 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 	--@debug@
 	dprint("watching", POWER_NAME)
 	--@end-debug@
-	
+
 	tinsert(auraScanners, function(callback, unit)
 		if unit ~= 'player' then return end
 		-- name, count, duration, expirationTime, isMine, spellId
@@ -370,7 +370,7 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 		end
 	end
 end
-	
+
 -- Rogue and Kitty combo points
 if playerClass == "ROGUE" or playerClass == "DRUID" then
 	--@debug@
@@ -378,17 +378,17 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	--@end-debug@
 	local GetComboPoints = GetComboPoints
 	keywords.COMBO_POINTS = true -- L["COMBO_POINTS"]
-	KEYWORD_EVENTS.COMBO_POINTS = "PLAYER_COMBO_POINTS"	
-	
+	KEYWORD_EVENTS.COMBO_POINTS = "PLAYER_COMBO_POINTS"
+
 	tinsert(auraScanners, function(callback, unit)
 		if unit ~= 'player' then return end
 		-- name, count, duration, expirationTime, isMine, spellId
 		callback("COMBO_POINTS", GetComboPoints("player"), nil, nil, true, "HELPFUL")
 	end)
-		
+
 	function InlineAura:PLAYER_COMBO_POINTS(event, unit)
 		return UpdateUnitAuras("player", event)
-	end	
+	end
 end
 
 -- Moonkin eclipse points
@@ -400,15 +400,15 @@ if playerClass == "DRUID" then
 	local UnitPower, UnitPowerMax = UnitPower, UnitPowerMax
 	local GetEclipseDirection = GetEclipseDirection
 	local GetPrimaryTalentTree = GetPrimaryTalentTree
-	
+
 	local isMoonkin, direction, power
 	keywords.LUNAR_ENERGY = true
 	keywords.SOLAR_ENERGY = true
 	KEYWORD_EVENTS.LUNAR_ENERGY = "PLAYER_TALENT_UPDATE"
 	KEYWORD_EVENTS.SOLAR_ENERGY = "PLAYER_TALENT_UPDATE"
-	
+
 	tinsert(auraScanners, function(callback, unit)
-		if unit ~= 'player' or not isMoonkin or not direction or not power then return end		
+		if unit ~= 'player' or not isMoonkin or not direction or not power then return end
 		if direction == "moon" then
 			callback("LUNAR_ENERGY", -power, nil, nil, true, "HELPFUL")
 		else
@@ -421,7 +421,7 @@ if playerClass == "DRUID" then
 			if newPower ~= power then
 				power = newPower
 				if event == "UNIT_POWER" then
-					return UpdateUnitAuras("player", event)	
+					return UpdateUnitAuras("player", event)
 				end
 			end
 		end
@@ -431,7 +431,7 @@ if playerClass == "DRUID" then
 		if newDirection ~= direction then
 			direction = newDirection
 			if event == "ECLIPSE_DIRECTION_CHANGE" then
-				return UpdateUnitAuras("player", event)			
+				return UpdateUnitAuras("player", event)
 			end
 		end
 	end
@@ -448,7 +448,7 @@ if playerClass == "DRUID" then
 				self:UnregisterEvent('UNIT_POWER')
 				self:UnregisterEvent('ECLIPSE_DIRECTION_CHANGE')
 			end
-			return UpdateUnitAuras("player", event)	
+			return UpdateUnitAuras("player", event)
 		end
 	end
 end
@@ -624,7 +624,7 @@ function TimerFrame_Display(self, expirationTime, count, now, hideCountdown)
 		TimerFrame_CancelTimer(self)
 		countdownText:Hide()
 	end
-	
+
 	if stackText:IsShown() or countdownText:IsShown() then
 		self:Show()
 		TimerFrame_UpdateTextLayout(self)
@@ -689,11 +689,11 @@ local function LookupAura(auras, spell, aliases, onlyMine, ...)
 		end
 	end
 	if aura then
-		return aura, aura.type, ...
+		return aura, ...
 	end
 end
 
-local function GetAuraToDisplay(spell)
+local function GetAuraToDisplay(spell, target)
 	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
 	if type(specific) == 'table' then
 		if specific.disabled then
@@ -705,11 +705,12 @@ local function GetAuraToDisplay(spell)
 		if auraType == "self" then -- Self auras
 			return LookupAura(unitAuras.player, spell, specific.aliases, true, hideStack, hideCountdown, specific.alternateColor)
 		elseif auraType == "special" then -- Special display
-			return LookupAura(unitAuras.player, spell, specific.aliases, true, false, false, false)		
+			return LookupAura(unitAuras.player, spell, specific.aliases, true, false, false, false)
 		elseif auraType == "pet" then -- Pet auras
 			if UnitExists("pet") then
 				return LookupAura(unitAuras.pet, spell, specific.aliases, specific.onlyMine, hideStack, hideCountdown, specific.alternateColor)
 			end
+			--[[
 		else -- Friend or enemy
 			local buffTest = (auraType == "enemy") and UnitIsDebuffable or UnitIsBuffable
 			for i, unit in ipairs(UNITS_TO_SCAN_BY_TYPE[auraType]) do
@@ -717,8 +718,29 @@ local function GetAuraToDisplay(spell)
 					return LookupAura(unitAuras[unit], spell, specific.aliases, specific.onlyMine, hideStack, hideCountdown, specific.alternateColor)
 				end
 			end
+			--]]
+		elseif target then -- Friend or enemy
+			--@debug@
+			--dprint("GetAuraToDisplay, specific", "spell=", spell, "type=", auraType, "target=", target)
+			--@end-debug@
+			if (auraType == "enemy" and UnitIsDebuffable(target)) or (auraType == "friend" and UnitIsBuffable(target)) then
+				return LookupAura(unitAuras[target], spell, specific.aliases, specific.onlyMine, hideStack, hideCountdown, specific.alternateColor)
+			end
 		end
-	else
+	elseif target then
+		--@debug@
+		--dprint("GetAuraToDisplay, generic", "spell=", spell, "target=", target)
+		--@end-debug@
+		local buffTest, onlyMine
+		if IsHarmfulSpell(spell) then
+			buffTest, onlyMine = UnitIsDebuffable, db.profile.onlyMyDebuffs
+		else
+			buffTest, onlyMine = UnitIsBuffable, db.profile.onlyMyBuffs
+		end
+		if buffTest(target) then
+			return LookupAura(unitAuras[target], spell, nil, onlyMine, db.profile.hideStack, db.profile.hideCountdown)
+		end
+		--[[
 		local auraType, buffTest, onlyMine
 		if IsHarmfulSpell(spell) then
 			auraType, buffTest, onlyMine = "enemy", UnitIsDebuffable, db.profile.onlyMyDebuffs
@@ -731,11 +753,30 @@ local function GetAuraToDisplay(spell)
 				return LookupAura(unitAuras[unit], spell, nil, onlyMine, hideStack, hideCountdown)
 			end
 		end
+		--]]
+
 	end
 end
 
 ------------------------------------------------------------------------------
--- Visual feedback
+-- LibButtonFacade compatibility
+------------------------------------------------------------------------------
+
+local function SetVertexColor(texture, r, g, b, a)
+	texture:SetVertexColor(r, g, b, a)
+end
+
+local function LBF_SetVertexColor(texture, r, g, b, a)
+	local R, G, B, A = texture:GetVertexColor()
+	texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
+end
+
+local function LBF_Callback()
+	configUpdated = true
+end
+
+------------------------------------------------------------------------------
+-- Updating core
 ------------------------------------------------------------------------------
 
 local function UpdateTimer(self, aura, hideStack, hideCountdown)
@@ -759,73 +800,6 @@ local function UpdateTimer(self, aura, hideStack, hideCountdown)
 	end
 end
 
-local function SetVertexColor(texture, r, g, b, a)
-	texture:SetVertexColor(r, g, b, a)
-end
-
-local IsSpellOverlayed = IsSpellOverlayed
-local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
-local ActionButton_HideOverlayGlow = ActionButton_HideOverlayGlow
-
-local function GetSpellId(type, data)
-	if type == 'action' then
-		type, data = GetActionInfo(data)
-	end
-	if type == 'spell' then
-		return data
-	elseif type == 'macro' then
-		return GetMacroSpell(data)
-	elseif type == 'item' then
-		return GetItemSpell(data)
-	end
-end
-
-local function SafeUpdateOverlayGlow(self)
-	local spellId = GetSpellId(self:__IA_GetAction())
-	if tonumber(spellId) and IsSpellOverlayed(spellId) then
-		ActionButton_ShowOverlayGlow(self)
-		return true
-	else
-		ActionButton_HideOverlayGlow(self)
-	end
-end
-
-local function UpdateHighlight(self, aura, color, alternate)
-	local texture = self:GetCheckedTexture()
-	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
-		if alternate then
-			ActionButton_ShowOverlayGlow(self)
-		elseif not SafeUpdateOverlayGlow(self) then
-			SetVertexColor(texture, unpack(color))
-			self:__IA_SetChecked(true)
-		end
-	else
-		SafeUpdateOverlayGlow(self)
-		texture:SetVertexColor(1, 1, 1)
-		local type, data = self:__IA_GetAction()
-		if type == "action" and data then
-			self:__IA_SetChecked(IsCurrentAction(data) or IsAutoRepeatAction(data))
-		end
-	end
-end
-
-------------------------------------------------------------------------------
--- LibButtonFacade compatibility
-------------------------------------------------------------------------------
-
-local function LBF_SetVertexColor(texture, r, g, b, a)
-	local R, G, B, A = texture:GetVertexColor()
-	texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
-end
-
-local function LBF_Callback()
-	configUpdated = true
-end
-
-------------------------------------------------------------------------------
--- Our core
-------------------------------------------------------------------------------
-
 local spellNames = setmetatable({}, {__index = function(t, id)
 	local numId = tonumber(id)
 	if numId then
@@ -838,18 +812,113 @@ local spellNames = setmetatable({}, {__index = function(t, id)
 	return id
 end})
 
-local function UpdateButton(self)
-	if not self:IsVisible() or not buttons[self] then return end
-	local spell = spellNames[GetSpellId(self:__IA_GetAction())]
-	local aura, auraType, color, hideStack, hideCountdown, alternateColor
-	if spell then
-		aura, auraType, hideStack, hideCountdown, alternateColor = GetAuraToDisplay(spell)		
-		if aura and not alternateColor then
-			color = db.profile['color'..auraType..(aura.isMine and 'Mine' or 'Others')]
+local function FindMacroOptions(...)
+	for i = 1, select('#', ...) do
+		local line = select(i, ...)
+		local prefix, suffix = strsplit(" ", line:trim(), 2)
+		if suffix and (prefix == '#show' or prefix == '#showtooltip' or prefix:sub(1,1) ~= "#") then
+			return suffix
 		end
 	end
-	UpdateHighlight(self, aura, color, alternateColor)
-	UpdateTimer(self, aura, hideStack, hideCountdown)
+end
+
+local function GuessMacroTarget(index)
+	local options = FindMacroOptions(strsplit("\n", GetMacroBody(index)))
+	if options then
+		local action, target = SecureCmdOptionParse(options)
+		if action and action ~= "" and target then
+			return target
+		end
+	end
+end
+
+local function GuessSpellTarget(spell)
+	if IsModifiedClick("SELFCAST") then
+		return "player"
+	elseif IsModifiedClick("FOCUSCAST") then
+		return "focus"
+	elseif IsHelpfulSpell(spell) and not UnitIsBuffable("target") and GetCVarBool("autoSelfCast") then
+		return "player"
+	else
+		return "target"
+	end
+end
+
+local function GetButtonSpellAndTarget(self)
+	local action
+	local type, data = self:__IA_GetAction()
+	if type == 'action' then
+		local _, spellId
+		action = data
+		type, data, _, spellId = GetActionInfo(action)
+		if type == 'equipmentset' then
+			return
+		elseif type == 'companion' then
+			type, data = 'spell', spellId
+		end
+	end
+	local spell, target = data, SecureButton_GetModifiedUnit(self)
+	if type == 'item' then
+		spell = GetItemSpell(data)
+	elseif type == 'macro' then
+		spell = GetMacroSpell(data)
+	end
+	local spellName = spellNames[spell]
+	if not target then
+		target = (type == "macro" and GuessMacroTarget(data)) or GuessSpellTarget(spellName)
+	end
+	return spell, spellName, target, action
+end
+
+local IsSpellOverlayed = IsSpellOverlayed
+local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
+local ActionButton_HideOverlayGlow = ActionButton_HideOverlayGlow
+
+local function SafeUpdateOverlayGlow(self, spell)
+	if tonumber(spell) and IsSpellOverlayed(spell) then
+		ActionButton_ShowOverlayGlow(self)
+		return true
+	else
+		ActionButton_HideOverlayGlow(self)
+	end
+end
+
+local function UpdateHighlight(self, aura, action)
+	local texture = self:GetCheckedTexture()
+	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
+		local color = db.profile['color'..aura.type..(aura.isMine and 'Mine' or 'Others')]
+		self:__IA_SetChecked(true)
+		SetVertexColor(texture, unpack(color))
+		return true
+	else
+		self:__IA_SetChecked(action and (IsCurrentAction(action) or IsAutoRepeatAction(action)))
+		texture:SetVertexColor(1, 1, 1)
+	end
+end
+
+local function UpdateButton(self)
+	if not self:IsVisible() or not buttons[self] then return end
+	local spell, spellName, target, action = GetButtonSpellAndTarget(self)
+	if spellName then
+		local aura, hideStack, hideCountdown, glow = GetAuraToDisplay(spellName, target)
+		--@debug@
+		dprint("UpdateButton", spellName, "=>", aura and aura.name)
+		--@end-debug@
+		if aura then
+			if glow then
+				ActionButton_ShowOverlayGlow(self)
+				UpdateHighlight(self, nil, action)
+			else
+				SafeUpdateOverlayGlow(self, spell)
+				UpdateHighlight(self, aura, action)
+			end
+			UpdateTimer(self, aura, hideStack, hideCountdown)
+			return
+		end
+	end
+	SafeUpdateOverlayGlow(self, spell)
+	UpdateHighlight(self, nil, action)
+	UpdateTimer(self)
 end
 
 local function Blizzard_GetAction(self)
@@ -899,6 +968,8 @@ end
 local UpdateUnitListeners
 do
 	local function IsEnabledUnit(unit)
+		return true
+		--[[
 		for name, spell in pairs(db.profile.spells) do
 			if type(spell) == "table" and not spell.disabled then
 				for i, spellUnit in pairs(UNITS_TO_SCAN_BY_TYPE[spell.auraType]) do
@@ -908,6 +979,7 @@ do
 				end
 			end
 		end
+		--]]
 	end
 	local function FillTableWith(t, ...)
 		wipe(t)
@@ -916,8 +988,9 @@ do
 		end
 		return t
 	end
-	local ALL_UNITS = {}
+	local ALL_UNITS = { target = true, focus = true, mouseover = true, player = true, pet = true }
 	function UpdateUnitListeners()
+--[[
 		-- Rebuild friend and enemy unit list
 		FillTableWith(UNITS_TO_SCAN_BY_TYPE.friend, strsplit(",", db.profile.friendOrdering:lower()))
 		FillTableWith(UNITS_TO_SCAN_BY_TYPE.enemy, strsplit(",", db.profile.enemyOrdering:lower()))
@@ -930,7 +1003,8 @@ do
 			for i, unit in ipairs(units) do
 				ALL_UNITS[unit] = true
 			end
-		end		
+		end
+--]]
 		-- Now check for actually enabled units
 		for unit in pairs(ALL_UNITS) do
 			local event = UNIT_EVENTS[unit]
@@ -945,14 +1019,14 @@ do
 					dprint("Starting listening for", event, "for unit", unit)
 					--@end-debug@
 					InlineAura:RegisterEvent(event)
-				end				
+				end
 			else
 				if event then
 					--@debug@
 					dprint("Stopping listening for", event, "for unit", unit)
 					--@end-debug@
 					InlineAura:UnregisterEvent(event)
-				end				
+				end
 				WipeAuras(unitAuras[unit])
 			end
 		end
@@ -1098,6 +1172,10 @@ function InlineAura:PLAYER_TARGET_CHANGED(event)
 	needUpdate = true
 end
 
+function InlineAura:MODIFIER_STATE_CHANGED(event)
+	needUpdate = true
+end
+
 function InlineAura:UPDATE_MOUSEOVER_UNIT(event)
 	self.hasMouseover = UnitExists("mouseover")
 	UpdateUnitAuras('mouseover', event)
@@ -1107,7 +1185,7 @@ end
 function InlineAura:VARIABLES_LOADED()
 	self.VARIABLES_LOADED = nil
 	self:UnregisterEvent('VARIABLES_LOADED')
-		
+
 	-- ButtonFacade support
 	local LBF = LibStub('LibButtonFacade', true)
 	local LBF_RegisterCallback = function() end
@@ -1144,7 +1222,7 @@ function InlineAura:VARIABLES_LOADED()
 			end
 		end)
 	end
-	
+
 	-- Do nothing, unless it's been hooked
 	self:SetupHook()
 
@@ -1176,7 +1254,7 @@ function InlineAura:ADDON_LOADED(event, name)
 	self.db = db
 
 	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
-	
+
 	-- Update the database from previous versions
 	for name, spell in pairs(db.profile.spells) do
 		if type(spell) == "table" then
@@ -1210,6 +1288,7 @@ function InlineAura:ADDON_LOADED(event, name)
 	self:RegisterEvent('PLAYER_ENTERING_WORLD')
 	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
 	self:RegisterEvent('UNIT_EXITED_VEHICLE')
+	self:RegisterEvent('MODIFIER_STATE_CHANGED')
 
 	if IsLoggedIn() then
 		self:VARIABLES_LOADED()

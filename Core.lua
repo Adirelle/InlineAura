@@ -54,7 +54,8 @@ local configUpdated = false
 local inVehicle = false
 
 local buttons = {}
-local newbuttons = {}
+local newButtons = {}
+local activeButtons = {}
 InlineAura.buttons = buttons
 
 ------------------------------------------------------------------------------
@@ -658,6 +659,23 @@ local function CreateTimerFrame(button)
 end
 
 ------------------------------------------------------------------------------
+-- LibButtonFacade compatibility
+------------------------------------------------------------------------------
+
+local function SetVertexColor(texture, r, g, b, a)
+	texture:SetVertexColor(r, g, b, a)
+end
+
+local function LBF_SetVertexColor(texture, r, g, b, a)
+	local R, G, B, A = texture:GetVertexColor()
+	texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
+end
+
+local function LBF_Callback()
+	configUpdated = true
+end
+
+------------------------------------------------------------------------------
 -- Aura lookup
 ------------------------------------------------------------------------------
 
@@ -759,27 +777,27 @@ local function GetAuraToDisplay(spell, target)
 end
 
 ------------------------------------------------------------------------------
--- LibButtonFacade compatibility
+-- Spell name memo
 ------------------------------------------------------------------------------
 
-local function SetVertexColor(texture, r, g, b, a)
-	texture:SetVertexColor(r, g, b, a)
-end
-
-local function LBF_SetVertexColor(texture, r, g, b, a)
-	local R, G, B, A = texture:GetVertexColor()
-	texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
-end
-
-local function LBF_Callback()
-	configUpdated = true
-end
+local spellNames = setmetatable({}, {__index = function(t, id)
+	local numId = tonumber(id)
+	if numId then
+		local name = GetSpellInfo(numId)
+		if name then
+			t[id] = name
+			return name
+		end
+	end
+	return id
+end})
 
 ------------------------------------------------------------------------------
--- Updating core
+-- Visual feedback hooks
 ------------------------------------------------------------------------------
 
-local function UpdateTimer(self, aura, hideStack, hideCountdown)
+local function UpdateTimer(self)
+	local aura = self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown
 	if aura and aura.serial and not (hideCountdown and hideStack) then
 		local now = GetTime()
 		local expirationTime = aura.expirationTime
@@ -800,17 +818,31 @@ local function UpdateTimer(self, aura, hideStack, hideCountdown)
 	end
 end
 
-local spellNames = setmetatable({}, {__index = function(t, id)
-	local numId = tonumber(id)
-	if numId then
-		local name = GetSpellInfo(numId)
-		if name then
-			t[id] = name
-			return name
-		end
+local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
+
+local function ActionButton_HideOverlayGlow_Hook(self)
+	if self.__IA_glow then
+		return ActionButton_ShowOverlayGlow(self)
 	end
-	return id
-end})
+end
+
+local function UpdateButtonState_Hook(self)
+	local aura = not self.__IA_glow and self.__IA_aura
+	local texture = self:GetCheckedTexture()
+	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
+		local color = db.profile['color'..aura.type..(aura.isMine and 'Mine' or 'Others')]
+		self:__IA_SetChecked(true)
+		SetVertexColor(texture, unpack(color))
+	else
+		self:__IA_SetChecked(action and (IsCurrentAction(action) or IsAutoRepeatAction(action)))
+		texture:SetVertexColor(1, 1, 1)
+	end
+	return UpdateTimer(self)
+end
+
+------------------------------------------------------------------------------
+-- Aura updating
+------------------------------------------------------------------------------
 
 local function FindMacroOptions(...)
 	for i = 1, select('#', ...) do
@@ -844,85 +876,69 @@ local function GuessSpellTarget(spell)
 	end
 end
 
-local function GetButtonSpellAndTarget(self)
-	local action
-	local type, data = self:__IA_GetAction()
-	if type == 'action' then
+local function UpdateAura(self)
+	local action, param = self.__IA_action, self.__IA_param
+	local spell, target = param, SecureButton_GetModifiedUnit(self)
+	if action == "macro" then
+		spell = GetMacroSpell(param)
+		if not target then
+			target = GuessMacroTarget(param) or GuessSpellTarget(spell)
+		end
+	elseif not target then
+		target = GuessSpellTarget(spell)
+	end
+	local aura, hideStack, hideCountdown, glow
+	if spell then
+		aura, hideStack, hideCountdown, glow = GetAuraToDisplay(spell, target)
+	end
+	if self.__IA_aura ~= aura or self.__IA_hideStack ~= hideStack or self.__IA_hideCountdown ~= hideCountdown or self.__IA_glow ~= glow then
+		self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown, self.__IA_glow = aura, hideStack, hideCountdown, glow
+		UpdateButtonState(self)
+		ActionButton_UpdateOverlayGlow(self)
+	end
+end
+
+------------------------------------------------------------------------------
+-- Action handling
+------------------------------------------------------------------------------
+
+local function ParseAction(self)
+	local action, param = self:__IA_GetAction()
+	if action == 'action' then
 		local _, spellId
-		action = data
-		type, data, _, spellId = GetActionInfo(action)
-		if type == 'equipmentset' then
+		action, param, _, spellId = GetActionInfo(param)
+		if action == 'equipmentset' then
 			return
-		elseif type == 'companion' then
-			type, data = 'spell', spellId
+		elseif action == 'companion' then
+			action, param = 'spell', spellId
 		end
 	end
-	local spell, target = data, SecureButton_GetModifiedUnit(self)
-	if type == 'item' then
-		spell = GetItemSpell(data)
-	elseif type == 'macro' then
-		spell = GetMacroSpell(data)
-	end
-	local spellName = spellNames[spell]
-	if not target then
-		target = (type == "macro" and GuessMacroTarget(data)) or GuessSpellTarget(spellName)
-	end
-	return spell, spellName, target, action
-end
-
-local IsSpellOverlayed = IsSpellOverlayed
-local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
-local ActionButton_HideOverlayGlow = ActionButton_HideOverlayGlow
-
-local function SafeUpdateOverlayGlow(self, spell)
-	if tonumber(spell) and IsSpellOverlayed(spell) then
-		ActionButton_ShowOverlayGlow(self)
-		return true
+	if action == 'item' then
+		return "spell", GetItemSpell(param)
 	else
-		ActionButton_HideOverlayGlow(self)
+		return action, spellNames[param]
 	end
 end
 
-local function UpdateHighlight(self, aura, action)
-	local texture = self:GetCheckedTexture()
-	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
-		local color = db.profile['color'..aura.type..(aura.isMine and 'Mine' or 'Others')]
-		self:__IA_SetChecked(true)
-		SetVertexColor(texture, unpack(color))
-		return true
-	else
-		self:__IA_SetChecked(action and (IsCurrentAction(action) or IsAutoRepeatAction(action)))
-		texture:SetVertexColor(1, 1, 1)
+local function UpdateAction_Hook(self)
+	if not buttons[self] then return end
+	local action, param
+	if self:IsVisible() then
+		action, param = ParseAction(self)
+	end
+	if action ~= self.__IA_action or param ~= self.__IA_param then
+		self.__IA_action, self.__IA_param = action, param
+		activeButtons[self] = (action and param) or nil
+		return UpdateAura(self)
 	end
 end
 
-local function UpdateButton(self)
-	if not self:IsVisible() or not buttons[self] then return end
-	local spell, spellName, target, action = GetButtonSpellAndTarget(self)
-	if spellName then
-		local aura, hideStack, hideCountdown, glow = GetAuraToDisplay(spellName, target)
-		--@debug@
-		dprint("UpdateButton", spellName, "=>", aura and aura.name)
-		--@end-debug@
-		if aura then
-			if glow then
-				ActionButton_ShowOverlayGlow(self)
-				UpdateHighlight(self, nil, action)
-			else
-				SafeUpdateOverlayGlow(self, spell)
-				UpdateHighlight(self, aura, action)
-			end
-			UpdateTimer(self, aura, hideStack, hideCountdown)
-			return
-		end
-	end
-	SafeUpdateOverlayGlow(self, spell)
-	UpdateHighlight(self, nil, action)
-	UpdateTimer(self)
-end
+------------------------------------------------------------------------------
+-- Button initializing
+------------------------------------------------------------------------------
 
 local function Blizzard_GetAction(self)
-	return 'action', ActionButton_GetPagedID(self)
+	return 'action', self.action
 end
 
 local function InitializeButton(self)
@@ -934,7 +950,8 @@ local function InitializeButton(self)
 		dprint("Initializing LAB button", self:GetName(), "v", self.__LAB_Version)
 		--@end-debug@
 		self.__IA_GetAction = self.GetAction
-		hooksecurefunc(self, 'SetChecked', UpdateButton)
+		hooksecurefunc(self, 'SetChecked', UpdateButtonState_Hook)
+		hooksecurefunc(self, 'UpdateAction', UpdateAction_Hook)		
 	else
 		self.__IA_GetAction = Blizzard_GetAction
 	end
@@ -945,19 +962,19 @@ end
 ------------------------------------------------------------------------------
 
 local function ActionButton_OnLoad_Hook(self)
-	if not buttons[self] and not newbuttons[self] then
-		newbuttons[self] = true
+	if not buttons[self] and not newButtons[self] then
+		newButtons[self] = true
 		needUpdate = true
 	end
 end
 
 local function ActionButton_Update_Hook(self)
 	if not buttons[self] then
-		newbuttons[self] = true
+		newButtons[self] = true
 		needUpdate = true
 		return
 	else
-		return UpdateButton(self)
+		return UpdateAction_Hook(self)
 	end
 end
 
@@ -1079,7 +1096,7 @@ end
 ------------------------------------------------------------------------------
 
 local enabledEvents = {}
-function InlineAura:OnUpdate()
+function InlineAura:OnUpdate(elapsed)
 	if configUpdated then
 		-- Update event listening based on units
 		UpdateUnitListeners()
@@ -1094,19 +1111,27 @@ function InlineAura:OnUpdate()
 			TimerFrame_Skin(timerFrame)
 		end
 	end
-	if self.hasMouseover and not UnitExists("mouseover") then
-		self:UPDATE_MOUSEOVER_UNIT("OnUpdate")
+	if self.hasMouseover then
+		if UnitExists("mouseover") then
+			self.mouseoverTimer = self.mouseoverTimer - elapsed
+			if self.mouseoverTimer <= 0 then
+				self.mouseoverTimer = 1
+				self:UNIT_AURA("OnUpdate", "mouseover")
+			end
+		else
+			self:UPDATE_MOUSEOVER_UNIT("OnUpdate")
+		end
 	end
 	if needUpdate or configUpdated then
-		if next(newbuttons) then
+		if next(newButtons) then
 			-- Handle new buttons
-			for button in pairs(newbuttons) do
+			for button in pairs(newButtons) do
 				InitializeButton(button)
 			end
-			wipe(newbuttons)
+			wipe(newButtons)
 		end
 		-- Update buttons
-		for button in pairs(buttons) do
+		for button in pairs(activeButtons) do
 			UpdateButton(button)
 		end
 		needUpdate, configUpdated = false, false
@@ -1122,8 +1147,8 @@ end
 function InlineAura:RegisterButtons(prefix, count)
 	for id = 1, count do
 		local button = _G[prefix .. id]
-		if button and not buttons[button] and not newbuttons[button] then
-			newbuttons[button] = true
+		if button and not buttons[button] and not newButtons[button] then
+			newButtons[button] = true
 			needUpdate = true
 		end
 	end
@@ -1177,7 +1202,13 @@ function InlineAura:MODIFIER_STATE_CHANGED(event)
 end
 
 function InlineAura:UPDATE_MOUSEOVER_UNIT(event)
-	self.hasMouseover = UnitExists("mouseover")
+	if UnitExists("mouseover") then
+		if not self.hasMouseover then
+			self.hasMouseover, self.mouseoverTimer = true, 1
+		end
+	else
+		self.hasMouseover = nil
+	end
 	UpdateUnitAuras('mouseover', event)
 	needUpdate = true
 end
@@ -1306,10 +1337,9 @@ function InlineAura:ADDON_LOADED(event, name)
 
 	-- Hooks
 	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
-	hooksecurefunc('ActionButton_UpdateState', UpdateButton)
+	hooksecurefunc('ActionButton_UpdateState', UpdateButtonState_Hook)
 	hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
-	hooksecurefunc('ActionButton_ShowOverlayGlow', UpdateButton)
-	hooksecurefunc('ActionButton_HideOverlayGlow', UpdateButton)
+	hooksecurefunc('ActionButton_HideOverlayGlow', ActionButton_HideOverlayGlow_Hook)
 end
 
 -- Event handler

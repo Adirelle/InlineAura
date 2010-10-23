@@ -120,7 +120,7 @@ local DEFAULT_OPTIONS = {
 		spells = {
 			['**'] = {
 				disabled = false,
-				auraType = 'friend',
+				auraType = 'regular',
 			},
 		},
 		enabledUnits = {
@@ -1233,13 +1233,13 @@ function InlineAura:ADDON_LOADED(event, name)
 			if auraType == "buff" then
 				if units and units.pet then
 					auraType = "pet"
-				elseif units and not units.target and not units.focus then
+				elseif units and units.player and not units.target and not units.focus then
 					auraType = "self"
 				else
-					auraType = "friend"
+					auraType = "regular"
 				end
-			elseif auraType == "debuff" then
-				auraType = "enemy"
+			elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
+				auraType = "regular"
 			end
 			if spell.auraType ~= auraType then
 				spell.auraType = auraType

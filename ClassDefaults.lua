@@ -423,7 +423,7 @@ elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
 	-- Soul link
-	Aliases('pet', 19028, 25228)
+	Aliases('buff', 19028, 25228)
 
 	-- Display soul shard count on Soulburn
 	Aliases("buff", 74434, 'SOUL_SHARDS')

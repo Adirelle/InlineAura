@@ -354,7 +354,10 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 	tinsert(auraScanners, function(callback, unit, filter)
 		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
 		-- name, count, duration, expirationTime, isMine, spellId
-		callback(POWER_NAME, UnitPower("player", POWER_TYPE) or 0, nil, nil, true)
+		local power = UnitPower("player", POWER_TYPE)
+		if power and power > 0 then
+			callback(POWER_NAME, power, nil, nil, true)
+		end
 	end)
 
 	function InlineAura:UNIT_POWER(event, unit, type)
@@ -376,7 +379,10 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	tinsert(auraScanners, function(callback, unit, filter)
 		if unit ~= 'player' or filter ~= 'HELPFUL' then return end
 		-- name, count, duration, expirationTime, isMine, spellId
-		callback("COMBO_POINTS", GetComboPoints("player"), nil, nil, true)
+		local points = GetComboPoints("player")
+		if points and points > 0 then
+			callback("COMBO_POINTS", points, nil, nil, true)
+		end
 	end)
 		
 	function InlineAura:PLAYER_COMBO_POINTS(event, unit)
@@ -401,7 +407,7 @@ if playerClass == "DRUID" then
 	KEYWORD_EVENTS.SOLAR_ENERGY = "PLAYER_TALENT_UPDATE"
 	
 	tinsert(auraScanners, function(callback, unit, filter)
-		if unit ~= 'player' or filter ~= 'HELPFUL' or not isMoonkin or not direction or not power then return end		
+		if unit ~= 'player' or filter ~= 'HELPFUL' or not isMoonkin or not direction or not power or (power == 0) then return end		
 		if direction == "moon" then
 			callback("LUNAR_ENERGY", -power, nil, nil, true)
 		else

@@ -340,11 +340,12 @@ GroupAuras("debuff",
 if class == 'HUNTER' then
 ------------------------------------------------------------------------------
 
-	--Aliases('debuff',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
+	Aliases('debuff',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
 	Aliases('debuff', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	Aliases('debuff', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
 
 	Aliases('buff', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...
+	Aliases('buff', 56641, 53224) -- Steady Shot => Improved Steady Shot
 
 	SelfBuffs(
 		 5118, -- Aspect of the Cheetah
@@ -360,7 +361,8 @@ if class == 'HUNTER' then
 		 3045, -- Rapid Fire
 		19263, -- Deterrence
 		 5384, -- Feign Death
-		53224, -- Improved Steady Shot
+		19434, -- Aimed Shot => Ready, Set, Aim...
+		56641, -- Steady Shot => Improved Steady Shot
 		82692  -- Focus Fire
 	)
 
@@ -415,9 +417,6 @@ elseif class == 'SHAMAN' then
 		55198  -- Tidal Force
 	)
 
-	--GroupDebuffs(51514) -- Hex
-	--GroupDebuffs(76780) -- Bind Elemental
-
 ------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
@@ -428,6 +427,14 @@ elseif class == 'WARLOCK' then
 	-- Display soul shard count on Soulburn
 	Aliases("buff", 74434, 'SOUL_SHARDS')
 
+	SelfBuffs(
+		687,   -- Demon Armor
+		6229,  -- Shadow Ward
+		7812,  -- Sacrifice (voidwalker buff)
+		19028, -- Soul Link
+		28176  -- Fel Armor
+	)
+
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
 	SelfTalentProc( 6353, 63165) -- Soul Fire => Decimation
 
@@ -437,15 +444,16 @@ elseif class == 'WARLOCK' then
 	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
 	SelfTalentProc(29722, 54274) -- Incinerate => Backdraft
 
-	--GroupDebuffs(710) -- Banish
-	--GroupDebuffs(5782) -- Fear
-
 ------------------------------------------------------------------------------
 elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
 
-	-- Polymorphs
-	--GroupDebuffs(118, 28272, 28271, 61025, 61305)
+	SelfBuffs(
+		 6117, -- Mage Armor
+		 7302, -- Frost Armor
+		30482, -- Molten Armor
+		45438  -- Ice Block
+	)
 
 ------------------------------------------------------------------------------
 elseif class == 'DEATHKNIGHT' then
@@ -467,8 +475,6 @@ elseif class == 'PRIEST' then
 	)
 
 	GroupBuffs(27683) -- Shadow Protection
-
-	--GroupDebuffs(9484) -- Shackle Undead
 
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then
@@ -504,9 +510,6 @@ elseif class == 'DRUID' then
 		61336  -- Survival Instincts
 	)
 
-	--GroupDebuffs(  339) -- Entangling Roots
-	--GroupDebuffs(33786) -- Cyclone
-
 ------------------------------------------------------------------------------
 elseif class == 'PALADIN' then
 ------------------------------------------------------------------------------
@@ -532,9 +535,6 @@ elseif class == 'PALADIN' then
 	GroupBuffs( 7294) -- Retribution Aura
 	GroupBuffs(19891) -- Resistance Aura
 	GroupBuffs(32223) -- Crusader Aura
-
-	--GroupDebuffs(20066) -- Repentance
-	--GroupDebuffs(10326) -- Turn Evil
 
 end
 

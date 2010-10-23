@@ -223,6 +223,9 @@ do
 		if unitGUIDs[unit] ~= guid then
 			WipeAuras(unit)
 		end
+		if unit == 'mouseover' then
+			InlineAura.mouseoverTimer = 1
+		end
 
 		if guid then
 			serial = (serial + 1) % 1000000
@@ -1065,9 +1068,8 @@ function InlineAura:OnUpdate(elapsed)
 
 	-- Emulate missing mouseover events
 	if unitGUIDs.mouseover then
-		if UnitGUID("mouseover") ~= unitGUIDs.mouseover or not self.mouseoverTimer or self.mouseoverTimer < elapsed then
+		if UnitGUID("mouseover") ~= unitGUIDs.mouseover or self.mouseoverTimer < elapsed then
 			self:UPDATE_MOUSEOVER_UNIT("OnUpdate")
-			self.mouseoverTimer = 1
 		else
 			self.mouseoverTimer = self.mouseoverTimer - elapsed
 		end
@@ -1121,7 +1123,10 @@ end
 InlineAura.UNIT_EXITED_VEHICLE = InlineAura.UNIT_ENTERED_VEHICLE
 
 function InlineAura:UNIT_AURA(event, unit)
-	return UpdateUnitAuras(unit, event)
+	UpdateUnitAuras(unit, event)
+	if UnitIsUnit(unit, "mouseover") then
+		UpdateUnitAuras("mouseover", event)
+	end
 end
 
 function InlineAura:UNIT_PET(event, unit)
@@ -1201,6 +1206,7 @@ function InlineAura:VARIABLES_LOADED()
 	self:RequireUpdate(true)
 
 	-- Our bucket thingy
+	self.mouseoverTimer = 1
 	self:SetScript('OnUpdate', self.OnUpdate)
 
 	-- Scan unit in case of delayed loading

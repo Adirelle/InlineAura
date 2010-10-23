@@ -44,6 +44,8 @@ local unitAuras = {
 	focus = {},
 	mouseover = {},
 }
+local unitGUIDs = {}
+local auraChanged = {}
 local enabledUnits = {
 	player = true,
 	target = true,
@@ -68,8 +70,22 @@ local function dprint() end
 --@debug@
 if tekDebug then
 	local frame = tekDebug:GetFrame(addonName)
+	local type, tostring, format = type, tostring, format
+	local function mytostringall(a, ...)
+		local str
+		if type(a) == "table" and type(a.GetName) == "function" then
+			str = format("|cffff8844[%s]|r", tostring(a:GetName()))
+		else
+			str = tostring(a)
+		end
+		if select('#', ...) > 0 then
+			return str, mytostringall(...)
+		else
+			return str
+		end
+	end
 	dprint = function(...)
-		return frame:AddMessage(strjoin(", ", tostringall(...)):gsub("([:=]), ", "%1"))
+		return frame:AddMessage(strjoin(" ", mytostringall(...)))
 	end
 end
 --@end-debug@
@@ -185,13 +201,19 @@ function InlineAura:SetupHook() end
 -- Aura monitoring core
 ------------------------------------------------------------------------------
 
-local function WipeAuras(auras)
+local function WipeAuras(unit)
+	local auras = unitAuras[unit]
 	if next(auras) then
 		for name,aura in pairs(auras) do
-			del(aura)
+			if name ~= "__GUID" then
+				auras[name] = del(aura)
+			end
 		end
-		wipe(auras)
-		needUpdate = true
+		unitGUIDs[unit] = nil
+		auraChanged[unit] = true
+		--@debug@
+		dprint("Wiped", unit, "auras")
+		--@end-debug@
 	end
 end
 
@@ -211,67 +233,77 @@ do
 			auras = unitAuras[unit]
 		end
 		serial = (serial + 1) % 1000000
+		
+		local guid = UnitGUID(unit)
+		if unitGUIDs[unit] ~= guid then
+			WipeAuras(unit)
+		end
 
-		-- Avoid recreating callback on every call
-		local now = GetTime()
-		local callback = callbacks[auras]
-		if not callback then
-			callback = function(name, count, duration, expirationTime, isMine, filter, spellId)
-				if not count or count == 0 then
-					count = nil
-				end
-				duration, expirationTime, isMine = tonumber(duration) or 0, tonumber(expirationTime) or 0, not not isMine
-				if expirationTime > 0 and expirationTime < now then return end
-				local data = auras[name]
-				if not data then
-					data = new()
-					auras[name] = data
-					needUpdate = true
-					--@debug@
-					dprint('New aura', unit, name)
-					--@end-debug@
-				elseif data.serial == serial and data.isMine and not isMine then
-					-- Do not overwrite player's auras by others' auras when they have already seen during this scan
-					data = nil
-				elseif expirationTime ~= data.expirationTime or count ~= data.count or isMine ~= data.isMine then
-					needUpdate = true
-					--@debug@
-					dprint('Updating aura', unit, name)
-					--@end-debug@
-				end
-				if data then
-					data.serial = serial
-					data.count = count
-					data.duration = duration
-					data.expirationTime = expirationTime
-					data.isMine = isMine
-					data.type = (filter == "HARMFUL") and "Debuff" or "Buff"
-					if spellId then
-						auras['#'..spellId] = data
+		if UnitExists(unit) then
+			unitGUIDs[unit] = guid
+			-- Avoid recreating callback on every call
+			local now = GetTime()
+			local callback = callbacks[auras]
+			if not callback then
+				callback = function(name, count, duration, expirationTime, isMine, filter, spellId)
+					if not count or count == 0 then
+						count = nil
+					end
+					duration, expirationTime, isMine = tonumber(duration) or 0, tonumber(expirationTime) or 0, not not isMine
+					if expirationTime > 0 and expirationTime < now then return end
+					local data = auras[name]
+					if not data then
+						data = new()
+						auras[name] = data
+						auraChanged[unit] = true
+						--@debug@
+						dprint('New aura', unit, name)
+						--@end-debug@
+					elseif data.serial == serial and data.isMine and not isMine then
+						-- Do not overwrite player's auras by others' auras when they have already seen during this scan
+						data = nil
+					elseif expirationTime ~= data.expirationTime or count ~= data.count or isMine ~= data.isMine then
+						auraChanged[unit] = true
+						--@debug@
+						dprint('Updating aura', unit, name)
+						--@end-debug@
+					end
+					if data then
+						data.name = name
+						data.serial = serial
+						data.count = count
+						data.duration = duration
+						data.expirationTime = expirationTime
+						data.isMine = isMine
+						data.type = (filter == "HARMFUL") and "Debuff" or "Buff"
+						if spellId then
+							auras['#'..spellId] = data
+						end
 					end
 				end
+				callbacks[auras] = callback
 			end
-			callbacks[auras] = callback
-		end
 
-		-- Give every scanner a try
-		for index, scan in ipairs(auraScanners) do
-			local ok, msg = pcall(scan, callback, unit)
-			if not ok then
-				geterrorhandler()(msg)
+			-- Give every scanner a try
+			for index, scan in ipairs(auraScanners) do
+				local ok, msg = pcall(scan, callback, unit)
+				if not ok then
+					geterrorhandler()(msg)
+				end
 			end
-		end
 
-		-- Remove auras that have faded out
-		for name, data in pairs(auras) do
-			if not data.serial or data.serial ~= serial then
-				auras[name] = del(auras[name])
-				needUpdate = true
-				--@debug@
-				dprint('Removing aura', unit, name)
-				--@end-debug@
+			-- Remove auras that have faded out
+			for name, data in pairs(auras) do
+				if not data.serial or data.serial ~= serial then
+					auras[name] = del(auras[name])
+					auraChanged[unit] = true
+					--@debug@
+					dprint('Removing aura', unit, name)
+					--@end-debug@
+				end
 			end
 		end
+		
 	end
 	InlineAura.UpdateUnitAuras = UpdateUnitAuras
 end
@@ -821,20 +853,26 @@ end
 local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
 
 local function ActionButton_HideOverlayGlow_Hook(self)
-	if self.__IA_glow then
+	if buttons[self] and self.__IA_glow then
+		--@debug@
+		dprint(self, "Enforcing glow")
+		--@end-debug@
 		return ActionButton_ShowOverlayGlow(self)
 	end
 end
 
 local function UpdateButtonState_Hook(self)
+	if not buttons[self] then return end
 	local aura = not self.__IA_glow and self.__IA_aura
 	local texture = self:GetCheckedTexture()
 	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
+		--@debug@
+		dprint(self, "Showing border", aura.name)	
+		--@end-debug@
 		local color = db.profile['color'..aura.type..(aura.isMine and 'Mine' or 'Others')]
 		self:__IA_SetChecked(true)
 		SetVertexColor(texture, unpack(color))
 	else
-		self:__IA_SetChecked(action and (IsCurrentAction(action) or IsAutoRepeatAction(action)))
 		texture:SetVertexColor(1, 1, 1)
 	end
 	return UpdateTimer(self)
@@ -858,7 +896,7 @@ local function GuessMacroTarget(index)
 	local options = FindMacroOptions(strsplit("\n", GetMacroBody(index)))
 	if options then
 		local action, target = SecureCmdOptionParse(options)
-		if action and action ~= "" and target then
+		if action and action ~= "" and target and target ~= "" then
 			return target
 		end
 	end
@@ -876,25 +914,39 @@ local function GuessSpellTarget(spell)
 	end
 end
 
-local function UpdateAura(self)
+local function UpdateButtonAura(self, force)
+	if not buttons[self] then return end
 	local action, param = self.__IA_action, self.__IA_param
 	local spell, target = param, SecureButton_GetModifiedUnit(self)
-	if action == "macro" then
-		spell = GetMacroSpell(param)
-		if not target then
-			target = GuessMacroTarget(param) or GuessSpellTarget(spell)
-		end
-	elseif not target then
-		target = GuessSpellTarget(spell)
-	end
-	local aura, hideStack, hideCountdown, glow
+	if target == "" then target = nil end
 	if spell then
-		aura, hideStack, hideCountdown, glow = GetAuraToDisplay(spell, target)
+		if action == "macro" then
+			spell = GetMacroSpell(param)
+			if not target then
+				target = GuessMacroTarget(param) or GuessSpellTarget(spell)
+			end
+		elseif not target then
+			target = GuessSpellTarget(spell)
+		end
 	end
-	if self.__IA_aura ~= aura or self.__IA_hideStack ~= hideStack or self.__IA_hideCountdown ~= hideCountdown or self.__IA_glow ~= glow then
-		self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown, self.__IA_glow = aura, hideStack, hideCountdown, glow
-		UpdateButtonState(self)
-		ActionButton_UpdateOverlayGlow(self)
+	local guid = target and UnitGUID(target)
+	if force or spell ~= self.__IA_spell or guid ~= self.__IA_guid or (target and auraChanged[target]) then
+		--@debug@
+		dprint(self, "spell=", spell, "target=", target, "guid=", guid, "auraChanged=", target and auraChanged[target])
+		--@end-debug@
+		self.__IA_spell, self.__IA_guid = spell, guid
+		local aura, hideStack, hideCountdown, glow
+		if spell then
+			aura, hideStack, hideCountdown, glow = GetAuraToDisplay(spell, target)
+		end
+		if self.__IA_aura ~= aura or self.__IA_hideStack ~= hideStack or self.__IA_hideCountdown ~= hideCountdown or self.__IA_glow ~= glow then
+			--@debug@
+			dprint(self, "need update =>", aura and aura.name)
+			--@end-debug@
+			self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown, self.__IA_glow = aura, hideStack, hideCountdown, glow
+			self:__IA_UpdateState()
+			ActionButton_UpdateOverlayGlow(self)
+		end
 	end
 end
 
@@ -915,8 +967,10 @@ local function ParseAction(self)
 	end
 	if action == 'item' then
 		return "spell", GetItemSpell(param)
-	else
+	elseif action == 'spell' then
 		return action, spellNames[param]
+	elseif action == "macro" then
+		return action, param
 	end
 end
 
@@ -927,9 +981,12 @@ local function UpdateAction_Hook(self)
 		action, param = ParseAction(self)
 	end
 	if action ~= self.__IA_action or param ~= self.__IA_param then
+		--@debug@
+		dprint(self, "action changed =>", action, param)
+		--@end-debug@
 		self.__IA_action, self.__IA_param = action, param
 		activeButtons[self] = (action and param) or nil
-		return UpdateAura(self)
+		return UpdateButtonAura(self)
 	end
 end
 
@@ -946,36 +1003,30 @@ local function InitializeButton(self)
 	buttons[self] = true
 	self.__IA_SetChecked = self.SetChecked
 	if self.__LAB_Version then
-		--@debug@
-		dprint("Initializing LAB button", self:GetName(), "v", self.__LAB_Version)
-		--@end-debug@
 		self.__IA_GetAction = self.GetAction
+		self.__IA_UpdateState = self.Update
 		hooksecurefunc(self, 'SetChecked', UpdateButtonState_Hook)
 		hooksecurefunc(self, 'UpdateAction', UpdateAction_Hook)		
 	else
 		self.__IA_GetAction = Blizzard_GetAction
+		self.__IA_UpdateState = ActionButton_UpdateState
 	end
+	UpdateAction_Hook(self)
 end
 
 ------------------------------------------------------------------------------
--- Button hooks
+-- Blizzard button hooks
 ------------------------------------------------------------------------------
 
 local function ActionButton_OnLoad_Hook(self)
 	if not buttons[self] and not newButtons[self] then
 		newButtons[self] = true
-		needUpdate = true
+		return true
 	end
 end
 
 local function ActionButton_Update_Hook(self)
-	if not buttons[self] then
-		newButtons[self] = true
-		needUpdate = true
-		return
-	else
-		return UpdateAction_Hook(self)
-	end
+	return ActionButton_OnLoad_Hook(self) or UpdateAction_Hook(self)
 end
 
 ------------------------------------------------------------------------------
@@ -1044,7 +1095,7 @@ do
 					--@end-debug@
 					InlineAura:UnregisterEvent(event)
 				end
-				WipeAuras(unitAuras[unit])
+				WipeAuras(unit)
 			end
 		end
 	end
@@ -1097,45 +1148,54 @@ end
 
 local enabledEvents = {}
 function InlineAura:OnUpdate(elapsed)
+	-- Configuration has been updated
 	if configUpdated then
+	
 		-- Update event listening based on units
 		UpdateUnitListeners()
+		
 		-- Update event listening based on keywords
 		UpdateKeywordListeners()
+		
 		-- Update all auras
 		for unit in pairs(enabledUnits) do
 			UpdateUnitAuras(unit)
 		end
+		
 		-- Update timer skins
 		for button, timerFrame in pairs(timerFrames) do
 			TimerFrame_Skin(timerFrame)
 		end
 	end
-	if self.hasMouseover then
-		if UnitExists("mouseover") then
-			self.mouseoverTimer = self.mouseoverTimer - elapsed
-			if self.mouseoverTimer <= 0 then
-				self.mouseoverTimer = 1
-				self:UNIT_AURA("OnUpdate", "mouseover")
-			end
-		else
+	
+	-- Emulate missing mouseover events
+	if unitGUIDs.mouseover then
+		if UnitGUID("mouseover") ~= unitGUIDs.mouseover or not self.mouseoverTimer or self.mouseoverTimer < elapsed then
 			self:UPDATE_MOUSEOVER_UNIT("OnUpdate")
+			self.mouseoverTimer = 1
+		else
+			self.mouseoverTimer = self.mouseoverTimer - elapsed
 		end
 	end
-	if needUpdate or configUpdated then
-		if next(newButtons) then
-			-- Handle new buttons
-			for button in pairs(newButtons) do
-				InitializeButton(button)
-			end
-			wipe(newButtons)
+	
+	-- Handle new buttons
+	if next(newButtons) then
+		for button in pairs(newButtons) do
+			InitializeButton(button)
 		end
-		-- Update buttons
+		wipe(newButtons)
+	end
+	
+	-- Update buttons
+	if next(auraChanged) or needUpdate or configUpdated then
 		for button in pairs(activeButtons) do
-			UpdateButton(button)
+			UpdateButtonAura(button, configUpdated)
 		end
 		needUpdate, configUpdated = false, false
+		wipe(auraChanged)
 	end
+	
+	-- Update timers
 	ProcessTimers()
 end
 
@@ -1149,7 +1209,6 @@ function InlineAura:RegisterButtons(prefix, count)
 		local button = _G[prefix .. id]
 		if button and not buttons[button] and not newButtons[button] then
 			newButtons[button] = true
-			needUpdate = true
 		end
 	end
 end
@@ -1161,7 +1220,7 @@ end
 function InlineAura:UNIT_ENTERED_VEHICLE(event, unit)
 	if unit == 'player' then
 		inVehicle = (event == 'UNIT_ENTERED_VEHICLE')
-		UpdateUnitAuras('player', event)
+		return UpdateUnitAuras('player', event)
 	end
 end
 
@@ -1169,14 +1228,13 @@ InlineAura.UNIT_EXITED_VEHICLE = InlineAura.UNIT_ENTERED_VEHICLE
 
 function InlineAura:UNIT_AURA(event, unit)
 	if enabledUnits[unit] or (unit == 'vehicle' and inVehicle) then
-		UpdateUnitAuras(unit, event)
+		return UpdateUnitAuras(unit, event)
 	end
 end
 
 function InlineAura:UNIT_PET(event, unit)
 	if unit == 'player' then
-		UpdateUnitAuras('pet', event)
-		needUpdate = true
+		return UpdateUnitAuras('pet', event)
 	end
 end
 
@@ -1188,13 +1246,11 @@ function InlineAura:PLAYER_ENTERING_WORLD(event)
 end
 
 function InlineAura:PLAYER_FOCUS_CHANGED(event)
-	UpdateUnitAuras('focus', event)
-	needUpdate = true
+	return UpdateUnitAuras('focus', event)
 end
 
 function InlineAura:PLAYER_TARGET_CHANGED(event)
-	UpdateUnitAuras('target', event)
-	needUpdate = true
+	return UpdateUnitAuras('target', event)
 end
 
 function InlineAura:MODIFIER_STATE_CHANGED(event)
@@ -1202,15 +1258,8 @@ function InlineAura:MODIFIER_STATE_CHANGED(event)
 end
 
 function InlineAura:UPDATE_MOUSEOVER_UNIT(event)
-	if UnitExists("mouseover") then
-		if not self.hasMouseover then
-			self.hasMouseover, self.mouseoverTimer = true, 1
-		end
-	else
-		self.hasMouseover = nil
-	end
 	UpdateUnitAuras('mouseover', event)
-	needUpdate = true
+	self.mouseoverTimer = 1
 end
 
 function InlineAura:VARIABLES_LOADED()

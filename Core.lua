@@ -46,14 +46,9 @@ local unitAuras = {
 }
 local unitGUIDs = {}
 local auraChanged = {}
-local enabledUnits = {
-	player = true,
-	target = true,
-}
 local timerFrames = {}
 local needUpdate = false
 local configUpdated = false
-local inVehicle = false
 
 local buttons = {}
 local newButtons = {}
@@ -128,27 +123,21 @@ local DEFAULT_OPTIONS = {
 				auraType = 'friend',
 			},
 		},
-		customOrder = false,
-		friendOrdering = "target,player",
-		enemyOrdering = "target",
+		enabledUnits = {
+			player = true,
+			pet = true,
+			target = true,
+			focus = true,
+			mouseover = false,
+		}
 	},
 }
 InlineAura.DEFAULT_OPTIONS = DEFAULT_OPTIONS
 
 -- Events only needed if the unit is enabled
 local UNIT_EVENTS = {
-	pet = 'UNIT_PET',
 	focus = 'PLAYER_FOCUS_CHANGED',
 	mouseover = 'UPDATE_MOUSEOVER_UNIT',
-}
-
--- Units to scan (and in which order) depending on the aura type
-local UNITS_TO_SCAN_BY_TYPE = {
-	enemy = { 'mouseover', 'focus', 'target' },
-	friend = { 'mouseover', 'focus', 'target', 'player' },
-	self = { 'player' },
-	special = { 'player' },
-	pet = { 'pet' },
 }
 
 ------------------------------------------------------------------------------
@@ -205,9 +194,7 @@ local function WipeAuras(unit)
 	local auras = unitAuras[unit]
 	if next(auras) then
 		for name,aura in pairs(auras) do
-			if name ~= "__GUID" then
-				auras[name] = del(aura)
-			end
+			auras[name] = del(aura)
 		end
 		unitGUIDs[unit] = nil
 		auraChanged[unit] = true
@@ -225,22 +212,22 @@ do
 	local serial = 0
 	local callbacks = setmetatable({}, {__mode='k'})
 	function UpdateUnitAuras(unit, event)
-		local auras
-		if inVehicle and (unit == 'player' or unit == 'vehicle') then
-			unit = 'vehicle'
-			auras = unitAuras.player
-		else
-			auras = unitAuras[unit]
+		local realUnit = unit
+		if UnitHasVehicleUI("player") and (unit == "player" or unit == "vehicle" or unit == "pet") then
+			unit, realUnit = "player", "vehicle"
 		end
-		serial = (serial + 1) % 1000000
-		
-		local guid = UnitGUID(unit)
+		local auras = unitAuras[unit]
+		if not auras then return end
+
+		local guid = db.profile.enabledUnits[unit] and UnitExists(realUnit) and UnitGUID(realUnit)
 		if unitGUIDs[unit] ~= guid then
 			WipeAuras(unit)
 		end
 
-		if UnitExists(unit) then
+		if guid then
+			serial = (serial + 1) % 1000000
 			unitGUIDs[unit] = guid
+
 			-- Avoid recreating callback on every call
 			local now = GetTime()
 			local callback = callbacks[auras]
@@ -286,7 +273,7 @@ do
 
 			-- Give every scanner a try
 			for index, scan in ipairs(auraScanners) do
-				local ok, msg = pcall(scan, callback, unit)
+				local ok, msg = pcall(scan, callback, realUnit)
 				if not ok then
 					geterrorhandler()(msg)
 				end
@@ -303,7 +290,7 @@ do
 				end
 			end
 		end
-		
+
 	end
 	InlineAura.UpdateUnitAuras = UpdateUnitAuras
 end
@@ -711,100 +698,66 @@ end
 -- Aura lookup
 ------------------------------------------------------------------------------
 
-local function GetTristateValue(value, default)
-	if value ~= nil then
-		return value
-	else
-		return default
-	end
-end
-
-local function CheckAura(auras, name, onlyMyBuffs, onlyMyDebuffs)
-	local aura = auras[name]
-	if aura and (aura.isMine or not ((aura.type == "Buff" and onlyMyBuffs) or (aura.type == "Debuff" and onlyMyDebuffs))) then
-		return aura
-	end
-end
-
-local function LookupAura(auras, spell, aliases, onlyMine, ...)
-	local onlyMyBuffs = GetTristateValue(onlyMine, InlineAura.db.profile.onlyMyBuffs)
-	local onlyMyDebuffs = GetTristateValue(onlyMine, InlineAura.db.profile.onlyMyDebuffs)
-	local aura = CheckAura(auras, spell, onlyMyBuffs, onlyMyDebuffs)
-	if not aura and aliases then
-		for i, alias in ipairs(aliases) do
-			aura = CheckAura(auras, alias, onlyMyBuffs, onlyMyDebuffs)
-			if aura then
-				break
-			end
+local function LookupAura(auras, onlyMyBuffs, onlyMyDebuffs, ...)
+	for i = 1, select('#', ...) do
+		local aura = auras[select(i, ...)]
+		if aura and (aura.isMine or (aura.type == "Buff" and not onlyMyBuffs) or (aura.type == "Debuff" and not onlyMyDebuffs)) then
+			return aura
 		end
 	end
-	if aura then
-		return aura, ...
-	end
 end
 
+local EMPTY_TABLE = {}
 local function GetAuraToDisplay(spell, target)
 	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
+	local hideStack, hideCountdown = db.profile.hideStack, db.profile.hideCountdown
+	local onlyMyBuffs, onlyMyDebuffs = db.profile.onlyMyBuffs, db.profile.onlyMyDebuffs
+	local aliases, glowing
+
+	-- Specific spell overrides global settings and targeting
 	if type(specific) == 'table' then
 		if specific.disabled then
 			return
 		end
+		aliases, glowing = specific.aliases, specific.alternateColor
+		local onlyMine = specific.onlyMine
+		if specific.hideStack ~= nil then
+			hideStack = specific.hideStack
+		end
+		if specific.hideCountdown ~= nil then
+			hideCountdown = specific.hideCountdown
+		end
 		local auraType = specific.auraType
-		local hideStack = GetTristateValue(specific.hideStack, db.profile.hideStack)
-		local hideCountdown = GetTristateValue(specific.hideCountdown, db.profile.hideCountdown)
-		if auraType == "self" then -- Self auras
-			return LookupAura(unitAuras.player, spell, specific.aliases, true, hideStack, hideCountdown, specific.alternateColor)
-		elseif auraType == "special" then -- Special display
-			return LookupAura(unitAuras.player, spell, specific.aliases, true, false, false, false)
-		elseif auraType == "pet" then -- Pet auras
-			if UnitExists("pet") then
-				return LookupAura(unitAuras.pet, spell, specific.aliases, specific.onlyMine, hideStack, hideCountdown, specific.alternateColor)
-			end
-			--[[
-		else -- Friend or enemy
-			local buffTest = (auraType == "enemy") and UnitIsDebuffable or UnitIsBuffable
-			for i, unit in ipairs(UNITS_TO_SCAN_BY_TYPE[auraType]) do
-				if enabledUnits[unit] and buffTest(unit) then
-					return LookupAura(unitAuras[unit], spell, specific.aliases, specific.onlyMine, hideStack, hideCountdown, specific.alternateColor)
-				end
-			end
-			--]]
-		elseif target then -- Friend or enemy
-			--@debug@
-			--dprint("GetAuraToDisplay, specific", "spell=", spell, "type=", auraType, "target=", target)
-			--@end-debug@
-			if (auraType == "enemy" and UnitIsDebuffable(target)) or (auraType == "friend" and UnitIsBuffable(target)) then
-				return LookupAura(unitAuras[target], spell, specific.aliases, specific.onlyMine, hideStack, hideCountdown, specific.alternateColor)
-			end
+		if auraType == "self" then
+			-- Self auras
+			target, onlyMine = "player", true
+		elseif auraType == "special" then
+			-- Special display
+			target, onlyMine, hideStack, hideCountdown, glowing = "player", true, false, false, false
+		elseif auraType == "pet" then
+			-- Pet auras
+			target = "pet"
 		end
-	elseif target then
-		--@debug@
-		--dprint("GetAuraToDisplay, generic", "spell=", spell, "target=", target)
-		--@end-debug@
-		local buffTest, onlyMine
-		if IsHarmfulSpell(spell) then
-			buffTest, onlyMine = UnitIsDebuffable, db.profile.onlyMyDebuffs
-		else
-			buffTest, onlyMine = UnitIsBuffable, db.profile.onlyMyBuffs
+		if onlyMine ~= nil then
+			onlyMyBuffs, onlyMyDebuffs = onlyMine, specific.onlyMine
 		end
-		if buffTest(target) then
-			return LookupAura(unitAuras[target], spell, nil, onlyMine, db.profile.hideStack, db.profile.hideCountdown)
-		end
-		--[[
-		local auraType, buffTest, onlyMine
-		if IsHarmfulSpell(spell) then
-			auraType, buffTest, onlyMine = "enemy", UnitIsDebuffable, db.profile.onlyMyDebuffs
-		else
-			auraType, buffTest, onlyMine = "friend", UnitIsBuffable, db.profile.onlyMyBuffs
-		end
-		local hideStack, hideCountdown = db.profile.hideStack, db.profile.hideCountdown
-		for i, unit in ipairs(UNITS_TO_SCAN_BY_TYPE[auraType]) do
-			if enabledUnits[unit] and buffTest(unit) then
-				return LookupAura(unitAuras[unit], spell, nil, onlyMine, hideStack, hideCountdown)
-			end
-		end
-		--]]
+	end
 
+	-- Check target
+	if not target then
+		return
+	elseif IsHarmfulSpell(spell) then
+		if not UnitIsDebuffable(target) then
+			return
+		end
+	elseif not UnitIsBuffable(target) then
+		return
+	end
+
+	-- Look for the aura or its aliases
+	local aura = LookupAura(unitAuras[target], onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
+	if aura then
+		return aura, hideStack, hideCountdown, glowing
 	end
 end
 
@@ -867,7 +820,7 @@ local function UpdateButtonState_Hook(self)
 	local texture = self:GetCheckedTexture()
 	if aura and aura.expirationTime and aura.expirationTime > GetTime() then
 		--@debug@
-		dprint(self, "Showing border", aura.name)	
+		dprint(self, "Showing border", aura.name)
 		--@end-debug@
 		local color = db.profile['color'..aura.type..(aura.isMine and 'Mine' or 'Others')]
 		self:__IA_SetChecked(true)
@@ -1004,7 +957,7 @@ local function InitializeButton(self)
 		self.__IA_GetAction = self.GetAction
 		self.__IA_UpdateState = self.Update
 		hooksecurefunc(self, 'SetChecked', UpdateButtonState_Hook)
-		hooksecurefunc(self, 'UpdateAction', UpdateAction_Hook)		
+		hooksecurefunc(self, 'UpdateAction', UpdateAction_Hook)
 	else
 		self.__IA_GetAction = Blizzard_GetAction
 		self.__IA_UpdateState = ActionButton_UpdateState
@@ -1031,70 +984,12 @@ end
 -- Event listener stuff
 ------------------------------------------------------------------------------
 
-local UpdateUnitListeners
-do
-	local function IsEnabledUnit(unit)
-		return true
-		--[[
-		for name, spell in pairs(db.profile.spells) do
-			if type(spell) == "table" and not spell.disabled then
-				for i, spellUnit in pairs(UNITS_TO_SCAN_BY_TYPE[spell.auraType]) do
-					if spellUnit == unit then
-						return true
-					end
-				end
-			end
-		end
-		--]]
-	end
-	local function FillTableWith(t, ...)
-		wipe(t)
-		for i = 1, select('#', ...) do
-			t[i] = select(i, ...)
-		end
-		return t
-	end
-	local ALL_UNITS = { target = true, focus = true, mouseover = true, player = true, pet = true }
-	function UpdateUnitListeners()
---[[
-		-- Rebuild friend and enemy unit list
-		FillTableWith(UNITS_TO_SCAN_BY_TYPE.friend, strsplit(",", db.profile.friendOrdering:lower()))
-		FillTableWith(UNITS_TO_SCAN_BY_TYPE.enemy, strsplit(",", db.profile.enemyOrdering:lower()))
-		--@debug@
-		dprint("friend:", db.profile.friendOrdering, "enemy:", db.profile.enemyOrdering)
-		--@end-debug@
-		-- Rebuild the complete unit list
-		wipe(ALL_UNITS)
-		for auraTypes, units in pairs(UNITS_TO_SCAN_BY_TYPE) do
-			for i, unit in ipairs(units) do
-				ALL_UNITS[unit] = true
-			end
-		end
---]]
-		-- Now check for actually enabled units
-		for unit in pairs(ALL_UNITS) do
-			local event = UNIT_EVENTS[unit]
-			local found = IsEnabledUnit(unit)
-			enabledUnits[unit] = found
-			--@debug@
-			dprint("Unit", unit, found and "enabled" or "disabled")
-			--@end-debug@
-			if found then
-				if event then
-					--@debug@
-					dprint("Starting listening for", event, "for unit", unit)
-					--@end-debug@
-					InlineAura:RegisterEvent(event)
-				end
-			else
-				if event then
-					--@debug@
-					dprint("Stopping listening for", event, "for unit", unit)
-					--@end-debug@
-					InlineAura:UnregisterEvent(event)
-				end
-				WipeAuras(unit)
-			end
+local function UpdateUnitListeners()
+	for unit, event in pairs(UNIT_EVENTS) do
+		if db.profile.enabledUnits[unit] then
+			InlineAura:RegisterEvent(event)
+		else
+			InlineAura:UnregisterEvent(event)
 		end
 	end
 end
@@ -1148,24 +1043,24 @@ local enabledEvents = {}
 function InlineAura:OnUpdate(elapsed)
 	-- Configuration has been updated
 	if configUpdated then
-	
+
 		-- Update event listening based on units
 		UpdateUnitListeners()
-		
+
 		-- Update event listening based on keywords
 		UpdateKeywordListeners()
-		
+
 		-- Update all auras
-		for unit in pairs(enabledUnits) do
+		for unit in pairs(unitAuras) do
 			UpdateUnitAuras(unit)
 		end
-		
+
 		-- Update timer skins
 		for button, timerFrame in pairs(timerFrames) do
 			TimerFrame_Skin(timerFrame)
 		end
 	end
-	
+
 	-- Emulate missing mouseover events
 	if unitGUIDs.mouseover then
 		if UnitGUID("mouseover") ~= unitGUIDs.mouseover or not self.mouseoverTimer or self.mouseoverTimer < elapsed then
@@ -1175,7 +1070,7 @@ function InlineAura:OnUpdate(elapsed)
 			self.mouseoverTimer = self.mouseoverTimer - elapsed
 		end
 	end
-	
+
 	-- Handle new buttons
 	if next(newButtons) then
 		for button in pairs(newButtons) do
@@ -1183,7 +1078,7 @@ function InlineAura:OnUpdate(elapsed)
 		end
 		wipe(newButtons)
 	end
-	
+
 	-- Update buttons
 	if next(auraChanged) or needUpdate or configUpdated then
 		for button in pairs(activeButtons) do
@@ -1192,7 +1087,7 @@ function InlineAura:OnUpdate(elapsed)
 		needUpdate, configUpdated = false, false
 		wipe(auraChanged)
 	end
-	
+
 	-- Update timers
 	ProcessTimers()
 end
@@ -1217,7 +1112,6 @@ end
 
 function InlineAura:UNIT_ENTERED_VEHICLE(event, unit)
 	if unit == 'player' then
-		inVehicle = (event == 'UNIT_ENTERED_VEHICLE')
 		return UpdateUnitAuras('player', event)
 	end
 end
@@ -1225,9 +1119,7 @@ end
 InlineAura.UNIT_EXITED_VEHICLE = InlineAura.UNIT_ENTERED_VEHICLE
 
 function InlineAura:UNIT_AURA(event, unit)
-	if enabledUnits[unit] or (unit == 'vehicle' and inVehicle) then
-		return UpdateUnitAuras(unit, event)
-	end
+	return UpdateUnitAuras(unit, event)
 end
 
 function InlineAura:UNIT_PET(event, unit)
@@ -1237,8 +1129,7 @@ function InlineAura:UNIT_PET(event, unit)
 end
 
 function InlineAura:PLAYER_ENTERING_WORLD(event)
-	inVehicle = not not UnitControllingVehicle('player')
-	for unit in pairs(enabledUnits) do
+	for unit in pairs(unitAuras) do
 		UpdateUnitAuras(unit, event)
 	end
 end
@@ -1256,8 +1147,8 @@ function InlineAura:MODIFIER_STATE_CHANGED(event)
 end
 
 function InlineAura:UPDATE_MOUSEOVER_UNIT(event)
-	UpdateUnitAuras('mouseover', event)
 	self.mouseoverTimer = 1
+	UpdateUnitAuras('mouseover', event)
 end
 
 function InlineAura:VARIABLES_LOADED()
@@ -1362,6 +1253,7 @@ function InlineAura:ADDON_LOADED(event, name)
 
 	-- Setup basic event listening up
 	self:RegisterEvent('UNIT_AURA')
+	self:RegisterEvent('UNIT_PET')
 	self:RegisterEvent('PLAYER_TARGET_CHANGED')
 	self:RegisterEvent('PLAYER_ENTERING_WORLD')
 	self:RegisterEvent('UNIT_ENTERED_VEHICLE')

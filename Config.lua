@@ -41,15 +41,20 @@ function handler:Set(info, ...)
 	if info.type == 'color' then
 		local color = InlineAura.db.profile[info.arg]
 		color[1], color[2], color[3], color[4] = ...
+	elseif info.type == 'multiselect' then
+		local key, value = ...
+		InlineAura.db.profile[info.arg][key] = value
 	else
 		InlineAura.db.profile[info.arg] = ...
 	end
 	InlineAura:RequireUpdate(true)
 end
 
-function handler:Get(info)
+function handler:Get(info, key)
 	if info.type == 'color' then
 		return unpack(InlineAura.db.profile[info.arg])
+	elseif info.type == 'multiselect' then
+		return InlineAura.db.profile[info.arg][key]
 	else
 		return InlineAura.db.profile[info.arg]
 	end
@@ -76,45 +81,6 @@ function handler:ListTextPositions(info, exclude)
 		end
 	end
 	return tmp
-end
-
------------------------------------------------------------------------------
--- Unit ordering helpers
------------------------------------------------------------------------------
-
-local function LocUnits(glue, a, b, ...)
-	if b then
-		return L[a]..glue..LocUnits(glue, b, ...)
-	else
-		return L[a]
-	end
-end
-
--- L["player"] L["target"] L["focus"] L["mouseover"]
-local function BuildOrderingValues(...)
-	local values = {}
-	for i = 1, select('#', ...) do
-		local key = select(i, ...)
-		values[key] = LocUnits(" > ", strsplit(',', key))
-	end
-	return values
-end
-
-local function ValidateOrdering(order, ...)
-	local allowed = {}
-	for i = 1, select('#', ...) do
-		allowed[select(i, ...)] = true
-	end
-	local units = { strsplit(',', order:lower()) }
-	for i = #units, 1, -1 do
-		if allowed[unit] then
-			tremove(units, i)
-		end
-	end
-	if #units > 0 then
-		return format(L["Invalid unit token(s): %s"], table.concat(units, ", "))
-	end
-	return true
 end
 
 -----------------------------------------------------------------------------
@@ -174,59 +140,15 @@ local options = {
 			disabled = function(info) return InlineAura.db.profile.hideCountdown or not InlineAura.db.profile.preciseCountdown end,
 			order = 46,
 		},
-		unitOrdering = {
-			name = L['Unit test order'],
-			desc = L['Select in which order units are tested.'],
-			type = 'group',
-			inline = true,
+		enabledUnits = {
+			name = L['Watch additional units'],
+			desc = L['Select additional units to watch. Disabling those units may save some resource but also prevent proper display of macros using these units.'],
+			type = 'multiselect',
+			arg = 'enabledUnits',
 			order = 49,
-			args = {
-				customOrder = {
-					name = L['Custom orders'],
-					type = 'toggle',
-					order = 10,
-					arg = 'customOrder',
-				},
-				friendOrdering = {
-					name = L['Friends'],
-					desc = L['Select in which order units should be tested to find a friendly unit. Only the the auras of the first unit are shown.'],
-					type = 'select',
-					arg = 'friendOrdering',
-					width = 'double',
-					order = 20,
-					hidden = function() return InlineAura.db.profile.customOrder end,
-					values = BuildOrderingValues("target,mouseover,player","target,focus,player", "target,player", "mouseover,player", "target", "focus", "mouseover"),
-				},
-				enemyOrdering = {
-					name = L['Enemies'],
-					desc = L['Select in which order units should be tested to find a hostile unit. Only the the auras of the first unit are shown.'],
-					type = 'select',
-					arg = 'enemyOrdering',
-					width = 'double',
-					order = 30,
-					hidden = function() return InlineAura.db.profile.customOrder end,
-					values = BuildOrderingValues("target,mouseover", "target,focus", "focus,mouseover", "focus,target", "target", "focus", "mousover"),
-				},
-				friendCustomOrdering = {
-					name = L['Friends'],
-					desc = L['Select in which order units should be tested to find a friendly unit. Only the the auras of the first unit are shown.'],
-					type = 'input',
-					arg = 'friendOrdering',
-					width = 'double',
-					order = 20,
-					hidden = function() return not InlineAura.db.profile.customOrder end,
-					validate = function(info, value) return ValidateOrdering(value, "target", "player", "focus", "mouseover") end,
-				},
-				enemyCustomOrdering = {
-					name = L['Enemies'],
-					desc = L['Select in which order units should be tested to find a hostile unit. Only the the auras of the first unit are shown.'],
-					type = 'input',
-					arg = 'enemyOrdering',
-					width = 'double',
-					order = 30,
-					hidden = function() return not InlineAura.db.profile.customOrder end,
-					validate = function(info, value) return ValidateOrdering(value, "target", "focus", "mouseover") end,
-				},
+			values = {
+				focus = L['focus'],
+				mouseover = L['mouseover'],
 			},
 		},
 		colors = {

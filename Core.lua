@@ -907,7 +907,7 @@ local function GuessSpellTarget(spell)
 		return "player"
 	elseif IsModifiedClick("FOCUSCAST") then
 		return "focus"
-	elseif IsHelpfulSpell(spell) and not UnitIsBuffable("target") and GetCVarBool("autoSelfCast") then
+	elseif spell and IsHelpfulSpell(spell) and not UnitIsBuffable("target") and GetCVarBool("autoSelfCast") then
 		return "player"
 	else
 		return "target"
@@ -919,15 +919,13 @@ local function UpdateButtonAura(self, force)
 	local action, param = self.__IA_action, self.__IA_param
 	local spell, target = param, SecureButton_GetModifiedUnit(self)
 	if target == "" then target = nil end
-	if spell then
-		if action == "macro" then
-			spell = GetMacroSpell(param)
-			if not target then
-				target = GuessMacroTarget(param) or GuessSpellTarget(spell)
-			end
-		elseif not target then
-			target = GuessSpellTarget(spell)
+	if action == "macro" then
+		spell = GetMacroSpell(param)
+		if not target then
+			target = GuessMacroTarget(param) or GuessSpellTarget(spell)
 		end
+	elseif not target then
+		target = GuessSpellTarget(spell)
 	end
 	local guid = target and UnitGUID(target)
 	if force or spell ~= self.__IA_spell or guid ~= self.__IA_guid or (target and auraChanged[target]) then

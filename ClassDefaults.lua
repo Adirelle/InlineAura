@@ -429,7 +429,13 @@ elseif class == 'WARLOCK' then
 	Aliases("buff", 74434, 'SOUL_SHARDS')
 
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
-	SelfTalentProc(6353, 63165) -- Soul Fire => Decimation
+	SelfTalentProc( 6353, 63165) -- Soul Fire => Decimation
+
+	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
+	SelfTalentProc(  686, 34936) -- Shadow Bolt => Backlash
+
+	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
+	SelfTalentProc(29722, 54274) -- Incinerate => Backdraft
 
 	--GroupDebuffs(710) -- Banish
 	--GroupDebuffs(5782) -- Fear

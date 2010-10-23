@@ -241,6 +241,7 @@ do
 					local data = auras[name]
 					if not data then
 						data = new()
+						data.version = 1
 						auras[name] = data
 						auraChanged[unit] = true
 						--@debug@
@@ -250,6 +251,7 @@ do
 						-- Do not overwrite player's auras by others' auras when they have already seen during this scan
 						data = nil
 					elseif expirationTime ~= data.expirationTime or count ~= data.count or isMine ~= data.isMine then
+						data.version = data.version + 1
 						auraChanged[unit] = true
 						--@debug@
 						dprint('Updating aura', unit, name)
@@ -890,11 +892,11 @@ local function UpdateButtonAura(self, force)
 		if spell then
 			aura, hideStack, hideCountdown, glow = GetAuraToDisplay(spell, target)
 		end
-		if self.__IA_aura ~= aura or self.__IA_hideStack ~= hideStack or self.__IA_hideCountdown ~= hideCountdown or self.__IA_glow ~= glow then
+		if self.__IA_aura ~= aura or self.__IA_aura_version ~= (aura and aura.version) or self.__IA_hideStack ~= hideStack or self.__IA_hideCountdown ~= hideCountdown or self.__IA_glow ~= glow then
 			--@debug@
 			dprint(self, "need update =>", aura and aura.name)
 			--@end-debug@
-			self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown, self.__IA_glow = aura, hideStack, hideCountdown, glow
+			self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown, self.__IA_glow, self.__IA_aura_version = aura, hideStack, hideCountdown, glow, aura and aura.version
 			self:__IA_UpdateState()
 			ActionButton_UpdateOverlayGlow(self)
 		end

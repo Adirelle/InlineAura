@@ -19,17 +19,17 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ------------------------------------------------------------------------------
 -- Per class defaults
 ------------------------------------------------------------------------------
-if not InlineAura then return end
 
-local addonName, ns = ...
-
-function InlineAura:LoadDefaults()
+function InlineAura_LoadDefaults(self)
 -- No identation there to avoid messing up with source control
 
 local SPELL_DEFAULTS = self.DEFAULT_OPTIONS.profile.spells
 
 local _, class = UnitClass('player')
-local version = GetAddOnMetadata(addonName, "Version")
+local version = "@file-hash@/@project-version@"
+--@debug@
+version = "developer"
+--@end-debug@
 local reported = {}
 
 -- Get the spell name, throwing error if not found

@@ -1225,8 +1225,11 @@ function InlineAura:VARIABLES_LOADED()
 	self.VARIABLES_LOADED = nil
 	self:UnregisterEvent('VARIABLES_LOADED')
 
-	-- Retrieve default spell values
-	self:LoadDefaults()
+	-- Retrieve default spell configuration, if loaded
+	if InlineAura_LoadDefaults then
+		InlineAura_LoadDefaults(self)
+		InlineAura_LoadDefaults = nil
+	end
 
 	-- Saved variables setup
 	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)

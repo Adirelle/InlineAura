@@ -33,4 +33,5 @@ externals:
 
 move-folders:
   InlineAura/InlineAura_Config: InlineAura_Config
+  InlineAura/InlineAura_Defaults: InlineAura_Defaults
 

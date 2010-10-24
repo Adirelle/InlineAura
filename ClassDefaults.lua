@@ -459,9 +459,46 @@ elseif class == 'MAGE' then
 elseif class == 'DEATHKNIGHT' then
 ------------------------------------------------------------------------------
 
-	-- Contributed by jexxlc
-	Aliases('debuff', 45462, 55078) -- Plague Strike => Blood Plague
-	Aliases('debuff', 45477, 55095) -- Icy Touch => Frost Fever
+	-- Contributed by Citlalin
+
+	Aliases('debuff', 45462, 59879) -- Plague Strike => Blood Plague
+	Aliases('debuff', 45477, 59921) -- Icy Touch => Frost Fever
+	Aliases('debuff', 48721, 81132) -- Blood Boil => Scarlet Fever
+	Aliases('debuff', 47541, 49194) -- Death Coil => Unholy Blight
+
+	Aliases('buff', 66188, 77513) -- Death Strike => Blood Shield
+	Aliases('buff', 49184, 59052) -- Howling Blast => Freezing Fog
+	Aliases('buff', 49020, 59052) -- Obliterate => Killing Machine
+
+	SelfBuffs(
+		48707, -- Anti-Magic Shell
+		45529, -- Blood Tap
+		49222, -- Bone Shield
+		49028, -- Dancing Rune Weapon
+		48792, -- Icebound Fortitude
+		49039, -- Lichborne
+		49206, -- Summon Gargoyle
+		55233  -- Vampiric Blood
+	)
+
+	GroupBuffs(
+		49016 -- Unholy Frenzy
+	)
+
+	GroupDebuffs(
+		77606, -- Dark Simulacrum
+		 9484, -- Chains of Ice
+		47476, -- Strangulate
+		49203  -- Hungering Cold
+	)
+
+	-- Pet only spells
+	local PET_UNITS = { pet = true, player = false, focus = false, target = false }
+
+	-- Dark Transformation
+	local DarkTransformation = GetSpellDefaults(63560)
+	DarkTransformation.auraType = 'buff'
+	DarkTransformation.unitsToScan = PET_UNITS
 
 ------------------------------------------------------------------------------
 elseif class == 'PRIEST' then

@@ -140,6 +140,12 @@ local UNIT_EVENTS = {
 	mouseover = 'UPDATE_MOUSEOVER_UNIT',
 }
 
+local keywords = {}
+local KEYWORD_EVENTS = {}
+InlineAura.keywords = keywords
+
+local _, playerClass = UnitClass("player")
+
 ------------------------------------------------------------------------------
 -- Table recycling stub
 ------------------------------------------------------------------------------
@@ -204,13 +210,90 @@ local function WipeAuras(unit)
 	end
 end
 
-local auraScanners = {}
-InlineAura.auraScanners = auraScanners
-
-local UpdateUnitAuras
+local UpdateUnitAuras, AddAura, RegisterAuraScanner
 do
 	local serial = 0
-	local callbacks = setmetatable({}, {__mode='k'})
+	local scanners = {}
+
+	function RegisterAuraScanner(unit, func)
+		if not scanners[unit] then
+			scanners[unit] = { func }
+		else
+			tinsert(scanners[unit], func)
+		end
+	end
+
+	function AddAura(unit, name, count, duration, expirationTime, isMine, filter, spellId)
+		local auras = unit and unitAuras[unit]
+		if not name or not auras then return end
+		if not count or count == 0 then
+			count = nil
+		end
+		duration, expirationTime, isMine = tonumber(duration) or 0, tonumber(expirationTime) or 0, not not isMine
+		if expirationTime > 0 and expirationTime < GetTime() then return end
+		local data = auras[name]
+		if not data then
+			data = new()
+			data.version = 1
+			auras[name] = data
+			auraChanged[unit] = true
+			--@debug@
+			dprint('New aura', unit, name)
+			--@end-debug@
+		elseif data.serial == serial and data.isMine and not isMine then
+			-- Do not overwrite player's auras by others' auras when they have already seen during this scan
+			data = nil
+		elseif expirationTime ~= data.expirationTime or count ~= data.count or isMine ~= data.isMine then
+			data.version = data.version + 1
+			auraChanged[unit] = true
+			--@debug@
+			dprint('Updating aura', unit, name)
+			--@end-debug@
+		end
+		if data then
+			data.name = name
+			data.serial = serial
+			data.count = count
+			data.duration = duration
+			data.expirationTime = expirationTime
+			data.isMine = isMine
+			data.type = (filter == "HARMFUL") and "Debuff" or "Buff"
+			data.spellId = spellId
+			if spellId then
+				auras['#'..spellId] = data
+			end
+		end
+	end
+
+	function RemoveAura(unit, name)
+		local auras = unit and unitAuras[unit]
+		local data = auras and auras[name]
+		if data then
+			local spellId = data.spellId
+			del(data)
+			auras[name] = nil
+			if spellId then
+				auras['#'..spellId] = nil
+			end
+			auraChanged[unit] = true
+			--@debug@
+			dprint('Removed aura', unit, name)
+			--@end-debug@
+		end
+	end
+	
+	local function RunScanners(unit, realUnit)
+		local unitScanners = scanners[unit]	
+		if unitScanners then
+			for i, scanner in ipairs(unitScanners) do
+				local ok, msg = pcall(scanner, realUnit)
+				if not ok then
+					geterrorhandler()(msg)
+				end
+			end
+		end
+	end
+
 	function UpdateUnitAuras(unit, event)
 		local realUnit = unit
 		if UnitHasVehicleUI("player") and (unit == "player" or unit == "vehicle" or unit == "pet") then
@@ -223,82 +306,29 @@ do
 		if unitGUIDs[unit] ~= guid then
 			WipeAuras(unit)
 		end
-		if unit == 'mouseover' then
-			InlineAura.mouseoverTimer = 1
-		end
 
 		if guid then
 			serial = (serial + 1) % 1000000
 			unitGUIDs[unit] = guid
 
-			-- Avoid recreating callback on every call
-			local now = GetTime()
-			local callback = callbacks[auras]
-			if not callback then
-				callback = function(name, count, duration, expirationTime, isMine, filter, spellId)
-					if not count or count == 0 then
-						count = nil
-					end
-					duration, expirationTime, isMine = tonumber(duration) or 0, tonumber(expirationTime) or 0, not not isMine
-					if expirationTime > 0 and expirationTime < now then return end
-					local data = auras[name]
-					if not data then
-						data = new()
-						data.version = 1
-						auras[name] = data
-						auraChanged[unit] = true
-						--@debug@
-						dprint('New aura', unit, name)
-						--@end-debug@
-					elseif data.serial == serial and data.isMine and not isMine then
-						-- Do not overwrite player's auras by others' auras when they have already seen during this scan
-						data = nil
-					elseif expirationTime ~= data.expirationTime or count ~= data.count or isMine ~= data.isMine then
-						data.version = data.version + 1
-						auraChanged[unit] = true
-						--@debug@
-						dprint('Updating aura', unit, name)
-						--@end-debug@
-					end
-					if data then
-						data.name = name
-						data.serial = serial
-						data.count = count
-						data.duration = duration
-						data.expirationTime = expirationTime
-						data.isMine = isMine
-						data.type = (filter == "HARMFUL") and "Debuff" or "Buff"
-						if spellId then
-							auras['#'..spellId] = data
-						end
-					end
-				end
-				callbacks[auras] = callback
+			if unit == 'mouseover' then
+				InlineAura.mouseoverTimer = 1
 			end
 
 			-- Give every scanner a try
-			for index, scan in ipairs(auraScanners) do
-				local ok, msg = pcall(scan, callback, realUnit)
-				if not ok then
-					geterrorhandler()(msg)
-				end
-			end
+			RunScanners('*', realUnit)
+			RunScanners(unit, realUnit)
 
 			-- Remove auras that have faded out
 			for name, data in pairs(auras) do
 				if not data.serial or data.serial ~= serial then
-					auras[name] = del(auras[name])
-					auraChanged[unit] = true
-					--@debug@
-					dprint('Removing aura', unit, name)
-					--@end-debug@
+					RemoveAura(unit, name)
 				end
 			end
 		end
-
 	end
-	InlineAura.UpdateUnitAuras = UpdateUnitAuras
 end
+InlineAura.AddAura, InlineAura.RegisterAuraScanner, InlineAura.UpdateUnitAuras = AddAura, RegisterAuraScanner, UpdateUnitAuras
 
 ------------------------------------------------------------------------------
 -- Aura scanners
@@ -306,43 +336,45 @@ end
 
 -- This scanner scans all auras
 do
-	local function ScanAuras(callback, unit, filter)
+	local UnitAura = UnitAura
+
+	local function ScanAuras(unit, filter)
 		local i = 1
 		repeat
 			local name, _, _, count, _, duration, expirationTime, isMine, _, _, spellId = UnitAura(unit, i, filter)
 			if name then
-				callback(name, count, duration, expirationTime, isMine, filter, spellId)
+				AddAura(unit, name, count, duration, expirationTime, isMine, filter, spellId)
 				i = i + 1
 			end
 		until not name
 	end
-
-	tinsert(auraScanners, function(callback, unit)
-		ScanAuras(callback, unit, "HELPFUL")
-		ScanAuras(callback, unit, "HARMFUL")
+	RegisterAuraScanner("*", function(unit)
+		ScanAuras(unit, "HELPFUL")
+		ScanAuras(unit, "HARMFUL")
 	end)
 end
 
 -- This scanner handles tracking as player self buff
-tinsert(auraScanners, function(callback, unit)
-	if unit ~= 'player' then return end
-	for i = 1, GetNumTrackingTypes() do
-		local name, _, active, category = GetTrackingInfo(i)
-		if active and category == 'spell' then
-			callback(name, nil, nil, nil, true, "HELPFUL")
+do
+	local GetNumTrackingTypes, GetTrackingInfo = GetNumTrackingTypes, GetTrackingInfo
+
+	local function UpdateTracking()
+		for i = 1, GetNumTrackingTypes() do
+			local name, _, active, category = GetTrackingInfo(i)
+			if category == 'spell' then
+				if active then
+					AddAura("player", name, nil, nil, nil, true, "HELPFUL")
+				else
+					RemoveAura("player", name)
+				end
+			end
 		end
 	end
-end)
-function InlineAura:MINIMAP_UPDATE_TRACKING(event)
-	UpdateUnitAuras("player", event)
+
+	RegisterAuraScanner("player", UpdateTracking)
+	InlineAura.MINIMAP_UPDATE_TRACKING = UpdateTracking
+	InlineAura:RegisterEvent('MINIMAP_UPDATE_TRACKING')
 end
-InlineAura:RegisterEvent('MINIMAP_UPDATE_TRACKING')
-
-local keywords = {}
-InlineAura.keywords = keywords
-local KEYWORD_EVENTS = {}
-
-local _, playerClass = UnitClass("player")
 
 -- Shaman totem support
 if playerClass == "SHAMAN" then
@@ -351,20 +383,20 @@ if playerClass == "SHAMAN" then
 	--@end-debug@
 	local GetTotemInfo = GetTotemInfo
 
-	tinsert(auraScanners, function(callback, unit)
-		if unit ~= 'player' then return end
+	local function UpdateTotems()
 		for i = 1, MAX_TOTEMS do
 			local haveTotem, name, startTime, duration = GetTotemInfo(i)
 			if haveTotem and name and name ~= "" then
 				name = name:gsub("%s[IVX]-$", "") -- Whoever proposed to use roman numerals in enchant names should be shot
-				callback(name, 0, duration, startTime+duration, true, "HELPFUL")
+				AddAura("player", name, 0, duration, startTime+duration, true, "HELPFUL")
+			else
+				RemoveAura("player", name)
 			end
 		end
-	end)
-
-	function InlineAura:PLAYER_TOTEM_UPDATE(event)
-		UpdateUnitAuras("player", event)
 	end
+
+	RegisterAuraScanner("player", UpdateTotems)
+	InlineAura.PLAYER_TOTEM_UPDATE = UpdateTotems
 	InlineAura:RegisterEvent('PLAYER_TOTEM_UPDATE')
 
 -- Warlock Soul Shards and Paladin Holy Power
@@ -383,17 +415,19 @@ elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
 	dprint("watching", POWER_NAME)
 	--@end-debug@
 
-	tinsert(auraScanners, function(callback, unit)
-		if unit ~= 'player' then return end
+	local function UpdatePower()
 		local power = UnitPower("player", POWER_TYPE)
 		if power and power > 0 then
-			callback(POWER_NAME, power, nil, nil, true, "HELPFUL")
+			AddAura("player", POWER_NAME, power, nil, nil, true, "HELPFUL")
+		else
+			RemoveAura("player", POWER_NAME)
 		end
-	end)
+	end
 
+	RegisterAuraScanner("player", UpdatePower)
 	function InlineAura:UNIT_POWER(event, unit, type)
 		if unit == "player" and type == POWER_NAME then
-			return UpdateUnitAuras("player", event)
+			return UpdatePower()
 		end
 	end
 end
@@ -407,18 +441,17 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	keywords.COMBO_POINTS = true -- L["COMBO_POINTS"]
 	KEYWORD_EVENTS.COMBO_POINTS = "PLAYER_COMBO_POINTS"
 
-	tinsert(auraScanners, function(callback, unit)
-		if unit ~= 'player' then return end
-		-- name, count, duration, expirationTime, isMine, spellId
+	local function UpdateComboPoints()
 		local points = GetComboPoints("player")
 		if points and points > 0 then
-			callback("COMBO_POINTS", points, nil, nil, true, "HELPFUL")
+			AddAura("player", "COMBO_POINTS", points, nil, nil, true, "HELPFUL")
+		else
+			RemoveAura("player", "COMBO_POINTS")
 		end
-	end)
-
-	function InlineAura:PLAYER_COMBO_POINTS(event, unit)
-		return UpdateUnitAuras("player", event)
 	end
+
+	RegisterAuraScanner("player", UpdateComboPoints)
+	InlineAura.PLAYER_COMBO_POINTS = UpdateComboPoints
 end
 
 -- Moonkin eclipse points
@@ -437,34 +470,45 @@ if playerClass == "DRUID" then
 	KEYWORD_EVENTS.LUNAR_ENERGY = "PLAYER_TALENT_UPDATE"
 	KEYWORD_EVENTS.SOLAR_ENERGY = "PLAYER_TALENT_UPDATE"
 
-	tinsert(auraScanners, function(callback, unit)
-		if unit ~= 'player' or not isMoonkin or not direction or not power or (power == 0) then return end
-		if direction == "moon" then
-			callback("LUNAR_ENERGY", -power, nil, nil, true, "HELPFUL")
+	function UpdateEclipse()
+		if isMoonkin and direction and power and power ~= 0 then
+			if direction == "moon" then
+				AddAura("player", "LUNAR_ENERGY", -power, nil, nil, true, "HELPFUL")
+				RemoveAura("player", "LUNAR_ENERGY")
+			else
+				RemoveAura("player", "SOLAR_ENERGY")
+				AddAura("player", "SOLAR_ENERGY", power, nil, nil, true, "HELPFUL")
+			end
 		else
-			callback("SOLAR_ENERGY", power, nil, nil, true, "HELPFUL")
+			RemoveAura("player", "LUNAR_ENERGY")
+			RemoveAura("player", "SOLAR_ENERGY")
 		end
-	end)
+	end
+
+	RegisterAuraScanner("player", UpdateEclipse)
+
 	function InlineAura:UNIT_POWER(event, unit, type)
 		if unit == "player" and type == "ECLIPSE" then
 			local newPower = math.ceil(100 * UnitPower("player", SPELL_POWER_ECLIPSE) / UnitPowerMax("player", SPELL_POWER_ECLIPSE))
 			if newPower ~= power then
 				power = newPower
 				if event == "UNIT_POWER" then
-					return UpdateUnitAuras("player", event)
+					return UpdateEclipse()
 				end
 			end
 		end
 	end
+
 	function InlineAura:ECLIPSE_DIRECTION_CHANGE(event)
 		local newDirection = GetEclipseDirection()
 		if newDirection ~= direction then
 			direction = newDirection
 			if event == "ECLIPSE_DIRECTION_CHANGE" then
-				return UpdateUnitAuras("player", event)
+				return UpdateEclipse()
 			end
 		end
 	end
+
 	function InlineAura:PLAYER_TALENT_UPDATE(event)
 		local newIsMoonkin = (GetPrimaryTalentTree() == 1)
 		if isMoonkin ~= newIsMoonkin then
@@ -478,7 +522,7 @@ if playerClass == "DRUID" then
 				self:UnregisterEvent('UNIT_POWER')
 				self:UnregisterEvent('ECLIPSE_DIRECTION_CHANGE')
 			end
-			return UpdateUnitAuras("player", event)
+			return UpdateEclipse()
 		end
 	end
 end
@@ -877,6 +921,8 @@ local function GuessSpellTarget(spell)
 	end
 end
 
+local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow
+
 local function UpdateButtonAura(self, force)
 	if not buttons[self] then return end
 	local action, param = self.__IA_action, self.__IA_param
@@ -900,11 +946,12 @@ local function UpdateButtonAura(self, force)
 		if spell then
 			aura, hideStack, hideCountdown, glow = GetAuraToDisplay(spell, target)
 		end
-		if self.__IA_aura ~= aura or self.__IA_aura_version ~= (aura and aura.version) or self.__IA_hideStack ~= hideStack or self.__IA_hideCountdown ~= hideCountdown or self.__IA_glow ~= glow then
+		local version = aura and aura.version or nil
+		if self.__IA_aura ~= aura or self.__IA_aura_version ~= version or self.__IA_hideStack ~= hideStack or self.__IA_hideCountdown ~= hideCountdown or self.__IA_glow ~= glow then
 			--@debug@
 			dprint(self, "need update =>", aura and aura.name)
 			--@end-debug@
-			self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown, self.__IA_glow, self.__IA_aura_version = aura, hideStack, hideCountdown, glow, aura and aura.version
+			self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown, self.__IA_glow, self.__IA_aura_version = aura, hideStack, hideCountdown, glow, version
 			self:__IA_UpdateState()
 			ActionButton_UpdateOverlayGlow(self)
 		end
@@ -958,6 +1005,8 @@ end
 local function Blizzard_GetAction(self)
 	return 'action', self.action
 end
+
+local ActionButton_UpdateState = ActionButton_UpdateState
 
 local function InitializeButton(self)
 	if buttons[self] then return end
@@ -1176,6 +1225,70 @@ function InlineAura:VARIABLES_LOADED()
 	self.VARIABLES_LOADED = nil
 	self:UnregisterEvent('VARIABLES_LOADED')
 
+	-- Retrieve default spell values
+	self:LoadDefaults()
+
+	-- Saved variables setup
+	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
+	db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
+	db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
+	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
+	self.db = db
+
+	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
+
+	-- Update the database from previous versions
+	for name, spell in pairs(db.profile.spells) do
+		if type(spell) == "table" then
+			local units = spell.unitsToScan
+			if type(units) ~= "table" then units = nil end
+			local auraType = spell.auraType
+			if auraType == "buff" then
+				if units and units.pet then
+					auraType = "pet"
+				elseif units and units.player and not units.target and not units.focus then
+					auraType = "self"
+				else
+					auraType = "regular"
+				end
+			elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
+				auraType = "regular"
+			end
+			if spell.auraType ~= auraType then
+				spell.auraType = auraType
+				spell.unitsToScan = nil
+			end
+		end
+	end
+
+	-- Setup
+	self.bigCountdown = true
+
+	-- Setup basic event listening up
+	self:RegisterEvent('UNIT_AURA')
+	self:RegisterEvent('UNIT_PET')
+	self:RegisterEvent('PLAYER_TARGET_CHANGED')
+	self:RegisterEvent('PLAYER_ENTERING_WORLD')
+	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
+	self:RegisterEvent('UNIT_EXITED_VEHICLE')
+	self:RegisterEvent('MODIFIER_STATE_CHANGED')
+	self:RegisterEvent('CVAR_UPDATE')
+	self:RegisterEvent('UPDATE_BINDINGS')
+
+	-- standard buttons
+	self:RegisterButtons("ActionButton", 12)
+	self:RegisterButtons("BonusActionButton", 12)
+	self:RegisterButtons("MultiBarRightButton", 12)
+	self:RegisterButtons("MultiBarLeftButton", 12)
+	self:RegisterButtons("MultiBarBottomRightButton", 12)
+	self:RegisterButtons("MultiBarBottomLeftButton", 12)
+
+	-- Hooks
+	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
+	hooksecurefunc('ActionButton_UpdateState', UpdateButtonState_Hook)
+	hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
+	hooksecurefunc('ActionButton_HideOverlayGlow', ActionButton_HideOverlayGlow_Hook)
+
 	-- ButtonFacade support
 	local LBF = LibStub('LibButtonFacade', true)
 	local LBF_RegisterCallback = function() end
@@ -1234,75 +1347,11 @@ function InlineAura:ADDON_LOADED(event, name)
 	self:UnregisterEvent('ADDON_LOADED')
 	self.ADDON_LOADED = nil
 
-	-- Retrieve default spell values
-	self:LoadDefaults()
-
-	-- Saved variables setup
-	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
-	db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
-	db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
-	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
-	self.db = db
-
-	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
-
-	-- Update the database from previous versions
-	for name, spell in pairs(db.profile.spells) do
-		if type(spell) == "table" then
-			local units = spell.unitsToScan
-			if type(units) ~= "table" then units = nil end
-			local auraType = spell.auraType
-			if auraType == "buff" then
-				if units and units.pet then
-					auraType = "pet"
-				elseif units and units.player and not units.target and not units.focus then
-					auraType = "self"
-				else
-					auraType = "regular"
-				end
-			elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
-				auraType = "regular"
-			end
-			if spell.auraType ~= auraType then
-				spell.auraType = auraType
-				spell.unitsToScan = nil
-			end
-		end
-	end
-
-	-- Setup
-	self.bigCountdown = true
-
-	-- Setup basic event listening up
-	self:RegisterEvent('UNIT_AURA')
-	self:RegisterEvent('UNIT_PET')
-	self:RegisterEvent('PLAYER_TARGET_CHANGED')
-	self:RegisterEvent('PLAYER_ENTERING_WORLD')
-	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
-	self:RegisterEvent('UNIT_EXITED_VEHICLE')
-	self:RegisterEvent('MODIFIER_STATE_CHANGED')
-	self:RegisterEvent('CVAR_UPDATE')
-	self:RegisterEvent('UPDATE_BINDINGS')
-
 	if IsLoggedIn() then
 		self:VARIABLES_LOADED()
 	else
 		self:RegisterEvent('VARIABLES_LOADED')
 	end
-
-	-- standard buttons
-	self:RegisterButtons("ActionButton", 12)
-	self:RegisterButtons("BonusActionButton", 12)
-	self:RegisterButtons("MultiBarRightButton", 12)
-	self:RegisterButtons("MultiBarLeftButton", 12)
-	self:RegisterButtons("MultiBarBottomRightButton", 12)
-	self:RegisterButtons("MultiBarBottomLeftButton", 12)
-
-	-- Hooks
-	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
-	hooksecurefunc('ActionButton_UpdateState', UpdateButtonState_Hook)
-	hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
-	hooksecurefunc('ActionButton_HideOverlayGlow', ActionButton_HideOverlayGlow_Hook)
 end
 
 -- Event handler

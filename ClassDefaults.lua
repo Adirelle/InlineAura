@@ -79,7 +79,7 @@ local function AddAlias(t, id)
 end
 
 local function MakeAliases(aliases, origId, ...)
-	if not aliases then
+	if type(aliases) ~= "table" then
 		aliases = {}
 	end
 	for i = 1,select('#', ...) do
@@ -284,8 +284,7 @@ SharedAuras(
 	"WARRIOR",  7386, -- Sunder Armor
 	"WARRIOR", 20243, -- Devastate
 	"ROGUE",    8647, -- Expose Armor
-	"DRUID",     770, -- Faerie Fire
-	"DRUID",   16857, -- Faerie Fire (feral)
+	"DRUID",   91565, -- Faerie Fire
 	"HUNTER",  35387, -- Corrosive Spit (pet ability)
 	"HUNTER",  50498  -- Tear Armor (pet ability)
 )
@@ -334,6 +333,7 @@ if class == 'HUNTER' then
 	Aliases(13813, 13812) -- Explosive Trap => Explosive Trap Effect
 
 	Aliases('self', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...
+	Aliases('self', 56641, 53224) -- Steady Shot => Improved Steady Shot
 
 	SelfBuffs(
 		 5118, -- Aspect of the Cheetah
@@ -349,7 +349,8 @@ if class == 'HUNTER' then
 		 3045, -- Rapid Fire
 		19263, -- Deterrence
 		 5384, -- Feign Death
-		53224, -- Improved Steady Shot
+		19434, -- Aimed Shot => Ready, Set, Aim...
+		56641, -- Steady Shot => Improved Steady Shot
 		82692  -- Focus Fire
 	)
 
@@ -398,15 +399,39 @@ elseif class == 'SHAMAN' then
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
+	-- Soul link
+	Aliases('buff', 19028, 25228)
+
 	-- Display soul shard count on Soulburn
 	Aliases("special", 74434, 'SOUL_SHARDS')
 
+	SelfBuffs(
+		687,   -- Demon Armor
+		6229,  -- Shadow Ward
+		7812,  -- Sacrifice (voidwalker buff)
+		19028, -- Soul Link
+		28176  -- Fel Armor
+	)
+
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
-	SelfTalentProc(6353, 63165) -- Soul Fire => Decimation
+	SelfTalentProc( 6353, 63165) -- Soul Fire => Decimation
+
+	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
+	SelfTalentProc(  686, 34936) -- Shadow Bolt => Backlash
+
+	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
+	SelfTalentProc(29722, 54274) -- Incinerate => Backdraft
 
 ------------------------------------------------------------------------------
--- elseif class == 'MAGE' then
+elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
+
+	SelfBuffs(
+		 6117, -- Mage Armor
+		 7302, -- Frost Armor
+		30482, -- Molten Armor
+		45438  -- Ice Block
+	)
 
 ------------------------------------------------------------------------------
 elseif class == 'DEATHKNIGHT' then
@@ -435,6 +460,10 @@ elseif class == 'PRIEST' then
 ------------------------------------------------------------------------------
 elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
+
+	-- Faerie Fire debuff and spell ids are different
+	Aliases("debuff", 770, 16857, 91565)
+	Aliases("debuff", 16857, 770, 91565)
 
 	-- Display eclipse energy
 	Aliases("special", 5176, "LUNAR_ENERGY") -- Wrath
@@ -468,6 +497,7 @@ elseif class == 'PALADIN' then
 
 	SelfBuffs(
 			498, -- Divine Protection
+			642, -- Divine Shield
 		20154, -- Seal of Righteousness
 		20164, -- Seal of Justice
 		20165, -- Seal of Insight
@@ -488,12 +518,11 @@ elseif class == 'PALADIN' then
 	GroupBuffs(19891) -- Resistance Aura
 	GroupBuffs(32223) -- Crusader Aura
 
-	Aliases("self", 642, 25771) -- Divine Shield / Forbearance
+	Aliases(642, 25771) -- Divine Shield / Forbearance
 
 	Aliases(1022, 25771) -- Hand of Protection / Forbearance
 
 	Aliases(53563, 53651).onlyMine = true -- Beacon of Light => Light's Beacon
-
 end
 
 end

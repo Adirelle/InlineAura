@@ -1154,7 +1154,6 @@ function InlineAura:MODIFIER_STATE_CHANGED(event)
 end
 
 function InlineAura:UPDATE_MOUSEOVER_UNIT(event)
-	self.mouseoverTimer = 1
 	UpdateUnitAuras('mouseover', event)
 end
 

@@ -67,13 +67,25 @@ local function GetSpellDefaults(id, level)
 	return SPELL_DEFAULTS[name]
 end
 
--- Create a list of aliases, ignoring origId when found in ...
-local function MakeAliases(origId, ...)
-	local aliases = {}
+-- Create a list of aliases
+local function AddAlias(t, id)
+	local name = GetSpellName(id, 3)
+	for i, existing in ipairs(t) do
+		if existing == name then
+			return
+		end
+	end
+	tinsert(t, name)
+end
+
+local function MakeAliases(aliases, origId, ...)
+	if not aliases then
+		aliases = {}
+	end
 	for i = 1,select('#', ...) do
 		local id = select(i, ...)
 		if id ~= origId then
-			table.insert(aliases, GetSpellName(id, 2))
+			AddAlias(aliases, id)
 		end
 	end
 	if #aliases > 0 then
@@ -83,39 +95,27 @@ end
 
 -- Defines spell type and aliases
 local function Aliases(auraType, id, ...)
+	if type(auraType) ~= "string" then
+		return Aliases(nil, auraType, id, ...)
+	end
 	local defaults = GetSpellDefaults(id, 1)
-	defaults.auraType = auraType
-	defaults.aliases = MakeAliases(id, ...)
+	defaults.auraType = auraType or defaults.auraType
+	defaults.aliases = MakeAliases(defaults.aliases, id, ...)
 end
 
 -- Defines buffs that only apply to the player
-local SELF_BUFF_UNITS = { player = true, pet = false, focus = false, target = false }
 local function SelfBuffs(...)
 	for i = 1, select('#', ...) do
-		local id = select(i, ...)
-		local defaults = GetSpellDefaults(id, 1)
-		defaults.auraType = 'self'
-		defaults.unitsToScan = SELF_BUFF_UNITS
+		GetSpellDefaults(select(i, ...), 1).auraType = 'self'
 	end
 end
 
 -- Defines auras that appear on the player and modify another spell
 local function SelfTalentProc(spellId, talentId)
 	local defaults = GetSpellDefaults(spellId, 1)
-	local talent = GetSpellName(talentId, 1)
 	defaults.auraType = 'self'
-	defaults.unitsToScan = SELF_BUFF_UNITS
 	defaults.alternateColor = true
-	if defaults.aliases then
-		for i, alias in pairs(defaults.aliases) do
-			if alias == talent then
-				return
-			end
-		end
-		table.insert(defaults.aliases, talent)
-	else
-		defaults.aliases = { talent }
-	end
+	defaults.aliases = MakeAliases(defaults.aliases, talentId)
 end
 
 -- Declare a category of group-wide buffs
@@ -123,28 +123,19 @@ local function GroupBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
 		local defaults = GetSpellDefaults(id, 1)
-		defaults.auraType = 'friend'
 		defaults.onlyMine = false
-		defaults.aliases = MakeAliases(id, ...)
+		defaults.aliases = MakeAliases(defaults.aliases, id, ...)
 	end
 end
 
 -- Declare a category of group-wide debuffs
-local function GroupDebuffs(...)
-	for i = 1, select('#', ...) do
-		local id = select(i, ...)
-		local defaults = GetSpellDefaults(id, 1)
-		defaults.auraType = 'enemy'
-		defaults.onlyMine = false
-		defaults.aliases = MakeAliases(id, ...)
-	end
-end
+local GroupDebuffs = GroupBuffs
 
--- Declare group (de)buffs that are brought by several classes
-local GroupAuras
+-- Declare (de)buffs that are brought by several classes
+local SharedAuras
 do
 	local t = {}
-	function GroupAuras(auraType, ...)
+	function SharedAuras(...)
 		wipe(t)
 		for i = 2, select('#', ...), 2 do
 			tinsert(t, (select(i, ...)))
@@ -153,9 +144,8 @@ do
 			local spellClass, spellId = select(i, ...)
 			if spellClass == class then
 				local defaults = GetSpellDefaults(spellId, 1)
-				defaults.auraType = auraType
 				defaults.onlyMine = false
-				defaults.aliases = MakeAliases(spellId, unpack(t))
+				defaults.aliases = MakeAliases(defaults.aliases, spellId, unpack(t))
 			end
 		end
 	end
@@ -180,14 +170,14 @@ Fully passive (de)buffs:
 --- Buffs ---
 
 -- Increased Stats (5%)
-GroupAuras("friend",
+SharedAuras(
 	"PALADIN", 20217, -- Blessing of Kings
 	"DRUID",    1126, -- Mark of the Wild
 	"HUNTER",  90363  -- Embrace of the Shale Spider (exotic pet ability)
 )
 
 -- Increased Attack Power (10%)
-GroupAuras("friend",
+SharedAuras(
 	"PALADIN",     19740, -- Blessing of Might
 	"DEATHKNIGHT", 53138, -- Abomination's Might (passive)
 	"HUNTER",      19506, -- Trueshot Aura (passive)
@@ -195,34 +185,34 @@ GroupAuras("friend",
 )
 
 -- Increased Spell Power (6%)
-GroupAuras("friend",
+SharedAuras(
 	"MAGE",   1459, -- Arcane Brillance
 	"SHAMAN", 8227  -- Flametongue Totem
 )
 
 -- Increased Physical Haste (10%)
-GroupAuras("friend",
+SharedAuras(
 	"DEATHKNIGHT", 55610, -- Improved Icy Talons (passive)
 	"HUNTER",      53290, -- Hunting Party (passive)
 	"SHAMAN",       8512  -- Windfury Totem
 )
 
 -- Increased Spell Haste (5%)
-GroupAuras("friend",
+SharedAuras(
 	"SHAMAN",  3738, -- Wrath of Air Totem
 	"PRIEST", 49868, -- Mind Quickening (passive)
 	"DRUID",  24907  -- Moonkin Aura (passive)
 )
 
 -- Burst Haste (30%)
-GroupAuras("friend",
+SharedAuras(
 	"SHAMAN", (UnitFactionGroup("player") == "Horde" and 2825 or 32182), -- Bloodlust/Heroism
 	"MAGE",   80353, -- Time Warp
 	"HUNTER", 90355  -- Ancient Hysteria (exotic pet ability)
 )
 
 -- Agility & Strength bonuses
-GroupAuras("friend",
+SharedAuras(
 	"WARRIOR",      6673, -- Battle Shout
 	"SHAMAN",       8075, -- Strength of Earth Totem
 	"DEATHKNIGHT", 57330, -- Horn of Winter
@@ -230,7 +220,7 @@ GroupAuras("friend",
 )
 
 -- Stamina Bonus
-GroupAuras("friend",
+SharedAuras(
 	"PRIEST",  21562, -- Power Word: Fortitude
 	"WARRIOR",   469, -- Commanding Shout
 	"WARLOCK",  6307, -- Blood Pact (imp ability)
@@ -238,19 +228,19 @@ GroupAuras("friend",
 )
 
 -- Armor Bonus
-GroupAuras("friend",
+SharedAuras(
 	"PALADIN",  465, -- Devotion Aura
 	"SHAMAN",  8071  -- Stoneskin Totem
 )
 
 -- Mana Bonus
-GroupAuras("friend",
+SharedAuras(
 	"MAGE",     1459, -- Arcane Brillance
 	"WARLOCK", 54424  -- Fel Intelligence (felhunter ability)
 )
 
 -- Pushback Resistance
-GroupAuras("friend",
+SharedAuras(
 	"PALADIN", 19746, -- Concentration Aura
 	"SHAMAN",  87718  -- Totem of Tranquil Mind
 )
@@ -258,7 +248,7 @@ GroupAuras("friend",
 --- Debuffs ---
 
 -- Spell Damage Taken (8%)
-GroupAuras("enemy",
+SharedAuras(
 	"WARLOCK",      1490, -- Curse of the Elements
 	"WARLOCK",     85479, -- Jinx
 	"ROGUE",       58410, -- Master Poisoner (passive)
@@ -269,7 +259,7 @@ GroupAuras("enemy",
 )
 
 -- Bleed Damage Taken (30%)
-GroupAuras("enemy",
+SharedAuras(
 	"DRUID",   33878, -- Mangle (bear)
 	"DRUID",   33876, -- Mangle (cat)
 	"ROGUE",   16511, -- Hemorrhage
@@ -280,7 +270,7 @@ GroupAuras("enemy",
 )
 
 -- Reduced Casting Speed (30%)
-GroupAuras("enemy",
+SharedAuras(
 	"WARLOCK",      1714, -- Curse of Tongues
 	"ROGUE",        5761, -- Mind-Numbing Poison
 	"MAGE",        31589, -- Slow
@@ -290,7 +280,7 @@ GroupAuras("enemy",
 )
 
 -- Reduced Armor (12%)
-GroupAuras("enemy",
+SharedAuras(
 	"WARRIOR",  7386, -- Sunder Armor
 	"WARRIOR", 20243, -- Devastate
 	"ROGUE",    8647, -- Expose Armor
@@ -301,7 +291,7 @@ GroupAuras("enemy",
 )
 
 -- Reduced Healing (25%)
-GroupAuras("enemy",
+SharedAuras(
 	"WARRIOR", 12294, -- Mortal Strike
 	"WARRIOR", 46910, -- Furious Attacks
 	"PRIEST",  15313, -- Improved Mind Blast
@@ -312,7 +302,7 @@ GroupAuras("enemy",
 )
 
 -- Trying a big crowd control category (using Phanx's list)
-GroupAuras("enemy",
+SharedAuras(
 	"WARLOCK",   710, -- Banish
 	"SHAMAN",  76780, -- Bind Elemental
 	"DRUID",   33786, -- Cyclone
@@ -339,9 +329,9 @@ GroupAuras("enemy",
 if class == 'HUNTER' then
 ------------------------------------------------------------------------------
 
-	Aliases('enemy',  1499,  3355) -- Freezing Trap => Freezing Trap Effect
-	Aliases('enemy', 13795, 13797) -- Immolation Trap => Immolation Trap Effect
-	Aliases('enemy', 13813, 13812) -- Explosive Trap => Explosive Trap Effect
+	Aliases( 1499,  3355) -- Freezing Trap => Freezing Trap Effect
+	Aliases(13795, 13797) -- Immolation Trap => Immolation Trap Effect
+	Aliases(13813, 13812) -- Explosive Trap => Explosive Trap Effect
 
 	Aliases('self', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...
 
@@ -368,8 +358,8 @@ if class == 'HUNTER' then
 
 	GroupDebuffs(1130, 53243) -- Hunter's Mark, Marked For Death
 
-	GetSpellDefaults(136).auraType = 'pet' 	-- Mend Pet
-	GetSpellDefaults(19574).auraType = 'pet' 	-- Bestial Wrath
+	Aliases("pet", 136) -- Mend Pet
+	Aliases("pet", 19574) -- Bestial Wrath
 
 ------------------------------------------------------------------------------
 elseif class == 'WARRIOR' then
@@ -401,7 +391,7 @@ elseif class == 'SHAMAN' then
 		52127, -- Water Shield
 		55198  -- Tidal Force
 	)
-	
+
 	GroupBuffs(8184) -- Elemental Resistance Totem
 
 ------------------------------------------------------------------------------
@@ -423,8 +413,8 @@ elseif class == 'DEATHKNIGHT' then
 ------------------------------------------------------------------------------
 
 	-- Contributed by jexxlc
-	Aliases('enemy', 45462, 55078) -- Plague Strike => Blood Plague
-	Aliases('enemy', 45477, 55095) -- Icy Touch => Frost Fever
+	Aliases(45462, 55078) -- Plague Strike => Blood Plague
+	Aliases(45477, 55095) -- Icy Touch => Frost Fever
 
 ------------------------------------------------------------------------------
 elseif class == 'PRIEST' then
@@ -437,8 +427,8 @@ elseif class == 'PRIEST' then
 		47585  -- Dispersion
 	)
 
-	-- This will display either the buff or the debuff	
-	Aliases('friend', 17, 6788) -- Power Word: Shield / Weakened Soul
+	-- This will display either the buff or the debuff
+	Aliases('regular', 17, 6788) -- Power Word: Shield / Weakened Soul
 
 	GroupBuffs(27683, 19891) -- Shadow Protection, Resistance Aura (Paladin)
 
@@ -497,11 +487,12 @@ elseif class == 'PALADIN' then
 	GroupBuffs( 7294) -- Retribution Aura
 	GroupBuffs(19891) -- Resistance Aura
 	GroupBuffs(32223) -- Crusader Aura
-		
+
 	Aliases("self", 642, 25771) -- Divine Shield / Forbearance
-	Aliases("friend", 1022, 25771) -- Hand of Protection / Forbearance
-	
-	Aliases("friend", 53563, 53651).onlyMine = true -- Beacon of Light => Light's Beacon
+
+	Aliases(1022, 25771) -- Hand of Protection / Forbearance
+
+	Aliases(53563, 53651).onlyMine = true -- Beacon of Light => Light's Beacon
 
 end
 

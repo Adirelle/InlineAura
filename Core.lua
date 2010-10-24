@@ -1155,7 +1155,17 @@ function InlineAura:PLAYER_TARGET_CHANGED(event)
 end
 
 function InlineAura:MODIFIER_STATE_CHANGED(event)
-	needUpdate = true
+	self:RequireUpdate()
+end
+
+function InlineAura:CVAR_UPDATE(event, name)
+	if name == 'autoSelfCast' then
+		self:RequireUpdate(true)
+	end
+end
+
+function InlineAura:UPDATE_BINDINGS(event, name)
+	self:RequireUpdate(true)
 end
 
 function InlineAura:UPDATE_MOUSEOVER_UNIT(event)
@@ -1271,6 +1281,8 @@ function InlineAura:ADDON_LOADED(event, name)
 	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
 	self:RegisterEvent('UNIT_EXITED_VEHICLE')
 	self:RegisterEvent('MODIFIER_STATE_CHANGED')
+	self:RegisterEvent('CVAR_UPDATE')
+	self:RegisterEvent('UPDATE_BINDINGS')
 
 	if IsLoggedIn() then
 		self:VARIABLES_LOADED()

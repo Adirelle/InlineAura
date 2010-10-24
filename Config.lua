@@ -29,7 +29,7 @@ local L, new, del = InlineAura.L, InlineAura.new, InlineAura.del
 -- but it seems AceDB has some issue with it.
 local REMOVED = '**REMOVED**'
 
-local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile. spells
+local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 
 -----------------------------------------------------------------------------
 -- Default option handler
@@ -297,11 +297,11 @@ local options = {
 local _, playerClass = UnitClass("player")
 local isPetClass = (playerClass == "WARLOCK" or playerclass == "MAGE" or playerClass == "DEATHKNIGHT" or playerClass == "HUNTER")
 
-local specialValues
-if InlineAura.keywords then
+local SPECIALS = InlineAura.SPECIALS
+if next(SPECIALS) then
 	specialValues = {}
-	for keyword in pairs(InlineAura.keywords) do
-		specialValues[keyword] = L[keyword]
+	for name in pairs(SPECIALS) do
+		specialValues[name] = L[name]
 	end
 end
 
@@ -698,13 +698,12 @@ end
 -----------------------------------------------------------------------------
 
 do
-	local keywords = InlineAura.keywords
 	local GetSpellInfo, GetItemInfo = GetSpellInfo, GetItemInfo
 	local validNames = setmetatable({}, {
 		__mode = 'kv',
 		__index = function(self, key)
 			local result = false
-			if keywords[key] then
+			if SPECIALS[key] then
 				result = key
 			else
 				local rawId = tonumber(string.match(tostring(key), '^#(%d+)$'))

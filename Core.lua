@@ -140,12 +140,6 @@ local UNIT_EVENTS = {
 	mouseover = 'UPDATE_MOUSEOVER_UNIT',
 }
 
-local keywords = {}
-local KEYWORD_EVENTS = {}
-InlineAura.keywords = keywords
-
-local _, playerClass = UnitClass("player")
-
 ------------------------------------------------------------------------------
 -- Table recycling stub
 ------------------------------------------------------------------------------
@@ -189,9 +183,6 @@ local UnitAura = function(...)
 	return name, rank, icon, count, debuffType, duration, expirationTime, MY_UNITS[caster or "none"], isStealable, shouldConsolidate, spellId
 end
 
--- This is meant to be hooked by conditional parts
-function InlineAura:SetupHook() end
-
 ------------------------------------------------------------------------------
 -- Aura monitoring core
 ------------------------------------------------------------------------------
@@ -210,12 +201,12 @@ local function WipeAuras(unit)
 	end
 end
 
-local UpdateUnitAuras, AddAura, RegisterAuraScanner
+local UpdateUnitAuras
 do
 	local serial = 0
 	local scanners = {}
 
-	function RegisterAuraScanner(unit, func)
+	function InlineAura:RegisterAuraScanner(unit, func)
 		if not scanners[unit] then
 			scanners[unit] = { func }
 		else
@@ -223,7 +214,7 @@ do
 		end
 	end
 
-	function AddAura(unit, name, count, duration, expirationTime, isMine, filter, spellId)
+	local function AddAura(unit, name, count, duration, expirationTime, isMine, filter, spellId)
 		local auras = unit and unitAuras[unit]
 		if not name or not auras then return end
 		if not count or count == 0 then
@@ -264,8 +255,9 @@ do
 			end
 		end
 	end
+	InlineAura.AddAura = AddAura
 
-	function RemoveAura(unit, name)
+	local function RemoveAura(unit, name)
 		local auras = unit and unitAuras[unit]
 		local data = auras and auras[name]
 		if data then
@@ -281,6 +273,7 @@ do
 			--@end-debug@
 		end
 	end
+	InlineAura.RemoveAura = RemoveAura
 
 	local function RunScanners(unit, realUnit)
 		local unitScanners = scanners[unit]
@@ -330,201 +323,68 @@ do
 		end
 	end
 end
-InlineAura.AddAura, InlineAura.RegisterAuraScanner, InlineAura.UpdateUnitAuras = AddAura, RegisterAuraScanner, UpdateUnitAuras
 
 ------------------------------------------------------------------------------
--- Aura scanners
+-- Special "auras" handling
 ------------------------------------------------------------------------------
 
--- This scanner scans all auras
-do
-	local UnitAura = UnitAura
+local SPECIALS = {}
+InlineAura.SPECIALS = SPECIALS
+local SPECIALS_EVENTS = {}
 
-	local function ScanAuras(unit, filter)
-		local i = 1
-		repeat
-			local name, _, _, count, _, duration, expirationTime, isMine, _, _, spellId = UnitAura(unit, i, filter)
-			if name then
-				AddAura(unit, name, count, duration, expirationTime, isMine, filter, spellId)
-				i = i + 1
-			end
-		until not name
+function InlineAura:RegisterSpecial(name, event, handler)
+	SPECIALS[name] = true
+	SPECIALS_EVENTS[name] = event
+	if event and handler then
+		if self[event] then
+			hooksecurefunc(self, event, handler)
+		else
+			self[event] = handler
+		end
 	end
-	RegisterAuraScanner("*", function(unit)
-		ScanAuras(unit, "HELPFUL")
-		ScanAuras(unit, "HARMFUL")
-	end)
 end
 
--- This scanner handles tracking as player self buff
-do
-	local GetNumTrackingTypes, GetTrackingInfo = GetNumTrackingTypes, GetTrackingInfo
+function InlineAura:IsSpecial(name)
+	return SPECIALS[name]
+end
 
-	local function UpdateTracking()
-		for i = 1, GetNumTrackingTypes() do
-			local name, _, active, category = GetTrackingInfo(i)
-			if category == 'spell' then
-				if active then
-					AddAura("player", name, nil, nil, nil, true, "HELPFUL")
-				else
-					RemoveAura("player", name)
+local UpdateSpecialListeners
+do
+	local t = {}
+	function UpdateSpecialListeners()
+		wipe(t)
+		for special, event in pairs(SPECIALS_EVENTS) do
+			t[event] = false
+		end
+		for name, spell in pairs(db.profile.spells) do
+			if not spell.disabled and spell.aliases then
+				for i, alias in pairs(spell.aliases) do
+					local event = SPECIALS_EVENTS[alias]
+					if event then
+						--@debug@
+						dprint("Have to listen for", event, "for special", alias, "for spell", name)
+						--@end-debug@
+						t[event] = true
+					end
 				end
 			end
 		end
-	end
-
-	RegisterAuraScanner("player", UpdateTracking)
-	InlineAura.MINIMAP_UPDATE_TRACKING = UpdateTracking
-	InlineAura:RegisterEvent('MINIMAP_UPDATE_TRACKING')
-end
-
--- Shaman totem support
-if playerClass == "SHAMAN" then
-	--@debug@
-	dprint("watching totems")
-	--@end-debug@
-	local GetTotemInfo = GetTotemInfo
-
-	local function UpdateTotems()
-		for i = 1, MAX_TOTEMS do
-			local haveTotem, name, startTime, duration = GetTotemInfo(i)
-			if haveTotem and name and name ~= "" then
-				name = name:gsub("%s[IVX]-$", "") -- Whoever proposed to use roman numerals in enchant names should be shot
-				AddAura("player", name, 0, duration, startTime+duration, true, "HELPFUL")
-			else
-				RemoveAura("player", name)
-			end
-		end
-	end
-
-	RegisterAuraScanner("player", UpdateTotems)
-	InlineAura.PLAYER_TOTEM_UPDATE = UpdateTotems
-	InlineAura:RegisterEvent('PLAYER_TOTEM_UPDATE')
-
--- Warlock Soul Shards and Paladin Holy Power
-elseif playerClass == "WARLOCK" or playerClass == "PALADIN" then
-	local UnitPower = UnitPower
-
-	local POWER_TYPE, POWER_NAME
-	if playerClass == "WARLOCK" then
-		POWER_TYPE, POWER_NAME = SPELL_POWER_SOUL_SHARDS, "SOUL_SHARDS" -- L["SOUL_SHARDS"]
-	else
-		POWER_TYPE, POWER_NAME = SPELL_POWER_HOLY_POWER, "HOLY_POWER"
-	end
-	keywords[POWER_NAME] = true
-	KEYWORD_EVENTS[POWER_NAME] = "UNIT_POWER"
-	--@debug@
-	dprint("watching", POWER_NAME)
-	--@end-debug@
-
-	local function UpdatePower()
-		local power = UnitPower("player", POWER_TYPE)
-		if power and power > 0 then
-			AddAura("player", POWER_NAME, power, nil, nil, true, "HELPFUL")
-		else
-			RemoveAura("player", POWER_NAME)
-		end
-	end
-
-	RegisterAuraScanner("player", UpdatePower)
-	function InlineAura:UNIT_POWER(event, unit, type)
-		if unit == "player" and type == POWER_NAME then
-			return UpdatePower()
-		end
-	end
-end
-
--- Rogue and Kitty combo points
-if playerClass == "ROGUE" or playerClass == "DRUID" then
-	--@debug@
-	dprint("watching combo points")
-	--@end-debug@
-	local GetComboPoints = GetComboPoints
-	keywords.COMBO_POINTS = true -- L["COMBO_POINTS"]
-	KEYWORD_EVENTS.COMBO_POINTS = "PLAYER_COMBO_POINTS"
-
-	local function UpdateComboPoints()
-		local points = GetComboPoints("player")
-		if points and points > 0 then
-			AddAura("player", "COMBO_POINTS", points, nil, nil, true, "HELPFUL")
-		else
-			RemoveAura("player", "COMBO_POINTS")
-		end
-	end
-
-	RegisterAuraScanner("player", UpdateComboPoints)
-	InlineAura.PLAYER_COMBO_POINTS = UpdateComboPoints
-end
-
--- Moonkin eclipse points
-if playerClass == "DRUID" then
-	--@debug@
-	dprint("watching eclipse energy")
-	--@end-debug@
-	local SPELL_POWER_ECLIPSE = SPELL_POWER_ECLIPSE
-	local UnitPower, UnitPowerMax = UnitPower, UnitPowerMax
-	local GetEclipseDirection = GetEclipseDirection
-	local GetPrimaryTalentTree = GetPrimaryTalentTree
-
-	local isMoonkin, direction, power
-	keywords.LUNAR_ENERGY = true
-	keywords.SOLAR_ENERGY = true
-	KEYWORD_EVENTS.LUNAR_ENERGY = "PLAYER_TALENT_UPDATE"
-	KEYWORD_EVENTS.SOLAR_ENERGY = "PLAYER_TALENT_UPDATE"
-
-	function UpdateEclipse()
-		if isMoonkin and direction and power and power ~= 0 then
-			if direction == "moon" then
-				AddAura("player", "LUNAR_ENERGY", -power, nil, nil, true, "HELPFUL")
-				RemoveAura("player", "LUNAR_ENERGY")
-			else
-				RemoveAura("player", "SOLAR_ENERGY")
-				AddAura("player", "SOLAR_ENERGY", power, nil, nil, true, "HELPFUL")
-			end
-		else
-			RemoveAura("player", "LUNAR_ENERGY")
-			RemoveAura("player", "SOLAR_ENERGY")
-		end
-	end
-
-	RegisterAuraScanner("player", UpdateEclipse)
-
-	function InlineAura:UNIT_POWER(event, unit, type)
-		if unit == "player" and type == "ECLIPSE" then
-			local newPower = math.ceil(100 * UnitPower("player", SPELL_POWER_ECLIPSE) / UnitPowerMax("player", SPELL_POWER_ECLIPSE))
-			if newPower ~= power then
-				power = newPower
-				if event == "UNIT_POWER" then
-					return UpdateEclipse()
+		for event, enabled in pairs(t) do
+			if enabled then
+				if not InlineAura:IsEventRegistered(event) then
+					--@debug@
+					dprint("Starting listening for", event)
+					--@end-debug@
+					InlineAura:RegisterEvent(event)
+					InlineAura[event](InlineAura, "UpdateSpecialListeners")
 				end
+			elseif InlineAura:IsEventRegistered(event) then
+				--@debug@
+				dprint("Stopping listening for", event)
+				--@end-debug@
+				InlineAura:UnregisterEvent(event)
+				InlineAura[event](InlineAura, "UpdateSpecialListeners")
 			end
-		end
-	end
-
-	function InlineAura:ECLIPSE_DIRECTION_CHANGE(event)
-		local newDirection = GetEclipseDirection()
-		if newDirection ~= direction then
-			direction = newDirection
-			if event == "ECLIPSE_DIRECTION_CHANGE" then
-				return UpdateEclipse()
-			end
-		end
-	end
-
-	function InlineAura:PLAYER_TALENT_UPDATE(event)
-		local newIsMoonkin = (GetPrimaryTalentTree() == 1)
-		if isMoonkin ~= newIsMoonkin then
-			isMoonkin = newIsMoonkin
-			if isMoonkin then
-				self:RegisterEvent('UNIT_POWER')
-				self:RegisterEvent('ECLIPSE_DIRECTION_CHANGE')
-				self:ECLIPSE_DIRECTION_CHANGE(event)
-				self:UNIT_POWER(event, "player", "ECLIPSE")
-			else
-				self:UnregisterEvent('UNIT_POWER')
-				self:UnregisterEvent('ECLIPSE_DIRECTION_CHANGE')
-			end
-			return UpdateEclipse()
 		end
 	end
 end
@@ -1055,52 +915,10 @@ local function UpdateUnitListeners()
 	end
 end
 
-local UpdateKeywordListeners
-do
-	local t ={}
-	function UpdateKeywordListeners()
-		wipe(t)
-		for keyword, event in pairs(KEYWORD_EVENTS) do
-			t[event] = false
-		end
-		for name, spell in pairs(db.profile.spells) do
-			if not spell.disabled and spell.aliases then
-				for i, alias in pairs(spell.aliases) do
-					local event = KEYWORD_EVENTS[alias]
-					if event then
-						--@debug@
-						dprint("Have to listen for", event, "for keyword", alias, "for spell", name)
-						--@end-debug@
-						t[event] = true
-					end
-				end
-			end
-		end
-		for event, enabled in pairs(t) do
-			if enabled then
-				if not InlineAura:IsEventRegistered(event) then
-					--@debug@
-					dprint("Starting listening for", event)
-					--@end-debug@
-					InlineAura:RegisterEvent(event)
-					InlineAura[event](InlineAura, "UpdateKeywordListeners")
-				end
-			elseif InlineAura:IsEventRegistered(event) then
-				--@debug@
-				dprint("Stopping listening for", event)
-				--@end-debug@
-				InlineAura:UnregisterEvent(event)
-				InlineAura[event](InlineAura, "UpdateKeywordListeners")
-			end
-		end
-	end
-end
-
 ------------------------------------------------------------------------------
 -- Button updates
 ------------------------------------------------------------------------------
 
-local enabledEvents = {}
 function InlineAura:OnUpdate(elapsed)
 	-- Configuration has been updated
 	if configUpdated then
@@ -1108,8 +926,8 @@ function InlineAura:OnUpdate(elapsed)
 		-- Update event listening based on units
 		UpdateUnitListeners()
 
-		-- Update event listening based on keywords
-		UpdateKeywordListeners()
+		-- Update event listening based on SPECIALS
+		UpdateSpecialListeners()
 
 		-- Update all auras
 		for unit in pairs(unitAuras) do
@@ -1330,9 +1148,6 @@ function InlineAura:VARIABLES_LOADED()
 			end
 		end)
 	end
-
-	-- Do nothing, unless it's been hooked
-	self:SetupHook()
 
 	-- Refresh everything
 	self:RequireUpdate(true)

@@ -31,11 +31,12 @@ local version = "@file-hash@/@project-version@"
 version = "developer"
 --@end-debug@
 local reported = {}
+local SPECIALS = self.SPECIALS
 
 -- Get the spell name, throwing error if not found
 local function GetSpellName(id, level)
 	local name
-	if self.keywords[id] then
+	if SPECIALS[id] then
 		return id
 	end
 	local rawId = tonumber(string.match(id, "^#(%d+)$"))

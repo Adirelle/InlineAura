@@ -68,63 +68,66 @@ local function GetSpellDefaults(id, level)
 end
 
 -- Create a list of aliases
-local function AddAlias(t, id)
+local function AddAlias(aliases, id)
 	local name = GetSpellName(id, 3)
-	for i, existing in ipairs(t) do
+	for i, existing in ipairs(aliases) do
 		if existing == name then
 			return
 		end
 	end
-	tinsert(t, name)
+	tinsert(aliases, name)
 end
 
-local function MakeAliases(aliases, origId, ...)
-	if type(aliases) ~= "table" then
-		aliases = {}
-	end
+local function AddAliases(mainId, ...)
+	local defaults = GetSpellDefaults(mainId, 2)
+	local aliases = defaults.aliases or {}
 	for i = 1,select('#', ...) do
 		local id = select(i, ...)
-		if id ~= origId then
+		if id ~= mainId then
 			AddAlias(aliases, id)
 		end
 	end
 	if #aliases > 0 then
-		return aliases
+		defaults.aliases = aliases
+	else
+		defaults.aliases = nil
 	end
+	return defaults
 end
 
 -- Defines spell type and aliases
-local function Aliases(auraType, id, ...)
-	if type(auraType) ~= "string" then
-		return Aliases(nil, auraType, id, ...)
+local function Aliases(mainId, ...)
+	local defaults
+	if type(mainId) == "string" then
+		defaults = AddAliases(...)
+		defaults.auraType = mainId
+	else
+		defaults = AddAliases(mainId, ...)
 	end
-	local defaults = GetSpellDefaults(id, 1)
-	defaults.auraType = auraType or defaults.auraType
-	defaults.aliases = MakeAliases(defaults.aliases, id, ...)
+	return defaults
 end
 
 -- Defines buffs that only apply to the player
 local function SelfBuffs(...)
 	for i = 1, select('#', ...) do
-		GetSpellDefaults(select(i, ...), 1).auraType = 'self'
+		local id = select(i, ...)
+		GetSpellDefaults(id, 1).auraType = 'self'
 	end
 end
 
 -- Defines auras that appear on the player and modify another spell
 local function SelfTalentProc(spellId, talentId)
-	local defaults = GetSpellDefaults(spellId, 1)
+	local defaults = AddAliases(spellId, talentId)
 	defaults.auraType = 'self'
 	defaults.alternateColor = true
-	defaults.aliases = MakeAliases(defaults.aliases, talentId)
+	return defaults
 end
 
 -- Declare a category of group-wide buffs
 local function GroupBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
-		local defaults = GetSpellDefaults(id, 1)
-		defaults.onlyMine = false
-		defaults.aliases = MakeAliases(defaults.aliases, id, ...)
+		AddAliases(id, ...).onlyMine = false
 	end
 end
 
@@ -138,14 +141,13 @@ do
 	function SharedAuras(...)
 		wipe(t)
 		for i = 2, select('#', ...), 2 do
-			tinsert(t, (select(i, ...)))
+			local id = select(i, ...)
+			tinsert(t, id)
 		end
 		for i = 1, select('#', ...), 2 do
 			local spellClass, spellId = select(i, ...)
 			if spellClass == class then
-				local defaults = GetSpellDefaults(spellId, 1)
-				defaults.onlyMine = false
-				defaults.aliases = MakeAliases(defaults.aliases, spellId, unpack(t))
+				AddAliases(spellId, unpack(t)).onlyMine = false
 			end
 		end
 	end

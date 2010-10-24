@@ -281,9 +281,9 @@ do
 			--@end-debug@
 		end
 	end
-	
+
 	local function RunScanners(unit, realUnit)
-		local unitScanners = scanners[unit]	
+		local unitScanners = scanners[unit]
 		if unitScanners then
 			for i, scanner in ipairs(unitScanners) do
 				local ok, msg = pcall(scanner, realUnit)
@@ -308,7 +308,6 @@ do
 		end
 
 		if guid then
-			serial = (serial + 1) % 1000000
 			unitGUIDs[unit] = guid
 
 			if unit == 'mouseover' then
@@ -325,6 +324,9 @@ do
 					RemoveAura(unit, name)
 				end
 			end
+
+			-- Next update will have an updated serial
+			serial = (serial + 1) % 1000000
 		end
 	end
 end
@@ -1006,8 +1008,6 @@ local function Blizzard_GetAction(self)
 	return 'action', self.action
 end
 
-local ActionButton_UpdateState = ActionButton_UpdateState
-
 local function InitializeButton(self)
 	if buttons[self] then return end
 	buttons[self] = true
@@ -1019,7 +1019,9 @@ local function InitializeButton(self)
 		hooksecurefunc(self, 'UpdateAction', UpdateAction_Hook)
 	else
 		self.__IA_GetAction = Blizzard_GetAction
-		self.__IA_UpdateState = ActionButton_UpdateState
+		self.__IA_UpdateState = function(self)
+			ActionButton_UpdateState(self)
+		end
 	end
 	UpdateAction_Hook(self)
 end

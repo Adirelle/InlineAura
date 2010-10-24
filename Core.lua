@@ -329,7 +329,7 @@ tinsert(auraScanners, function(callback, unit)
 	for i = 1, GetNumTrackingTypes() do
 		local name, _, active, category = GetTrackingInfo(i)
 		if active and category == 'spell' then
-			callback(name, 0, nil, nil, true, "HELPFUL")
+			callback(name, nil, nil, nil, true, "HELPFUL")
 		end
 	end
 end)
@@ -828,7 +828,7 @@ local function UpdateButtonState_Hook(self)
 	if not buttons[self] then return end
 	local aura = not self.__IA_glow and self.__IA_aura
 	local texture = self:GetCheckedTexture()
-	if aura and (aura.expirationTime and aura.expirationTime > GetTime() or not aura.count) then
+	if aura and aura.serial and (aura.expirationTime and aura.expirationTime > GetTime() or not aura.count) then
 		--@debug@
 		dprint(self, "Showing border", aura.name)
 		--@end-debug@

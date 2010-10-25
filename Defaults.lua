@@ -403,7 +403,7 @@ elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------
 
 	-- Soul link
-	Aliases('buff', 19028, 25228)
+	Aliases(19028, 25228)
 
 	-- Display soul shard count on Soulburn
 	Aliases("special", 74434, 'SOUL_SHARDS')
@@ -456,7 +456,7 @@ elseif class == 'PRIEST' then
 	)
 
 	-- This will display either the buff or the debuff
-	Aliases('regular', 17, 6788) -- Power Word: Shield / Weakened Soul
+	Aliases(17, 6788) -- Power Word: Shield / Weakened Soul
 
 	GroupBuffs(27683, 19891) -- Shadow Protection, Resistance Aura (Paladin)
 
@@ -465,8 +465,8 @@ elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
 
 	-- Faerie Fire debuff and spell ids are different
-	Aliases("debuff", 770, 16857, 91565)
-	Aliases("debuff", 16857, 770, 91565)
+	Aliases(770, 16857, 91565)
+	Aliases(16857, 770, 91565)
 
 	-- Display eclipse energy
 	Aliases("special", 5176, "LUNAR_ENERGY") -- Wrath

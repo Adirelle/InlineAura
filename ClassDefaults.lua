@@ -437,13 +437,14 @@ elseif class == 'WARLOCK' then
 
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
 	SelfTalentProc( 6353, 63165) -- Soul Fire => Decimation
+	SelfTalentProc( 6353, 85385) -- Soul Fire => Improved Soul Fire
 
 	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
 	SelfTalentProc(  686, 34936) -- Shadow Bolt => Backlash
 
 	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
 	SelfTalentProc(29722, 54274) -- Incinerate => Backdraft
-
+	
 ------------------------------------------------------------------------------
 elseif class == 'MAGE' then
 ------------------------------------------------------------------------------

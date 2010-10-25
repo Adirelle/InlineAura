@@ -370,7 +370,7 @@ elseif class == 'WARRIOR' then
 ------------------------------------------------------------------------------
 
 	SelfBuffs(
-			871, -- Shield Wall
+		  871, -- Shield Wall
 		 1719, -- Recklessness
 		 2565, -- Shield Block
 		12292, -- Death Wish
@@ -388,7 +388,7 @@ elseif class == 'SHAMAN' then
 	-- Contributed by brotherhobbes
 
 	SelfBuffs(
-			324, -- Lightning Shield
+		  324, -- Lightning Shield
 		 2645, -- Ghost Wolf
 		16188, -- Nature's Swiftness
 		30823, -- Shamanistic Rage
@@ -418,13 +418,14 @@ elseif class == 'WARLOCK' then
 
 	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
 	SelfTalentProc( 6353, 63165) -- Soul Fire => Decimation
+	SelfTalentProc( 6353, 85385) -- Soul Fire => Improved Soul Fire
 
 	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
 	SelfTalentProc(  686, 34936) -- Shadow Bolt => Backlash
 
 	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
 	SelfTalentProc(29722, 54274) -- Incinerate => Backdraft
-
+	
 ------------------------------------------------------------------------------
 elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
@@ -440,9 +441,41 @@ elseif class == 'MAGE' then
 elseif class == 'DEATHKNIGHT' then
 ------------------------------------------------------------------------------
 
-	-- Contributed by jexxlc
-	Aliases(45462, 55078) -- Plague Strike => Blood Plague
-	Aliases(45477, 55095) -- Icy Touch => Frost Fever
+	-- Contributed by Citlalin
+
+	Aliases(45462, 59879) -- Plague Strike => Blood Plague
+	Aliases(45477, 59921) -- Icy Touch => Frost Fever
+	Aliases(48721, 81132) -- Blood Boil => Scarlet Fever
+	Aliases(47541, 49194) -- Death Coil => Unholy Blight
+
+	Aliases(66188, 77513) -- Death Strike => Blood Shield
+	Aliases(49184, 59052) -- Howling Blast => Freezing Fog
+	Aliases(49020, 59052) -- Obliterate => Killing Machine
+
+	SelfBuffs(
+		48707, -- Anti-Magic Shell
+		45529, -- Blood Tap
+		49222, -- Bone Shield
+		49028, -- Dancing Rune Weapon
+		48792, -- Icebound Fortitude
+		49039, -- Lichborne
+		49206, -- Summon Gargoyle
+		55233  -- Vampiric Blood
+	)
+
+	GroupBuffs(
+		49016 -- Unholy Frenzy
+	)
+
+	GroupDebuffs(
+		77606, -- Dark Simulacrum
+		 9484, -- Chains of Ice
+		47476, -- Strangulate
+		49203  -- Hungering Cold
+	)
+
+	-- Dark Transformation
+	Aliases('pet', 63560)
 
 ------------------------------------------------------------------------------
 elseif class == 'PRIEST' then
@@ -473,8 +506,8 @@ elseif class == 'DRUID' then
 	Aliases("special", 2912, "SOLAR_ENERGY") -- Starfire
 
 	SelfBuffs(
-			768, -- Cat Form
-			783, -- Travel Form
+		  768, -- Cat Form
+		  783, -- Travel Form
 		 1066, -- Aquatic Form
 		 1850, -- Dash
 		 5217, -- Tiger's Fury
@@ -499,8 +532,8 @@ elseif class == 'PALADIN' then
 ------------------------------------------------------------------------------
 
 	SelfBuffs(
-			498, -- Divine Protection
-			642, -- Divine Shield
+		  498, -- Divine Protection
+		  642, -- Divine Shield
 		20154, -- Seal of Righteousness
 		20164, -- Seal of Justice
 		20165, -- Seal of Insight

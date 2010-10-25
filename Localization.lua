@@ -588,11 +588,13 @@ L["Check to ignore buffs cast by other characters."] = "다른 캐릭터가 시�
 L["Check to ignore debuffs cast by other characters."] = "다른 캐릭터가 시전한 약화 효과를 무시하려면 체크."
 L["Check to only show aura you applied. Uncheck to always show aura, even when applied by others. Leave grayed to use default settings."] = "적용된 효과중 표시하고 싶은 것을 선택합니다. 선택하지 않으면 모든 효과에 대하여 표시합니다. "
 L["Check to totally disable this spell. No border highlight nor text is displayed for disabled spells."] = "현재 주문을 사용하지 않습니다. 사용하지 않는 주문은 화면에 표시되지 않습니다."
+L["Check to use the animated glow that is used for reactive abilities instead of coloring the button border."] = "움직이는 반짝임을 사용하려면 체크 합니다. 버튼 테두리의 색상 강조보다 역동적입니다." -- Needs review
 L["Check which units you want to be scanned for the aura. Auras of the first existing unit are shown, using this order: focus, target, pet and then player."] = "원하는 강화 및 약화 효과를 선택합니다. 첫번째 선택한 효과가 표시되면, 순서는 주시대상, 대상, 소환수 그리고 플레이어 입니다."
 L["Click to create specific settings for the spell."] = "클릭하면 주문을 추가합니다."
 L["Countdown position"] = "카운트다운 위치"
 L["Countdown text color"] = "카운트다운 글자색"
 L["Debuff"] = "약화 효과"
+L["Decimal countdown threshold"] = "십진 카운트 한계" -- Needs review
 L["Disable"] = "사용 안함"
 L["Do you really want to remove these aura specific settings ?"] = "정말로 이 오라 특정 설정을 삭제하시겠습니까?"
 L["Either OmniCC or CooldownCount is loaded so aura countdowns are displayed using small font at the bottom of action buttons."] = "OmniCC든 CooldownCount든 행동 단축 버튼 아래쪽에 작은 글꼴로 표시되는 오라 카운트다운으로 로드됩니다."
@@ -634,6 +636,7 @@ L["Select the color to use for the debuffs cast by other characters."] = "다른
 L["Select the color to use for the debuffs you cast."] = "당신이 시전한 약화 효과에 사용할 색을 선택합니다."
 L["Select the colors used to highlight the action button. There are selected based on aura type and caster."] = "행동 단축 버튼 강조에 쓰일 색을 선택합니다. 오라 형태와 시전자를 기초로 선택됩니다."
 L["Select the font to be used to display both countdown and application count."] = "카운트다운과 효과 카운트 표시에 쓰일 글꼴을 선택합니다."
+L["Select the remaining time threshold under which tenths of second are displayed."] = "10초 이하를 표시할때 시간 한계 기억을 선택합니다." -- Needs review
 L["Select the spell to edit or to remove its specific settings. Spells with specific defaults are written in |cff77ffffcyan|r. Removed spells with specific defaults are written in |cff777777gray|r."] = "변경하거나 삭제할 주문을 선택합니다. 직업별 주문은 기본적으로 |cff77ffff하늘색|r 입니다. 삭제된 주문은 |cff777777회색|r 입니다."
 L["Select where to display countdown and application count in the button. When only one value is displayed, the \"single value position\" is used instead of the regular one."] = "효과 카운트나 카운트다운 글자가 표시될 곳을 선택합니다. 하나의 값만 표시되는 경우는 '값이 하나일 때 위치'에서 위치를 선택해야 합니다."
 L["Select where to place a single value."] = "값이 하나만 보일 때 글자가 놓일 곳 선택"
@@ -653,6 +656,7 @@ L["Top left"] = "왼쪽 위"
 L["Top right"] = "오른쪽 위"
 L["Units to scan"] = "검색할 단위"
 L["Unknown spell: %s"] = "알 수 없는 주문: %s"
+L["Use animated glow"] = "움직이는 반짝임 사용" -- Needs review
 end
 
 -- @noloc]]

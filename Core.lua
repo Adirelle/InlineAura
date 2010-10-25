@@ -329,8 +329,8 @@ end
 ------------------------------------------------------------------------------
 
 local SPECIALS = {}
-InlineAura.SPECIALS = SPECIALS
 local SPECIALS_EVENTS = {}
+InlineAura.SPECIALS = SPECIALS
 
 function InlineAura:RegisterSpecial(name, event, handler)
 	SPECIALS[name] = true
@@ -342,10 +342,6 @@ function InlineAura:RegisterSpecial(name, event, handler)
 			self[event] = handler
 		end
 	end
-end
-
-function InlineAura:IsSpecial(name)
-	return SPECIALS[name]
 end
 
 local UpdateSpecialListeners
@@ -361,10 +357,7 @@ do
 				for i, alias in pairs(spell.aliases) do
 					local event = SPECIALS_EVENTS[alias]
 					if event then
-						--@debug@
-						dprint("Have to listen for", event, "for special", alias, "for spell", name)
-						--@end-debug@
-						t[event] = true
+						t[event] = alias
 					end
 				end
 			end
@@ -373,7 +366,7 @@ do
 			if enabled then
 				if not InlineAura:IsEventRegistered(event) then
 					--@debug@
-					dprint("Starting listening for", event)
+					dprint("Starting listening for event", event, "for special", enabled)
 					--@end-debug@
 					InlineAura:RegisterEvent(event)
 					InlineAura[event](InlineAura, "UpdateSpecialListeners")
@@ -623,55 +616,64 @@ local function LookupAura(auras, onlyMyBuffs, onlyMyDebuffs, ...)
 	end
 end
 
-local EMPTY_TABLE = {}
-local function GetAuraToDisplay(spell, target)
-	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
-	local hideStack, hideCountdown = db.profile.hideStack, db.profile.hideCountdown
-	local onlyMyBuffs, onlyMyDebuffs = db.profile.onlyMyBuffs, db.profile.onlyMyDebuffs
-	local aliases, glowing
-
-	-- Specific spell overrides global settings and targeting
-	if type(specific) == 'table' then
+local function GetModifiedTarget(spell, target)
+	if not spell then return end
+	local auraType = "regular"
+	local specific = rawget(db.profile.spells, spell)
+	if specific then
 		if specific.disabled then
 			return
 		end
-		aliases, glowing = specific.aliases, specific.alternateColor
-		local onlyMine = specific.onlyMine
+		auraType = specific.auraType or "regular"
+		if auraType == "self" or auraType == "special" then
+			target = "player"
+		elseif auraType == "pet" then
+			target = "pet"
+		end
+	end
+	if auraType == "regular" and target then
+		if IsHarmfulSpell(spell) and not UnitIsDebuffable(target) then
+			return
+		elseif IsHelpfulSpell(spell) and not UnitIsBuffable(target) then
+			return
+		end
+	end
+	return auraType, target
+end
+
+local EMPTY_TABLE = {}
+local function GetAuraToDisplay(spell, target)
+	local aliases = EMPTY_TABLE
+	local hideStack = db.profile.hideStack
+	local hideCountdown = db.profile.hideCountdown
+	local onlyMyBuffs = db.profile.onlyMyBuffs
+	local onlyMyDebuffs = db.profile.onlyMyDebuffs
+	local glowing = false
+
+	-- Specific spell overrides global settings and targeting
+	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
+	if type(specific) == 'table' then
+		glowing = specific.alternateColor
+		if specific.aliases then
+			aliases = specific.aliases
+		end
 		if specific.hideStack ~= nil then
 			hideStack = specific.hideStack
 		end
 		if specific.hideCountdown ~= nil then
 			hideCountdown = specific.hideCountdown
 		end
-		local auraType = specific.auraType
-		if auraType == "self" then
-			-- Self auras
-			target, onlyMine = "player", true
-		elseif auraType == "special" then
-			-- Special display
-			target, onlyMine, hideStack, hideCountdown, glowing = "player", true, false, false, false
-		elseif auraType == "pet" then
-			-- Pet auras
-			target = "pet"
+		if specific.auraType == "self" then
+			onlyMyBuffs, onlyMyDebuffs = true, true
+		elseif specific.auraType == "special" then
+			onlyMyBuffs, onlyMyDebuffs, hideStack, hideCountdown = true, true, false, false
+		elseif specific.onlyMine ~= nil then
+			onlyMyBuffs, onlyMyDebuffs = specific.onlyMine, specific.onlyMine
 		end
-		if onlyMine ~= nil then
-			onlyMyBuffs, onlyMyDebuffs = onlyMine, specific.onlyMine
-		end
-	end
-
-	-- Check target
-	if not target then
-		return
-	elseif IsHarmfulSpell(spell) then
-		if not UnitIsDebuffable(target) then
-			return
-		end
-	elseif not UnitIsBuffable(target) then
-		return
 	end
 
 	-- Look for the aura or its aliases
-	local aura = LookupAura(unitAuras[target], onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
+	local aura = LookupAura(unitAuras[target], onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases))
 	if aura then
 		return aura, hideStack, hideCountdown, glowing
 	end
@@ -724,7 +726,7 @@ local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
 local function ActionButton_HideOverlayGlow_Hook(self)
 	if buttons[self] and self.__IA_glow then
 		--@debug@
-		dprint(self, "Enforcing glow")
+		self:Debug("Enforcing glow")
 		--@end-debug@
 		return ActionButton_ShowOverlayGlow(self)
 	end
@@ -736,12 +738,15 @@ local function UpdateButtonState_Hook(self)
 	local texture = self:GetCheckedTexture()
 	if aura and aura.serial and (aura.expirationTime and aura.expirationTime > GetTime() or not aura.count) then
 		--@debug@
-		dprint(self, "Showing border", aura.name)
+		self:Debug("Showing border", aura.name)
 		--@end-debug@
 		local color = db.profile['color'..aura.type..(aura.isMine and 'Mine' or 'Others')]
 		self:__IA_SetChecked(true)
 		SetVertexColor(texture, unpack(color))
 	else
+		--@debug@
+		self:Debug("Not showing border")
+		--@end-debug@
 		texture:SetVertexColor(1, 1, 1)
 	end
 	return UpdateTimer(self)
@@ -798,24 +803,35 @@ local function UpdateButtonAura(self, force)
 	elseif not target then
 		target = GuessSpellTarget(spell)
 	end
+	local auraType
+	auraType, target = GetModifiedTarget(spell, target)
+	--@debug@
+	self:Debug(self, "UpdateButtonAura", action, param, '=>', spell, target)
+	--@end-debug@
 	local guid = target and UnitGUID(target)
-	if force or spell ~= self.__IA_spell or guid ~= self.__IA_guid or (target and auraChanged[target]) then
-		--@debug@
-		dprint(self, "spell=", spell, "target=", target, "guid=", guid, "auraChanged=", target and auraChanged[target])
-		--@end-debug@
-		self.__IA_spell, self.__IA_guid = spell, guid
+	if force or (target and auraChanged[target]) or auraType ~= self.__IA_aura_type or spell ~= self.__IA_spell or guid ~= self.__IA_guid then
+		self.__IA_spell, self.__IA_guid, self.__IA_aura_type = spell, guid, auraType
 		local aura, hideStack, hideCountdown, glow
-		if spell then
+		if spell and target and auraType then
 			aura, hideStack, hideCountdown, glow = GetAuraToDisplay(spell, target)
+			--@debug@
+			self:Debug("GetAuraToDisplay", spell, target, "=>", aura, hideStack, hideCountdown, glow)
+			--@end-debug@
 		end
 		local version = aura and aura.version or nil
 		if self.__IA_aura ~= aura or self.__IA_aura_version ~= version or self.__IA_hideStack ~= hideStack or self.__IA_hideCountdown ~= hideCountdown or self.__IA_glow ~= glow then
+			self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown, self.__IA_aura_version = aura, hideStack, hideCountdown, version
+			if self.__IA_glow ~= glow then
+				self.__IA_glow = glow
+				--@debug@
+				self:Debug("GetAuraToDisplay: updating glow")
+				--@end-debug@
+				ActionButton_UpdateOverlayGlow(self)
+			end
 			--@debug@
-			dprint(self, "need update =>", aura and aura.name)
+			self:Debug("GetAuraToDisplay: updating state")
 			--@end-debug@
-			self.__IA_aura, self.__IA_hideStack, self.__IA_hideCountdown, self.__IA_glow, self.__IA_aura_version = aura, hideStack, hideCountdown, glow, version
-			self:__IA_UpdateState()
-			ActionButton_UpdateOverlayGlow(self)
+			self:__IA_UpdateState()			
 		end
 	end
 end
@@ -852,7 +868,7 @@ local function UpdateAction_Hook(self)
 	end
 	if action ~= self.__IA_action or param ~= self.__IA_param then
 		--@debug@
-		dprint(self, "action changed =>", action, param)
+		self:Debug("action changed =>", action, param)
 		--@end-debug@
 		self.__IA_action, self.__IA_param = action, param
 		activeButtons[self] = (action and param) or nil
@@ -868,10 +884,20 @@ local function Blizzard_GetAction(self)
 	return 'action', self.action
 end
 
+local function NOOP() end
 local function InitializeButton(self)
 	if buttons[self] then return end
 	buttons[self] = true
 	self.__IA_SetChecked = self.SetChecked
+	--@debug@
+	if self == BonusActionButton1 then
+		self.Debug = dprint
+	else
+	--@end-debug@
+		self.Debug = self.Debug or NOOP
+	--@debug@
+	end
+	--@end-debug@
 	if self.__LAB_Version then
 		self.__IA_GetAction = self.GetAction
 		self.__IA_UpdateState = self.Update
@@ -908,8 +934,18 @@ end
 local function UpdateUnitListeners()
 	for unit, event in pairs(UNIT_EVENTS) do
 		if db.profile.enabledUnits[unit] then
+			--@debug@
+			if not InlineAura:IsEventRegistered(event) then
+				dprint("Starting listening for event", event, 'for unit', unit)
+			end
+			--@end-debug@
 			InlineAura:RegisterEvent(event)
 		else
+			--@debug@
+			if InlineAura:IsEventRegistered(event) then
+				dprint("Stopping listening for event", event, 'for unit', unit)
+			end
+			--@end-debug@
 			InlineAura:UnregisterEvent(event)
 		end
 	end

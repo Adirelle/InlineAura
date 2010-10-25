@@ -79,7 +79,8 @@ local function AddAlias(aliases, id)
 	tinsert(aliases, name)
 end
 
-local function AddAliases(mainId, ...)
+-- Defines spell type and aliases
+local function Aliases(mainId, ...)
 	local defaults = GetSpellDefaults(mainId, 2)
 	local aliases = defaults.aliases or {}
 	for i = 1,select('#', ...) do
@@ -96,23 +97,31 @@ local function AddAliases(mainId, ...)
 	return defaults
 end
 
--- Defines spell type and aliases
-local function Aliases(mainId, ...)
-	local defaults
-	if type(mainId) == "string" then
-		defaults = AddAliases(...)
-		defaults.auraType = mainId
-	else
-		defaults = AddAliases(mainId, ...)
-	end
-	return defaults
-end
-
 -- Defines buffs that only apply to the player
 local function SelfBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
 		GetSpellDefaults(id, 1).auraType = 'self'
+	end
+end
+
+-- Define pet buffs
+local function PetBuffs(...)
+	for i = 1, select('#', ...) do
+		local id = select(i, ...)
+		GetSpellDefaults(id, 1).auraType = 'pet'
+	end
+end
+
+-- Add special display
+local function ShowSpecial(special, ...)
+	for i = 1, select('#', ...) do
+		local defaults = AddAliases(select(i, ...), special)
+		if #(defaults.aliases) == 1 then
+			defaults.auraType = 'special'
+		else
+			defaults.auraType = 'self'
+		end
 	end
 end
 
@@ -335,8 +344,8 @@ if class == 'HUNTER' then
 	Aliases(13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	Aliases(13813, 13812) -- Explosive Trap => Explosive Trap Effect
 
-	Aliases('self', 19434, 82925) -- Aimed Shot => Ready, Set, Aim...
-	Aliases('self', 56641, 53224) -- Steady Shot => Improved Steady Shot
+	Aliases(19434, 82925) -- Aimed Shot => Ready, Set, Aim...
+	Aliases(56641, 53224) -- Steady Shot => Improved Steady Shot
 
 	SelfBuffs(
 		 5118, -- Aspect of the Cheetah
@@ -362,8 +371,10 @@ if class == 'HUNTER' then
 
 	GroupDebuffs(1130, 53243) -- Hunter's Mark, Marked For Death
 
-	Aliases("pet", 136) -- Mend Pet
-	Aliases("pet", 19574) -- Bestial Wrath
+	PetBuffs(
+	    136, -- Mend Pet
+		19574  -- Bestial Wrath
+	)
 
 ------------------------------------------------------------------------------
 elseif class == 'WARRIOR' then
@@ -406,7 +417,7 @@ elseif class == 'WARLOCK' then
 	Aliases(19028, 25228)
 
 	-- Display soul shard count on Soulburn
-	Aliases("special", 74434, 'SOUL_SHARDS')
+	ShowSpecial("SOUL_SHARDS", 74434) -- Soulburn
 
 	SelfBuffs(
 		687,   -- Demon Armor
@@ -425,7 +436,7 @@ elseif class == 'WARLOCK' then
 
 	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
 	SelfTalentProc(29722, 54274) -- Incinerate => Backdraft
-	
+
 ------------------------------------------------------------------------------
 elseif class == 'MAGE' then
 ------------------------------------------------------------------------------
@@ -474,8 +485,7 @@ elseif class == 'DEATHKNIGHT' then
 		49203  -- Hungering Cold
 	)
 
-	-- Dark Transformation
-	Aliases('pet', 63560)
+	PetBuffs(63560) -- Dark Transformation
 
 ------------------------------------------------------------------------------
 elseif class == 'PRIEST' then
@@ -498,12 +508,12 @@ elseif class == 'DRUID' then
 ------------------------------------------------------------------------------
 
 	-- Faerie Fire debuff and spell ids are different
-	Aliases(770, 16857, 91565)
-	Aliases(16857, 770, 91565)
+	Aliases(  770, 91565)
+	Aliases(16857, 91565)
 
 	-- Display eclipse energy
-	Aliases("special", 5176, "LUNAR_ENERGY") -- Wrath
-	Aliases("special", 2912, "SOLAR_ENERGY") -- Starfire
+	ShowSpecial("LUNAR_ENERGY", 5176) -- Wrath
+	ShowSpecial("SOLAR_ENERGY", 2912) -- Starfire
 
 	SelfBuffs(
 		  768, -- Cat Form
@@ -543,22 +553,24 @@ elseif class == 'PALADIN' then
 		31884  -- Avenging Wrath
 	)
 
-	-- Spells that use Holy Power
-	Aliases("special", 85673, "HOLY_POWER") -- Word of Glory
-	Aliases("special", 85256, "HOLY_POWER") -- Templar's Verdict
-	Aliases("special", 53385, "HOLY_POWER") -- Divine Storm
-	Aliases("special", 53600, "HOLY_POWER") -- Shield of the Righteous
-	Aliases("special", 84963, "HOLY_POWER") -- Inquisition
+	ShowSpecial(
+		"HOLY_POWER",
+		85673, -- Word of Glory
+		85256, -- Templar's Verdict
+		53385, -- Divine Storm
+		53600, -- Shield of the Righteous
+		84963  -- Inquisition
+	)
 
 	GroupBuffs( 7294) -- Retribution Aura
 	GroupBuffs(19891) -- Resistance Aura
 	GroupBuffs(32223) -- Crusader Aura
 
 	Aliases(642, 25771) -- Divine Shield / Forbearance
-
 	Aliases(1022, 25771) -- Hand of Protection / Forbearance
 
 	Aliases(53563, 53651).onlyMine = true -- Beacon of Light => Light's Beacon
+
 end
 
 end

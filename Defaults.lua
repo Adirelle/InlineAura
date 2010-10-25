@@ -116,7 +116,7 @@ end
 -- Add special display
 local function ShowSpecial(special, ...)
 	for i = 1, select('#', ...) do
-		local defaults = AddAliases(select(i, ...), special)
+		local defaults = Aliases(select(i, ...), special)
 		if #(defaults.aliases) == 1 then
 			defaults.auraType = 'special'
 		else
@@ -127,7 +127,7 @@ end
 
 -- Defines auras that appear on the player and modify another spell
 local function SelfTalentProc(spellId, talentId)
-	local defaults = AddAliases(spellId, talentId)
+	local defaults = Aliases(spellId, talentId)
 	defaults.auraType = 'self'
 	defaults.alternateColor = true
 	return defaults
@@ -157,7 +157,7 @@ do
 		for i = 1, select('#', ...), 2 do
 			local spellClass, spellId = select(i, ...)
 			if spellClass == class then
-				AddAliases(spellId, unpack(t)).onlyMine = false
+				Aliases(spellId, unpack(t)).onlyMine = false
 			end
 		end
 	end

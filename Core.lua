@@ -557,7 +557,7 @@ local function GetAuraToDisplay(spell, target)
 	end
 
 	-- Look for the aura or its aliases
-	local name, count, expirationTime, isDebuff, isMine, specGlowing = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE)) 
+	local name, count, expirationTime, isDebuff, isMine, specGlowing = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
 	if name then
 		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, glowing or specGlowing
 	end
@@ -592,7 +592,7 @@ end
 local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
 
 local function ActionButton_HideOverlayGlow_Hook(self)
-	local state = buttons[self] 
+	local state = buttons[self]
 	if not state then return end
 	if state.name and state.glowing then
 		--@debug@
@@ -603,7 +603,7 @@ local function ActionButton_HideOverlayGlow_Hook(self)
 end
 
 local function UpdateButtonState_Hook(self)
-	local state = buttons[self] 
+	local state = buttons[self]
 	if not state then return end
 	local texture = self:GetCheckedTexture()
 	if state.name and not state.glowing then
@@ -658,12 +658,12 @@ end
 local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow
 
 local function UpdateButtonAura(self, force)
-	local state = buttons[self] 
+	local state = buttons[self]
 	if not state then return end
-	
+
 	local action, param = state.action, state.param
 	local spell, target = param, SecureButton_GetModifiedUnit(self)
-	
+
 	if target == "" then target = nil end
 	if action == "macro" then
 		spell = GetMacroSpell(param)
@@ -673,9 +673,10 @@ local function UpdateButtonAura(self, force)
 	elseif not target then
 		target = GuessSpellTarget(spell)
 	end
-	
+
 	local auraType
 	auraType, target = GetModifiedTarget(spell, target)
+
 	local guid = target and UnitGUID(target)
 
 	if force or auraChanged[guid or state.guid or false] or auraType ~= state.auraType or spell ~= state.spell or guid ~= state.guid then
@@ -689,7 +690,7 @@ local function UpdateButtonAura(self, force)
 		)
 		--@end-debug@
 		state.spell, state.guid, state.auraType = spell, guid, auraType
-		
+
 		local name, count, expirationTime, isDebuff, isMine, glowing
 		if spell and target and auraType then
 			name, count, expirationTime, isDebuff, isMine, glowing = GetAuraToDisplay(spell, target)
@@ -700,7 +701,7 @@ local function UpdateButtonAura(self, force)
 			--@end-debug@
 		end
 
-		if state.name ~= name or state.count ~= count or state.expirationTime ~= expirationTime or state.isDebuff ~= isDebuff or state.isMine ~= isMine or state.glowing ~= glowing then 
+		if state.name ~= name or state.count ~= count or state.expirationTime ~= expirationTime or state.isDebuff ~= isDebuff or state.isMine ~= isMine or state.glowing ~= glowing then
 			state.name, state.count, state.expirationTime, state.isDebuff, state.isMine = name, count, expirationTime, isDebuff, isMine
 			if state.glowing ~= glowing then
 				state.glowing = glowing
@@ -712,7 +713,7 @@ local function UpdateButtonAura(self, force)
 			--@debug@
 			self:Debug("GetAuraToDisplay: updating state")
 			--@end-debug@
-			self:__IA_UpdateState()			
+			self:__IA_UpdateState()
 		end
 	end
 end
@@ -742,7 +743,7 @@ local function ParseAction(self)
 end
 
 local function UpdateAction_Hook(self)
-	local state = buttons[self] 
+	local state = buttons[self]
 	if not state then return end
 	local action, param
 	if self:IsVisible() then
@@ -939,6 +940,10 @@ function InlineAura:UNIT_PET(event, unit)
 	end
 end
 
+function InlineAura:MINIMAP_UPDATE_TRACKING(event)
+	self:AuraChanged("player")
+end
+
 function InlineAura:PLAYER_ENTERING_WORLD(event)
 	for unit, enabled in pairs(db.profile.enabledUnits) do
 		if enabled then
@@ -1026,9 +1031,14 @@ function InlineAura:VARIABLES_LOADED()
 	self:RegisterEvent('PLAYER_ENTERING_WORLD')
 	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
 	self:RegisterEvent('UNIT_EXITED_VEHICLE')
+	self:RegisterEvent('MINIMAP_UPDATE_TRACKING')
 	self:RegisterEvent('MODIFIER_STATE_CHANGED')
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
+	if isShaman then
+		self.PLAYER_TOTEM_UPDATE = self.MINIMAP_UPDATE_TRACKING
+		self:RegisterEvent('PLAYER_TOTEM_UPDATE')
+	end
 
 	-- standard buttons
 	self:RegisterButtons("ActionButton", 12)

@@ -655,6 +655,19 @@ local function GuessSpellTarget(spell)
 	end
 end
 
+local function GetModifiedUnit(unit)
+	if UnitHasVehicleUI("player") then
+		if unit == "player" then
+			return "vehicle"
+		elseif unit == "pet" then
+			return
+		end
+	elseif unit == "vehicle" then
+		return
+	end
+	return unit
+end
+
 local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow
 
 local function UpdateButtonAura(self, force)
@@ -676,6 +689,7 @@ local function UpdateButtonAura(self, force)
 
 	local auraType
 	auraType, target = GetModifiedTarget(spell, target)
+	target = GetModifiedUnit(target)
 
 	local guid = target and UnitGUID(target)
 
@@ -909,7 +923,8 @@ end
 
 function InlineAura:AuraChanged(unit)
 	local oldGUID = unitGUIDs[unit]
-	local guid = db.profile.enabledUnits[unit] and UnitGUID(unit)
+	local realUnit = GetModifiedUnit(unit)
+	local guid = realUnit and db.profile.enabledUnits[unit] and UnitGUID(realUnit)
 	if oldGUID then
 		auraChanged[oldGUID] = true
 	end

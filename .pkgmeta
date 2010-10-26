@@ -1,5 +1,7 @@
 package-as: InlineAura
 
+enable-nolib-creation: no
+
 license-output: LICENSE.txt
 
 externals:

@@ -790,14 +790,14 @@ local function UpdateHighlight(self, aura, color, alternate)
 			ActionButton_ShowOverlayGlow(self)
 		elseif not SafeUpdateOverlayGlow(self) then
 			SetVertexColor(texture, unpack(color))
-			self:__IA_SetChecked(true)
+			self:SetChecked(true)
 		end
 	else
 		SafeUpdateOverlayGlow(self)
 		texture:SetVertexColor(1, 1, 1)
 		local type, data = self:__IA_GetAction()
 		if type == "action" and data then
-			self:__IA_SetChecked(IsCurrentAction(data) or IsAutoRepeatAction(data))
+			self:SetChecked(IsCurrentAction(data) or IsAutoRepeatAction(data))
 		end
 	end
 end
@@ -856,13 +856,8 @@ end
 local function InitializeButton(self)
 	if buttons[self] then return end
 	buttons[self] = true
-	self.__IA_SetChecked = self.SetChecked
 	if self.__LAB_Version then
-		--@debug@
-		dprint("Initializing LAB button", self:GetName(), "v", self.__LAB_Version)
-		--@end-debug@
 		self.__IA_GetAction = self.GetAction
-		hooksecurefunc(self, 'SetChecked', UpdateButton)
 	else
 		self.__IA_GetAction = Blizzard_GetAction
 	end
@@ -1057,26 +1052,31 @@ function InlineAura:VARIABLES_LOADED()
 			LBF:RegisterSkinCallback("Dominos", LBF_Callback)
 		end
 	end
-	if Bartender4 then
-		self:RegisterButtons("BT4Button", 120)
-		if LBF then
-			LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
-		end
-	end
 	if OmniCC or CooldownCount then
 		InlineAura.bigCountdown = false
 	end
 	local LAB, LAB_version = LibStub("LibActionButton-1.0", true)
 	if LAB then
-		--@debug@
-		dprint("Found LibActionButton-1.0 version", LAB_version)
-		--@end-debug@
-		hooksecurefunc(LAB, "CreateButton", function(_, id, name, header, config)
-			local button = name and _G[name]
-			if button then
-				ActionButton_OnLoad_Hook(button)
+		if LAB_version >= 11 then -- Callbacks and GetAllButtons() are supported since minor 11
+			--@debug@
+			dprint("Found LibActionButton-1.0 version", LAB_version)
+			--@end-debug@
+			LAB.RegisterCallback(self, "OnButtonCreated", function(_, button) return InitializeButton(button) end)
+			LAB.RegisterCallback(self, "OnButtonUpdate", function(_, button) return UpdateButton(button) end)
+			LAB.RegisterCallback(self, "OnButtonState", function(_, button) return UpdateButton(button) end)
+			for button in pairs(LAB:GetAllButtons()) do
+				newbuttons[button] = true
 			end
-		end)
+		else
+			local _, loader = issecurevariable(LAB, "CreateButton")
+			print("|cffff0000InlineAura: the version of LibActionButton-1.0 embedded in", (loader or "???"), "is not supported. Please consider updating it.|r")
+		end
+	end
+	if Bartender4 then
+		self:RegisterButtons("BT4Button", 120) -- should not be necessary
+		if LBF then
+			LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
+		end
 	end
 	
 	-- Do nothing, unless it's been hooked

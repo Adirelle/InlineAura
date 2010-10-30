@@ -111,10 +111,13 @@ local function SelfBuffs(...)
 end
 
 -- Define pet buffs
-local function PetBuffs(...)
-	for i = 1, select('#', ...) do
-		local id = select(i, ...)
-		GetSpellDefaults(id, 1).auraType = 'pet'
+local function PetBuffs(id, ...)
+	local spell = GetSpellDefaults(id, 1)
+	spell.auraType = 'pet'
+	if select('#', ...) > 0 then
+		return spell, PetBuffs(...)
+	else
+		return spell
 	end
 end
 

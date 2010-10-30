@@ -137,7 +137,7 @@ end
 local function GroupBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
-		AddAliases(id, ...).onlyMine = false
+		Aliases(id, ...).onlyMine = false
 	end
 end
 

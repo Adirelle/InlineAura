@@ -551,7 +551,7 @@ local function GetAuraToDisplay(spell, target)
 		if specific.auraType == "self" then
 			onlyMyBuffs, onlyMyDebuffs = true, true
 		elseif specific.auraType == "special" then
-			onlyMyBuffs, onlyMyDebuffs, hideStack, hideCountdown = true, true, false, false
+			onlyMyBuffs, onlyMyDebuffs, hideStack, hideCountdown, highlight = true, true, false, false, "none"
 		elseif specific.onlyMine ~= nil then
 			onlyMyBuffs, onlyMyDebuffs = specific.onlyMine, specific.onlyMine
 		end

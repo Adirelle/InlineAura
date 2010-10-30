@@ -127,6 +127,8 @@ local function ShowSpecial(special, ...)
 		else
 			defaults.auraType = 'self'
 		end
+		defaults.hideStack = false
+		defaults.highlight = 'none'
 	end
 end
 
@@ -134,7 +136,7 @@ end
 local function SelfTalentProc(spellId, ...)
 	local defaults = Aliases(spellId, ...)
 	defaults.auraType = 'self'
-	defaults.alternateColor = true
+	defaults.highlight = 'glowing'
 	return defaults
 end
 

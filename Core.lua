@@ -114,6 +114,7 @@ local DEFAULT_OPTIONS = {
 			['**'] = {
 				disabled = false,
 				auraType = 'regular',
+				highlight = 'border',
 			},
 		},
 		enabledUnits = {
@@ -530,16 +531,16 @@ end
 local EMPTY_TABLE = {}
 local function GetAuraToDisplay(spell, target)
 	local aliases
+	local highlight = "border"
 	local hideStack = db.profile.hideStack
 	local hideCountdown = db.profile.hideCountdown
 	local onlyMyBuffs = db.profile.onlyMyBuffs
 	local onlyMyDebuffs = db.profile.onlyMyDebuffs
-	local glowing = false
 
 	-- Specific spell overrides global settings and targeting
 	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
 	if type(specific) == 'table' then
-		glowing = specific.alternateColor
+		highlight = specific.highlight
 		aliases = specific.aliases
 		if specific.hideStack ~= nil then
 			hideStack = specific.hideStack
@@ -557,9 +558,12 @@ local function GetAuraToDisplay(spell, target)
 	end
 
 	-- Look for the aura or its aliases
-	local name, count, expirationTime, isDebuff, isMine, specGlowing = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
+	local name, count, expirationTime, isDebuff, isMine, forceGlowing = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
+	if forceGlowing then
+		highlight = "glowing"
+	end
 	if name then
-		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, glowing or specGlowing
+		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, highlight
 	end
 end
 
@@ -594,7 +598,7 @@ local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
 local function ActionButton_HideOverlayGlow_Hook(self)
 	local state = buttons[self]
 	if not state then return end
-	if state.name and state.glowing then
+	if state.highlight == "glowing" then
 		--@debug@
 		self:Debug("Enforcing glowing for", state.name)
 		--@end-debug@
@@ -606,7 +610,7 @@ local function UpdateButtonState_Hook(self)
 	local state = buttons[self]
 	if not state then return end
 	local texture = self:GetCheckedTexture()
-	if state.name and not state.glowing then
+	if state.highlight == "border" then
 		--@debug@
 		self:Debug("Showing border for", state.name)
 		--@end-debug@
@@ -616,7 +620,6 @@ local function UpdateButtonState_Hook(self)
 	else
 		texture:SetVertexColor(1, 1, 1)
 	end
-	return UpdateTimer(self)
 end
 
 ------------------------------------------------------------------------------
@@ -705,29 +708,27 @@ local function UpdateButtonAura(self, force)
 		--@end-debug@
 		state.spell, state.guid, state.auraType = spell, guid, auraType
 
-		local name, count, expirationTime, isDebuff, isMine, glowing
+		local name, count, expirationTime, isDebuff, isMine, highlight
 		if spell and target and auraType then
-			name, count, expirationTime, isDebuff, isMine, glowing = GetAuraToDisplay(spell, target)
+			name, count, expirationTime, isDebuff, isMine, highlight = GetAuraToDisplay(spell, target)
 			--@debug@
 			if name then
-				self:Debug("GetAuraToDisplay", spell, target, "=>", "name=", name, "count=", count, "expirationTime=", expirationTime, "isDebuff=", isDebuff, "isMine=", isMine, "glowing=", glowing)
+				self:Debug("GetAuraToDisplay", spell, target, "=>", "name=", name, "count=", count, "expirationTime=", expirationTime, "isDebuff=", isDebuff, "isMine=", isMine, "highlight=", highlight)
 			end
 			--@end-debug@
 		end
 
-		if state.name ~= name or state.count ~= count or state.expirationTime ~= expirationTime or state.isDebuff ~= isDebuff or state.isMine ~= isMine or state.glowing ~= glowing then
+		if state.name ~= name or state.count ~= count or state.expirationTime ~= expirationTime or state.isDebuff ~= isDebuff or state.isMine ~= isMine or state.highlight ~= highlight then
 			state.name, state.count, state.expirationTime, state.isDebuff, state.isMine = name, count, expirationTime, isDebuff, isMine
-			if state.glowing ~= glowing then
-				state.glowing = glowing
+			if state.highlight ~= highlight then
+				state.highlight = highlight
 				--@debug@
-				self:Debug("GetAuraToDisplay: updating glow")
+				self:Debug("GetAuraToDisplay: updating highlight")
 				--@end-debug@
 				ActionButton_UpdateOverlayGlow(self)
+				self:__IA_UpdateState()
 			end
-			--@debug@
-			self:Debug("GetAuraToDisplay: updating state")
-			--@end-debug@
-			self:__IA_UpdateState()
+			return UpdateTimer(self)
 		end
 	end
 end
@@ -1032,10 +1033,12 @@ function InlineAura:VARIABLES_LOADED()
 			elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
 				auraType = "regular"
 			end
-			if spell.auraType ~= auraType then
-				spell.auraType = auraType
-				spell.unitsToScan = nil
+			if spell.alternateColor then
+				spell.highlight = "glowing"
+				spell.alternateColor = nil
 			end
+			spell.auraType = auraType
+			spell.unitsToScan = nil
 		end
 	end
 

@@ -476,14 +476,19 @@ local spellOptions = {
 					hidden = 'IsSpecial',
 					order = 40,
 				},
-				alternateColor = {
-					name = L['Use animated glow'],
-					desc = L['Check to use the animated glow that is used for reactive abilities instead of coloring the button border.'],
-					type = 'toggle',
-					arg = 'alternateColor',
+				highlight = {
+					name = L['Highlight effect'],
+					desc = L['Select how to highlight the button.'],
+					type = 'select',
+					arg = 'highlight',
 					disabled = 'IsSpellDisabled',
 					hidden = 'IsSpecial',
 					order = 50,
+					values = {
+						none = L['None'],
+						border = L['Colored border'],
+						glowing = L['Glowing animation'],
+					}
 				},
 				aliases = {
 					name = L['Auras to look up'],

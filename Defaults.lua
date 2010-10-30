@@ -61,9 +61,14 @@ end
 
 -- Get the spell defaults, creating the table if need be
 local function GetSpellDefaults(id, level)
+	if type(id) == "table" then
+		return id
+	end
 	local name = GetSpellName(id, (level or 0) + 1)
 	if not SPELL_DEFAULTS[name] then
-		SPELL_DEFAULTS[name] = {}
+		SPELL_DEFAULTS[name] = {
+			hideStack = true,
+		}
 	end
 	return SPELL_DEFAULTS[name]
 end
@@ -126,8 +131,8 @@ local function ShowSpecial(special, ...)
 end
 
 -- Defines auras that appear on the player and modify another spell
-local function SelfTalentProc(spellId, talentId)
-	local defaults = Aliases(spellId, talentId)
+local function SelfTalentProc(spellId, ...)
+	local defaults = Aliases(spellId, ...)
 	defaults.auraType = 'self'
 	defaults.alternateColor = true
 	return defaults
@@ -344,8 +349,15 @@ if class == 'HUNTER' then
 	Aliases(13795, 13797) -- Immolation Trap => Immolation Trap Effect
 	Aliases(13813, 13812) -- Explosive Trap => Explosive Trap Effect
 
-	Aliases(19434, 82925) -- Aimed Shot => Ready, Set, Aim...
-	Aliases(56641, 53224) -- Steady Shot => Improved Steady Shot
+	-- Aimed Shot => Ready, Set, Aim...
+	local aimedShot = Aliases(19434, 82925)
+	aimedShot.auraType = "self"
+	aimedShot.hideStack = false
+
+	-- Steady Shot => Improved Steady Shot
+	local steadyShot = Aliases(56641, 53224)
+	steadyShot.auraType = "self"
+	steadyShot.hideStack = true
 
 	SelfBuffs(
 		 5118, -- Aspect of the Cheetah
@@ -361,8 +373,6 @@ if class == 'HUNTER' then
 		 3045, -- Rapid Fire
 		19263, -- Deterrence
 		 5384, -- Feign Death
-		19434, -- Aimed Shot => Ready, Set, Aim...
-		56641, -- Steady Shot => Improved Steady Shot
 		82692  -- Focus Fire
 	)
 
@@ -427,15 +437,12 @@ elseif class == 'WARLOCK' then
 		28176  -- Fel Armor
 	)
 
-	SelfTalentProc(29722, 47383) -- Incinerate => Molten Core
-	SelfTalentProc( 6353, 63165) -- Soul Fire => Decimation
-	SelfTalentProc( 6353, 85385) -- Soul Fire => Improved Soul Fire
+	-- Incinerate => Molten Core, Backlash or Backdraft
+	local incinerate = SelfTalentProc(29722, 47383, 34936, 54274)
+	incinerate.hideStack = false
 
-	SelfTalentProc(  686, 17941) -- Shadow Bolt => Shadow Trance
-	SelfTalentProc(  686, 34936) -- Shadow Bolt => Backlash
-
-	SelfTalentProc(29722, 34936) -- Incinerate => Backlash
-	SelfTalentProc(29722, 54274) -- Incinerate => Backdraft
+	SelfTalentProc( 6353, 63165, 85385) -- Soul Fire => Decimation or Improved Soul Fire
+	SelfTalentProc(  686, 17941, 34936) -- Shadow Bolt => Shadow Trance Backlash
 
 ------------------------------------------------------------------------------
 elseif class == 'MAGE' then
@@ -485,7 +492,8 @@ elseif class == 'DEATHKNIGHT' then
 		49203  -- Hungering Cold
 	)
 
-	PetBuffs(63560) -- Dark Transformation
+	local dt = PetBuffs(63560) -- Dark Transformation
+	dt.hideStack = false
 
 ------------------------------------------------------------------------------
 elseif class == 'PRIEST' then

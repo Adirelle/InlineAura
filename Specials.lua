@@ -25,7 +25,6 @@ local _, playerClass = UnitClass("player")
 ------------------------------------------------------------------------------
 
 if playerClass == "WARLOCK" then
-	-- L["SOUL_SHARDS"]
 	local UnitPower = UnitPower
 	local SPELL_POWER_SOUL_SHARDS = SPELL_POWER_SOUL_SHARDS
 	InlineAura:RegisterSpecial(
@@ -43,7 +42,6 @@ end
 ------------------------------------------------------------------------------
 
 if playerClass == "PALADIN" then
-	-- L["HOLY_POWER"]
 	local UnitPower = UnitPower
 	local SPELL_POWER_HOLY_POWER = SPELL_POWER_HOLY_POWER
 	local MAX_HOLY_POWER = MAX_HOLY_POWER
@@ -67,7 +65,6 @@ end
 ------------------------------------------------------------------------------
 
 if playerClass == "ROGUE" or playerClass == "DRUID" then
-	-- L["COMBO_POINTS"]
 	local GetComboPoints = GetComboPoints
 	local MAX_COMBO_POINTS = MAX_COMBO_POINTS
 	InlineAura:RegisterSpecial(

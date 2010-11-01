@@ -29,11 +29,15 @@ local L = setmetatable({}, {__index = function(self, key)
 end})
 ns.L = L
 
--- @noloc[[
+-- Hard-coded locales
+L["COMBO_POINTS"] = "Combo points"
+L["SOUL_SHARDS"] = "Soul shards"
+
+--@noloc[[
 -- Locales from GlobalStrings.lua
-L.LUNAR_ENERGY = BALANCE_NEGATIVE_ENERGY
-L.SOLAR_ENERGY = BALANCE_POSITIVE_ENERGY
-L.HOLY_POWER = HOLY_POWER
+L["LUNAR_ENERGY"] = BALANCE_NEGATIVE_ENERGY
+L["SOLAR_ENERGY"] = BALANCE_POSITIVE_ENERGY
+L["HOLY_POWER"] = HOLY_POWER
 -- @noloc]]
 
 --------------------------------------------------------------------------------
@@ -76,6 +80,7 @@ L["Countdown text color"] = true
 L["Decimal countdown threshold"] = true
 L["Disable"] = true
 L["Do you really want to remove these aura specific settings ?"] = true
+L["Dynamic countdown"] = true
 L["Either OmniCC or CooldownCount is loaded so aura countdowns are displayed using small font at the bottom of action buttons."] = true
 L["Enter additional aura names to check. This allows to check for alternative or equivalent auras. Some spells also apply auras that do not have the same name as the spell."] = true
 L["Enter one aura name per line. They are spell-checked ; errors will prevents you to validate."] = true
@@ -85,6 +90,7 @@ L["Glowing animation"] = true
 L["Highlight effect"] = true
 L["Inline Aura"] = true
 L["Left"] = true
+L["Make the countdown color, and size if possible, depends on remaining time."] = true
 L["My buffs"] = true
 L["My debuffs"] = true
 L["New spell name"] = true
@@ -147,11 +153,6 @@ L["mouseover"] = true
 L["%dh"] = true
 L["%dm"] = true
 
--- Specials.lua
-L["COMBO_POINTS"] = true
-L["HOLY_POWER"] = true
-L["SOUL_SHARDS"] = true
-
 
 ------------------------ frFR ------------------------
 local locale = GetLocale()
@@ -190,7 +191,6 @@ L["Enter one aura name per line. They are spell-checked ; errors will prevents y
 L["Enter the name of the spell for which you want to add specific settings. Non-existent spell or item names are rejected."] = "Entrez le nom du sort pour lequel vous voulez définir des réglages spécifiques. Les noms d'objet ou de sort inexistants sont rejetés."
 L["Font name"] = "Nom de la police"
 L["Glowing animation"] = "Animation brillante"
-L["HOLY_POWER"] = "Pouvoir sacré"
 L["Highlight effect"] = "Effet de surbrillance"
 L["Inline Aura"] = "Inline Aura"
 L["Left"] = "A gauche"
@@ -552,6 +552,7 @@ L["Border highlight colors"] = "테두리 강조색"
 L["Bottom"] = "아래쪽"
 L["Bottom left"] = "왼쪽 아래"
 L["Bottom right"] = "오른쪽 아래"
+L["COMBO_POINTS"] = "연계 포인트"
 L["Center"] = "가운데"
 L["Check to have a more accurate countdown display instead of default Blizzard rounding."] = "기본 블리자드 어림수 대신 더 정확한 카운트다운을 표시하려면 체크합니다."
 L["Check to hide the aura application count (charges or stacks)."] = "오라 효과 카운트 (중첩이나 사용 여부)을(를) 숨기려면 체크."
@@ -562,6 +563,7 @@ L["Check to ignore debuffs cast by other characters."] = "다른 캐릭터가 �
 L["Check to only show aura you applied. Uncheck to always show aura, even when applied by others. Leave grayed to use default settings."] = "적용된 효과중 표시하고 싶은 것을 선택합니다. 선택하지 않으면 모든 효과에 대하여 표시합니다. "
 L["Check to totally disable this spell. No border highlight nor text is displayed for disabled spells."] = "현재 주문을 사용하지 않습니다. 사용하지 않는 주문은 화면에 표시되지 않습니다."
 L["Click to create specific settings for the spell."] = "클릭하면 주문을 추가합니다."
+L["Colored border"] = "테두리 색상화"
 L["Countdown position"] = "카운트다운 위치"
 L["Countdown text color"] = "카운트다운 글자색"
 L["Decimal countdown threshold"] = "십진 카운트 한계" -- Needs review
@@ -572,6 +574,8 @@ L["Enter additional aura names to check. This allows to check for alternative or
 L["Enter one aura name per line. They are spell-checked ; errors will prevents you to validate."] = "효과 이름을 입력하세요. 직업 주문으로 선택되었습니다. 에러가 발생하면 거부할 것입니다."
 L["Enter the name of the spell for which you want to add specific settings. Non-existent spell or item names are rejected."] = "원하는 주문의 이름을 입력하세요. 존재하지 않는 주문이나 아이템의 이름은 거부합니다."
 L["Font name"] = "글꼴 이름"
+L["Glowing animation"] = "버튼 움직임"
+L["Highlight effect"] = "강조 효과"
 L["Inline Aura"] = "Inline Aura"
 L["Left"] = "왼쪽"
 L["My buffs"] = "내 강화 효과"
@@ -579,13 +583,16 @@ L["My debuffs"] = "내 약화 효과"
 L["New spell name"] = "새로운 주문 이름"
 L["No application count"] = "효과 카운트 안 함"
 L["No countdown"] = "카운트다운 안 함"
+L["None"] = "없음"
 L["Only my buffs"] = "내 강화 효과만"
 L["Only my debuffs"] = "내 약화 효과만"
 L["Only show mine"] = "내 것만"
 L["Others' buffs"] = "다른 플레이어의 강화 효과"
 L["Others' debuffs"] = "다른 플레이어의 약화 효과"
+L["Pet buff or debuff"] = "소환수 버프/디버프"
 L["Precise countdown"] = "정밀한 카운트다운"
 L["Profiles"] = "프로필"
+L["Regular buff or debuff"] = "일반적인 버프/디버프"
 L["Remove spell"] = "주문 제거"
 L["Remove spell specific settings."] = "주문 특정 설정 제거."
 L["Reset settings"] = "초기화 설정"
@@ -593,6 +600,9 @@ L["Reset settings to global defaults."] = "기본값으로 재설정"
 L["Restore default settings of the selected spell."] = "선택한 주문의 기본 설정값을 불러옵니다."
 L["Restore defaults"] = "기본값 불러오기"
 L["Right"] = "오른쪽"
+L["SOUL_SHARDS"] = "영혼의 조각" -- Needs review
+L["Select additional units to watch. Disabling those units may save some resource but also prevent proper display of macros using these units."] = "추가적으로 표시할 유닛을 선택합니다. 유닛 추가를 사용하지 않으면 리소스를 감소시킬 수 있습니다. " -- Needs review
+L["Select how to highlight the button."] = "버튼을 강조하는 효과를 선택합니다."
 L["Select the aura type of this spell. This helps to look up the aura."] = "이 주문의 오라 형태를 선택합니다. 이는 오라 찾기를 돕습니다."
 L["Select the color to use for the buffs cast by other characters."] = "다른 캐릭터가 시전한 강화 효과에 사용할 색을 선택합니다."
 L["Select the color to use for the buffs you cast."] = "당신이 시전한 강화 효과에 사용할 색을 선택합니다."
@@ -606,9 +616,12 @@ L["Select where to display countdown and application count in the button. When o
 L["Select where to place a single value."] = "값이 하나만 보일 때 글자가 놓일 곳 선택"
 L["Select where to place the application count text when both values are shown."] = "두 값이 보일 때 효과 카운트 글자가 놓일 곳 선택."
 L["Select where to place the countdown text when both values are shown."] = "두 값이 보일 때 효과 카운트다운 글자가 놓일 곳 선택."
+L["Select which special value should be displayed."] = "버튼을 강조할 수 있는 효과를 선택합니다."
+L["Self buff or debuff"] = "자신의 버프/디버프"
 L["Single value position"] = "값이 하나일 때 위치"
 L["Size of large text"] = "큰 글자 크기"
 L["Size of small text"] = "작은 글자 크기"
+L["Special"] = "특별함" -- Needs review
 L["Spell specific settings"] = "특정 주문 설정"
 L["Spell to edit"] = "편집할 주문"
 L["Text Position"] = "글자 위치"
@@ -619,6 +632,10 @@ L["Top"] = "위쪽"
 L["Top left"] = "왼쪽 위"
 L["Top right"] = "오른쪽 위"
 L["Unknown spell: %s"] = "알 수 없는 주문: %s"
+L["Value to display"] = "값을 표시" -- Needs review
+L["Watch additional units"] = "유닛 추가로 표시"
+L["focus"] = "주시 대상"
+L["mouseover"] = "마우스오버"
 end
 
 -- @noloc]]

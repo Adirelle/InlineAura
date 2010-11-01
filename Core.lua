@@ -383,10 +383,29 @@ end
 TimerFrame_CancelTimer = CancelTimer
 TimerCallback = TimerFrame_OnUpdate
 
+local dynamicModifiers = {
+	-- { font scale, r, g, b }
+	{ 1.3, 1, 0, 0 }, -- soon
+	{ 1.0, 1, 1, 0 }, -- in less than a minute
+	{ 0.8, 1, 1, 1 }, -- in more than a minute
+}
+
 function TimerFrame_UpdateCountdown(self, now)
 	local timeLeft = self.expirationTime - now
 	local displayTime, delay = GetCountdownText(timeLeft, db.profile.preciseCountdown, db.profile.decimalCountdownThreshold)
-	self.countdownText:SetText(displayTime)
+	local countdownText = self.countdownText
+	countdownText:SetText(displayTime)
+	if db.profile.dynamicCountdownColor then
+		local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
+		if phase ~= self.dynamicPhase then
+			self.dynamicPhase = phase
+			local scale, r, g, b = unpack(dynamicModifiers[phase])
+			if InlineAura.bigCountdown then
+				countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize * scale, FONT_FLAGS)
+			end
+			countdownText:SetTextColor(r, g, b)
+		end
+	end
 	if delay then
 		ScheduleTimer(self, math.min(delay, timeLeft))
 	end
@@ -404,13 +423,17 @@ function TimerFrame_Display(self, expirationTime, count, now)
 
 	if expirationTime then
 		self.expirationTime = expirationTime
-		TimerFrame_UpdateCountdown(self, now)
 		countdownText:Show()
 		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
 		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
 		if sizeRatio > 1 then
-			countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize / sizeRatio, FONT_FLAGS)
+			countdownText.actualFontSize = countdownText.baseFontSize / sizeRatio
+			countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize, FONT_FLAGS)
+		else
+			countdownText.actualFontSize = countdownText.baseFontSize
 		end
+		self.dynamicPhase = nil
+		TimerFrame_UpdateCountdown(self, now)
 	else
 		TimerFrame_CancelTimer(self)
 		countdownText:Hide()

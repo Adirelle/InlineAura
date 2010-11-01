@@ -227,12 +227,19 @@ local options = {
 					disabled = function() return not InlineAura.bigCountdown end,
 					order = 30,
 				},
+				dynamicCountdownColor = {
+					name = L['Dynamic countdown'],
+					desc = L['Make the countdown color, and size if possible, depends on remaining time.'],
+					type = 'toggle',
+					order = 35,
+					disabled = function() return InlineAura.db.profile.hideCountdown end,
+				},
 				colorCountdown = {
 					name = L['Countdown text color'],
 					type = 'color',
 					hasAlpha = true,
 					order = 40,
-					disabled = function() return InlineAura.db.profile.hideCountdown end,
+					disabled = function() return InlineAura.db.profile.hideCountdown or InlineAura.db.profile.dynamicCountdownColor end,
 				},
 				colorStack = {
 					name = L['Application text color'],

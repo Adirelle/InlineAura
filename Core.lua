@@ -135,31 +135,6 @@ local UNIT_EVENTS = {
 }
 
 ------------------------------------------------------------------------------
--- Table recycling stub
-------------------------------------------------------------------------------
-
-local new, del
-do
-	local heap = setmetatable({}, {__mode='k'})
-	function new()
-		local t = next(heap)
-		if t then
-			heap[t] = nil
-		else
-			t = {}
-		end
-		return t
-	end
-	function del(t)
-		if type(t) == "table" then
-			wipe(t)
-			heap[t] = true
-		end
-	end
-end
-InlineAura.new, InlineAura.del = new, del
-
-------------------------------------------------------------------------------
 -- Some Unit helpers
 ------------------------------------------------------------------------------
 

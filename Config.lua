@@ -671,7 +671,7 @@ function spellSpecificHandler:SetAliases(info, value)
 	if aliases then
 		wipe(aliases)
 	else
-		aliases = new()
+		aliases = {}
 	end
 	for name in tostring(value):gmatch("[^\n]+") do
 		name = name:trim()
@@ -682,7 +682,6 @@ function spellSpecificHandler:SetAliases(info, value)
 	if #aliases > 0 then
 		self.db.aliases = aliases
 	else
-		del(aliases)
 		self.db.aliases = nil
 	end
 	InlineAura:RequireUpdate(true)

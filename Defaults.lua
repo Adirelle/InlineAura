@@ -549,6 +549,10 @@ elseif class == 'DRUID' then
 		52610, -- Savage Roar
 		61336  -- Survival Instincts
 	)
+	
+	
+	Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
+	Aliases(93402,  8921) -- ... and conversely
 
 ------------------------------------------------------------------------------
 elseif class == 'PALADIN' then

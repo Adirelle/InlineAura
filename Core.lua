@@ -49,6 +49,24 @@ local activeButtons = {}
 InlineAura.buttons = buttons
 
 ------------------------------------------------------------------------------
+-- Make often-used globals local
+------------------------------------------------------------------------------
+
+local UnitCanAssist, UnitCanAttack = UnitCanAssist, UnitCanAttack
+local UnitGUID, UnitIsUnit, UnitAura = UnitGUID, UnitIsUnit, UnitAura
+local IsHarmfulSpell, IsHelpfulSpell = IsHarmfulSpell, IsHelpfulSpell
+local unpack, type, pairs, rawget, next = unpack, type, pairs, rawget, next
+local strsplit, strtrim, strsub, select = strsplit, strtrim, strsub, select
+local format, ceil, floor, tostring, gsub = format, ceil, floor, tostring, gsub
+local GetTotemInfo, GetActionInfo = GetTotemInfo, GetActionInfo
+local GetNumTrackingTypes, GetTrackingInfo = GetNumTrackingTypes, GetTrackingInfo
+local SecureCmdOptionParse, GetMacroBody = SecureCmdOptionParse, GetMacroBody
+local GetCVarBool, SecureButton_GetModifiedUnit = GetCVarBool, SecureButton_GetModifiedUnit
+
+local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow -- Hook protection
+local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow -- Hook protection
+
+------------------------------------------------------------------------------
 -- Libraries and helpers
 ------------------------------------------------------------------------------
 
@@ -58,7 +76,6 @@ local function dprint() end
 --@debug@
 if tekDebug then
 	local frame = tekDebug:GetFrame(addonName)
-	local type, tostring, format = type, tostring, format
 	local function mytostringall(a, ...)
 		local str
 		if type(a) == "table" and type(a.GetName) == "function" then
@@ -73,7 +90,7 @@ if tekDebug then
 		end
 	end
 	dprint = function(...)
-		return frame:AddMessage(strjoin(" ", mytostringall(...)):gsub("= ", "="))
+		return frame:AddMessage(gsub(strjoin(" ", mytostringall(...)), "= ", "="))
 	end
 end
 --@end-debug@
@@ -137,8 +154,6 @@ local UNIT_EVENTS = {
 ------------------------------------------------------------------------------
 -- Some Unit helpers
 ------------------------------------------------------------------------------
-
-local UnitCanAssist, UnitCanAttack, UnitIsUnit = UnitCanAssist, UnitCanAttack, UnitIsUnit
 
 local MY_UNITS = { player = true, pet = true, vehicle = true }
 
@@ -208,19 +223,17 @@ end
 -- Countdown formatting
 ------------------------------------------------------------------------------
 
-local floor, ceil = math.floor, math.ceil
-
 local function GetPreciseCountdownText(timeLeft, threshold)
 	if timeLeft >= 3600 then
-		return L["%dh"]:format(floor(timeLeft/3600)), 1 + floor(timeLeft) % 3600
+		return format(L["%dh"], floor(timeLeft/3600)), 1 + floor(timeLeft) % 3600
 	elseif timeLeft >= 600 then
-		return L["%dm"]:format(floor(timeLeft/60)), 1 + floor(timeLeft) % 60
+		return format(L["%dm"], floor(timeLeft/60)), 1 + floor(timeLeft) % 60
 	elseif timeLeft >= 60 then
-		return ("%d:%02d"):format(floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
+		return format("%d:%02d", floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
 	elseif timeLeft >= threshold then
 		return tostring(floor(timeLeft)), timeLeft % 1
 	elseif timeLeft >= 0 then
-		return ("%.1f"):format(floor(timeLeft*10)/10), 0
+		return format("%.1f", floor(timeLeft*10)/10), 0
 	else
 		return "0"
 	end
@@ -228,9 +241,9 @@ end
 
 local function GetImpreciseCountdownText(timeLeft)
 	if timeLeft >= 3600 then
-		return L["%dh"]:format(ceil(timeLeft/3600)), ceil(timeLeft) % 3600
+		return format(L["%dh"], ceil(timeLeft/3600)), ceil(timeLeft) % 3600
 	elseif timeLeft >= 60 then
-		return L["%dm"]:format(ceil(timeLeft/60)), ceil(timeLeft) % 60
+		return format(L["%dm"], ceil(timeLeft/60)), ceil(timeLeft) % 60
 	elseif timeLeft > 0 then
 		return tostring(floor(timeLeft)), timeLeft % 1
 	else
@@ -243,12 +256,39 @@ local function GetCountdownText(timeLeft, precise, threshold)
 end
 
 ------------------------------------------------------------------------------
+-- Safecall
+------------------------------------------------------------------------------
+
+local safecall
+do
+	local pcall, geterrorhandler = pcall, geterrorhandler
+	local reported = {}
+
+	local function safecall_inner(ok, ...)
+		if not ok then
+			local msg = ...
+			if not reported[msg] then
+				geterrorhandler()(msg)
+				reported[msg] = true
+			end
+		else
+			return ...
+		end
+	end
+
+	function safecall(...)
+		return safecall_inner(pcall(...))
+	end
+end
+
+------------------------------------------------------------------------------
 -- Home-made bucketed timers
 ------------------------------------------------------------------------------
 -- This is mainly a simplified version of AceTimer-3.0, credits goes to Ace3 authors
 
-local ScheduleTimer, CancelTimer, FireTimers, TimerCallback
+local ScheduleTimer, CancelTimer, TimerCallback
 do
+	local assert, type, next, floor, GetTime = assert, type, next, floor, GetTime
 	local BUCKETS = 131
 	local HZ = 20
 	local buckets = {}
@@ -284,11 +324,11 @@ do
 		for index = lastIndex + 1, newIndex do
 			local bucketNum = 1 + (index % BUCKETS)
 			local bucket = buckets[bucketNum]
-			for target, when in pairs(bucket) do
+			for target, when in next, bucket do
 				if when <= now then
 					bucket[target] = nil
 					targets[target] = nil
-					TimerCallback(target)
+					safecall(TimerCallback, target)
 				end
 			end
 		end
@@ -568,8 +608,6 @@ local function UpdateTimer(self)
 	end
 end
 
-local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
-
 local function ActionButton_HideOverlayGlow_Hook(self)
 	local state = buttons[self]
 	if not state then return end
@@ -604,8 +642,8 @@ end
 local function FindMacroOptions(...)
 	for i = 1, select('#', ...) do
 		local line = select(i, ...)
-		local prefix, suffix = strsplit(" ", line:trim(), 2)
-		if suffix and (prefix == '#show' or prefix == '#showtooltip' or prefix:sub(1,1) ~= "#") then
+		local prefix, suffix = strsplit(" ", strtrim(line), 2)
+		if suffix and (prefix == '#show' or prefix == '#showtooltip' or strsub(prefix, 1, 1) ~= "#") then
 			return suffix
 		end
 	end
@@ -645,8 +683,6 @@ local function GetModifiedUnit(unit)
 	end
 	return unit
 end
-
-local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow
 
 local function UpdateButtonAura(self, force)
 	local state = buttons[self]
@@ -828,58 +864,76 @@ local function UpdateUnitListeners()
 end
 
 ------------------------------------------------------------------------------
--- Button updates
+-- Bucketed updates
 ------------------------------------------------------------------------------
+
+local function UpdateConfig()
+	-- Update event listening based on units
+	UpdateUnitListeners()
+
+	-- Update event listening based on SPECIALS
+	UpdateSpecialListeners()
+
+	-- Update timer skins
+	for button, timerFrame in pairs(timerFrames) do
+		TimerFrame_Skin(timerFrame)
+	end
+end
+
+local function UpdateMouseover(elapsed)
+	-- Track mouseover changes, since most events aren't fired for mouseover
+	if unitGUIDs['mouseover'] ~= UnitGUID('mouseover') then
+		InlineAura:UPDATE_MOUSEOVER_UNIT("OnUpdate")
+	elseif InlineAura.mouseoverTimer < elapsed then
+		InlineAura.mouseoverTimer = 1
+		if not (UnitInParty('mouseover') or UnitInRaid('mouseover') or UnitIsUnit('mouseover', 'pet') or UnitIsUnit('mouseover', 'target') or UnitIsUnit('mouseover', 'focus')) then
+			InlineAura:UPDATE_MOUSEOVER_UNIT("OnUpdate")
+		end
+	else
+		InlineAura.mouseoverTimer = InlineAura.mouseoverTimer - elapsed
+	end
+end
+
+local function InitializeNewButtons()
+	-- Initializing any pending buttons
+	for button in pairs(newButtons) do
+		InitializeButton(button)
+	end
+end
+
+local function UpdateButtons()
+	-- Update all buttons
+	for button in pairs(activeButtons) do
+		UpdateButtonAura(button, configUpdated)
+	end
+end
 
 function InlineAura:OnUpdate(elapsed)
 	-- Configuration has been updated
 	if configUpdated then
-
-		-- Update event listening based on units
-		UpdateUnitListeners()
-
-		-- Update event listening based on SPECIALS
-		UpdateSpecialListeners()
-
-		-- Update timer skins
-		for button, timerFrame in pairs(timerFrames) do
-			TimerFrame_Skin(timerFrame)
-		end
+		safecall(UpdateConfig)
 	end
 
 	-- Watch for mouseover aura if we can't get UNIT_AURA events
 	if unitGUIDs['mouseover'] then
-		if unitGUIDs['mouseover'] ~= UnitGUID('mouseover') then
-			self:UPDATE_MOUSEOVER_UNIT("OnUpdate")
-		elseif self.mouseoverTimer < elapsed then
-			self.mouseoverTimer = 1
-			if not (UnitInParty('mouseover') or UnitInRaid('mouseover') or UnitIsUnit('mouseover', 'pet') or UnitIsUnit('mouseover', 'target') or UnitIsUnit('mouseover', 'focus')) then
-				self:UPDATE_MOUSEOVER_UNIT("OnUpdate")
-			end
-		else
-			self.mouseoverTimer = self.mouseoverTimer - elapsed
-		end
+		safecall(UpdateMouseover, elapsed)
 	end
 
 	-- Handle new buttons
 	if next(newButtons) then
-		for button in pairs(newButtons) do
-			InitializeButton(button)
-		end
+		safecall(InitializeNewButtons)
 		wipe(newButtons)
 	end
 
 	-- Update buttons
 	if next(auraChanged) or needUpdate or configUpdated then
-		for button in pairs(activeButtons) do
-			UpdateButtonAura(button, configUpdated)
-		end
+		safecall(UpdateButtons)
 		needUpdate, configUpdated = false, false
 		wipe(auraChanged)
 	end
 
 	-- Update timers
-	ProcessTimers()
+	safecall(ProcessTimers)
 end
 
 function InlineAura:RequireUpdate(config)
@@ -1046,9 +1100,9 @@ function InlineAura:VARIABLES_LOADED()
 
 	-- Hooks
 	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
-	hooksecurefunc('ActionButton_UpdateState', UpdateButtonState_Hook)
-	hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
-	hooksecurefunc('ActionButton_HideOverlayGlow', ActionButton_HideOverlayGlow_Hook)
+	hooksecurefunc('ActionButton_UpdateState', function(...) return safecall(UpdateButtonState_Hook, ...) end)
+	hooksecurefunc('ActionButton_Update', function(...) return safecall(ActionButton_Update_Hook, ...) end)
+	hooksecurefunc('ActionButton_HideOverlayGlow', function(...) return safecall(ActionButton_HideOverlayGlow_Hook, ...) end)
 
 	-- ButtonFacade support
 	local LBF = LibStub('LibButtonFacade', true)
@@ -1119,16 +1173,15 @@ end
 
 -- Event handler
 InlineAura:SetScript('OnEvent', function(self, event, ...)
+	--@debug@
 	if type(self[event]) == 'function' then
-		local success, msg = pcall(self[event], self, event, ...)
-		if not success then
-			geterrorhandler()(msg)
-		end
+	--@end-debug@
+		safecall(self[event], self, event, ...)
 	--@debug@
 	else
 		dprint('InlineAura: registered event has no handler: '..event)
-	--@end-debug@
 	end
+	--@end-debug@
 end)
 
 -- Initialize on ADDON_LOADED

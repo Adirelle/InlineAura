@@ -37,26 +37,33 @@ local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 
 local handler = {}
 
+function handler:GetDatabase(info)
+	local key = info.arg or info[#info]
+	return InlineAura.db.profile, key
+end
+
 function handler:Set(info, ...)
+	local db, key = self:GetDatabase(info)
 	if info.type == 'color' then
-		local color = InlineAura.db.profile[info.arg]
+		local color = db[key]
 		color[1], color[2], color[3], color[4] = ...
 	elseif info.type == 'multiselect' then
-		local key, value = ...
-		InlineAura.db.profile[info.arg][key] = value
+		local k, v = ...
+		db[key][k] = v
 	else
-		InlineAura.db.profile[info.arg] = ...
+		db[key] = ...
 	end
 	InlineAura:RequireUpdate(true)
 end
 
-function handler:Get(info, key)
+function handler:Get(info, k)
+	local db, key = self:GetDatabase(info)
 	if info.type == 'color' then
-		return unpack(InlineAura.db.profile[info.arg])
+		return unpack(db[key])
 	elseif info.type == 'multiselect' then
-		return InlineAura.db.profile[info.arg][key]
+		return db[key][key]
 	else
-		return InlineAura.db.profile[info.arg]
+		return db[key]
 	end
 end
 
@@ -97,35 +104,30 @@ local options = {
 			name = L['Only my buffs'],
 			desc = L['Check to ignore buffs cast by other characters.'],
 			type = 'toggle',
-			arg = 'onlyMyBuffs',
 			order = 10,
 		},
 		onlyMyDebuffs = {
 			name = L['Only my debuffs'],
 			desc = L['Check to ignore debuffs cast by other characters.'],
 			type = 'toggle',
-			arg = 'onlyMyDebuffs',
 			order = 20,
 		},
 		hideCountdown = {
 			name = L['No countdown'],
 			desc = L['Check to hide the aura countdown.'],
 			type = 'toggle',
-			arg = 'hideCountdown',
 			order = 30,
 		},
 		hideStack = {
 			name = L['No application count'],
 			desc = L['Check to hide the aura application count (charges or stacks).'],
 			type = 'toggle',
-			arg = 'hideStack',
 			order = 40,
 		},
 		preciseCountdown = {
 			name = L['Precise countdown'],
 			desc = L['Check to have a more accurate countdown display instead of default Blizzard rounding.'],
 			type = 'toggle',
-			arg = 'preciseCountdown',
 			disabled = function(info) return InlineAura.db.profile.hideCountdown end,
 			order = 45,
 		},
@@ -136,7 +138,6 @@ local options = {
 			min = 1,
 			max = 10,
 			step = 0.5,
-			arg = 'decimalCountdownThreshold',
 			disabled = function(info) return InlineAura.db.profile.hideCountdown or not InlineAura.db.profile.preciseCountdown end,
 			order = 46,
 		},
@@ -144,7 +145,6 @@ local options = {
 			name = L['Watch additional units'],
 			desc = L['Select additional units to watch. Disabling those units may save some resource but also prevent proper display of macros using these units.'],
 			type = 'multiselect',
-			arg = 'enabledUnits',
 			order = 49,
 			values = {
 				focus = L['focus'],
@@ -206,7 +206,6 @@ local options = {
 					type = 'select',
 					dialogControl = 'LSM30_Font',
 					values = AceGUIWidgetLSMlists.font,
-					arg = 'fontName',
 					order = 10,
 				},
 				smallFontSize = {
@@ -216,7 +215,6 @@ local options = {
 					min = 5,
 					max = 30,
 					step = 1,
-					arg = 'smallFontSize',
 					order = 20,
 				},
 				largeFontSize = {
@@ -226,14 +224,12 @@ local options = {
 					min = 5,
 					max = 30,
 					step = 1,
-					arg = 'largeFontSize',
 					disabled = function() return not InlineAura.bigCountdown end,
 					order = 30,
 				},
 				colorCountdown = {
 					name = L['Countdown text color'],
 					type = 'color',
-					arg = 'colorCountdown',
 					hasAlpha = true,
 					order = 40,
 					disabled = function() return InlineAura.db.profile.hideCountdown end,
@@ -241,7 +237,6 @@ local options = {
 				colorStack = {
 					name = L['Application text color'],
 					type = 'color',
-					arg = 'colorStack',
 					hasAlpha = true,
 					order = 50,
 				},

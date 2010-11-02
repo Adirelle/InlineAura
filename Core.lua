@@ -495,7 +495,7 @@ end
 -- Aura lookup
 ------------------------------------------------------------------------------
 
-local function GetModifiedTarget(spell, target)
+local function GetSmartTarget(spell, target, helpful)
 	if not spell then return end
 	local auraType = "regular"
 	local specific = rawget(db.profile.spells, spell)
@@ -511,9 +511,11 @@ local function GetModifiedTarget(spell, target)
 		end
 	end
 	if auraType == "regular" and target then
-		if IsHarmfulSpell(spell) and not UnitIsDebuffable(target) then
-			return
-		elseif IsHelpfulSpell(spell) and not UnitIsBuffable(target) then
+		if helpful then
+			if not UnitIsBuffable(target) then
+				return
+			end
+		elseif not UnitIsDebuffable(target) then
 			return
 		end
 	end
@@ -690,12 +692,12 @@ local function GuessMacroTarget(index)
 	end
 end
 
-local function GuessSpellTarget(spell)
+local function GuessSpellTarget(spell, helpful)
 	if IsModifiedClick("SELFCAST") then
 		return "player"
 	elseif IsModifiedClick("FOCUSCAST") then
 		return "focus"
-	elseif spell and IsHelpfulSpell(spell) and not UnitIsBuffable("target") and GetCVarBool("autoSelfCast") then
+	elseif spell and helpful and not UnitIsBuffable("target") and GetCVarBool("autoSelfCast") then
 		return "player"
 	else
 		return "target"
@@ -719,28 +721,49 @@ local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
 
-	local action, param = state.action, state.param
-	local spell, target = param, SecureButton_GetModifiedUnit(self)
+	local action, param = state.action, state.param, state
 
+	local target = SecureButton_GetModifiedUnit(self)
 	if target == "" then target = nil end
-	if action == "macro" then
-		spell = GetMacroSpell(param)
-		if not target then
-			target = GuessMacroTarget(param) or GuessSpellTarget(spell)
+
+	local spell, helpful
+
+	if action == "spell" then
+		spell = GetSpellInfo(param)
+		helpful = spell and IsHelpfulSpell(spell)
+	elseif action == "item" then
+		spell, helpful = GetItemSpell(param), IsHelpfulItem(param)
+	elseif action == "macro" then
+		local spellOrItem = GetMacroSpell(param)
+		if spellOrItem and spellOrItem ~= "" then
+			if GetSpellInfo(spellOrItem) then
+				spell = GetSpellInfo(spellOrItem)
+				helpful = IsHelpfulSpell(spell)
+			elseif GetItemCount(spellOrItem) > 0 then
+				spell, helpful = GetItemSpell(spellOrItem), IsHelpfulItem(spellOrItem)
+			end
+			if not target and spell then
+				target = GuessMacroTarget(param)
+			end
 		end
-	elseif not target then
-		target = GuessSpellTarget(spell)
 	end
 
-	local auraType
-	auraType, target = GetModifiedTarget(spell, target)
-	target = GetModifiedUnit(target)
-
-	local guid = target and UnitGUID(target)
+	local guid, auraType
+	if spell then
+		if not target then
+			target = GuessSpellTarget(spell, helpful)
+		end
+		self:Debug('UpdateButtonAura', action, param, '=>', spell, target, helpful)
+		auraType, target = GetSmartTarget(spell, target, helpful)
+		target = GetModifiedUnit(target)
+		guid = target and UnitGUID(target)
+	else
+		target = nil
+	end
 
 	if force or auraChanged[guid or state.guid or false] or auraType ~= state.auraType or spell ~= state.spell or guid ~= state.guid then
 		--@debug@
-		self:Debug(self, "UpdateButtonAura update because of:",
+		self:Debug("UpdateButtonAura update because of:",
 			force and "forced" or "-",
 			auraChanged[guid or false] and "aura" or "-",
 			auraType ~= state.auraType and "auraType" or "-",
@@ -790,11 +813,7 @@ local function ParseAction(self)
 			action, param = 'spell', spellId
 		end
 	end
-	if action == 'item' and param then
-		return "spell", GetItemSpell(param)
-	elseif action == 'spell' and param then
-		return action, (GetSpellInfo(param))
-	elseif action == "macro" then
+	if action and param and param ~= 0 and param ~= "" then
 		return action, param
 	end
 end

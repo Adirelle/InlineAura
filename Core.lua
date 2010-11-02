@@ -261,18 +261,20 @@ end
 
 local safecall
 do
-	local pcall, geterrorhandler = pcall, geterrorhandler
+	local pcall, geterrorhandler, _ERRORMESSAGE = pcall, geterrorhandler, _ERRORMESSAGE
 	local reported = {}
 
 	local function safecall_inner(ok, ...)
 		if not ok then
 			local msg = ...
-			if not reported[msg] then
-				geterrorhandler()(msg)
-				reported[msg] = true
-				if not GetCVarBool("scriptErrors") and not _G.Swatter and not _G.BugGrabber then
+			local handler = geterrorhandler()
+			if handler == _ERRORMESSAGE then
+				if not reported[msg] then
+					reported[msg] = true
 					print('|cffff0000InlineAura error report:|r', msg)
 				end
+			else
+				handler(msg)
 			end
 		else
 			return ...
@@ -678,11 +680,7 @@ local function FindMacroOptions(...)
 end
 
 local function GuessMacroTarget(index)
-	local body = GetMacroBody(index)
-	if not body then
-		geterrorhandler()(format("Can't find macro body for %q", index))
-		return
-	end
+	local body = assert(GetMacroBody(index), format("Can't find macro body for %q", index))
 	local options = FindMacroOptions(strsplit("\n", body))
 	if options then
 		local action, target = SecureCmdOptionParse(options)

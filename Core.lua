@@ -270,6 +270,9 @@ do
 			if not reported[msg] then
 				geterrorhandler()(msg)
 				reported[msg] = true
+				if not GetCVarBool("scriptErrors") and not _G.Swatter and not _G.BugGrabber then
+					print('|cffff0000InlineAura error report:|r', msg)
+				end
 			end
 		else
 			return ...
@@ -1060,7 +1063,7 @@ function InlineAura:VARIABLES_LOADED()
 
 	-- Retrieve default spell configuration, if loaded
 	if InlineAura_LoadDefaults then
-		InlineAura_LoadDefaults(self)
+		safecall(InlineAura_LoadDefaults, self)
 		InlineAura_LoadDefaults = nil
 	end
 
@@ -1220,7 +1223,7 @@ InlineAura:RegisterEvent('ADDON_LOADED')
 ------------------------------------------------------------------------------
 
 local function LoadConfigGUI()
-	LoadAddOn('InlineAura_Config')
+	safecall(LoadAddOn, 'InlineAura_Config')
 end
 
 -- Chat command line

@@ -673,7 +673,12 @@ local function FindMacroOptions(...)
 end
 
 local function GuessMacroTarget(index)
-	local options = FindMacroOptions(strsplit("\n", GetMacroBody(index)))
+	local body = GetMacroBody(index)
+	if not body then
+		geterrorhandler()(format("Can't find macro body for %q", index))
+		return
+	end
+	local options = FindMacroOptions(strsplit("\n", body))
 	if options then
 		local action, target = SecureCmdOptionParse(options)
 		if action and action ~= "" and target and target ~= "" then

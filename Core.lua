@@ -734,17 +734,17 @@ local function UpdateButtonAura(self, force)
 	elseif action == "item" then
 		spell, helpful = GetItemSpell(param), IsHelpfulItem(param)
 	elseif action == "macro" then
-		local spellOrItem = GetMacroSpell(param)
-		if spellOrItem and spellOrItem ~= "" then
-			if GetSpellInfo(spellOrItem) then
-				spell = GetSpellInfo(spellOrItem)
-				helpful = IsHelpfulSpell(spell)
-			elseif GetItemCount(spellOrItem) > 0 then
-				spell, helpful = GetItemSpell(spellOrItem), IsHelpfulItem(spellOrItem)
+		spell = GetMacroSpell(param)
+		if spell then
+			helpful = IsHelpfulSpell(spell)
+		else
+			local _, item = GetMacroItem(param)
+			if item then
+				spell, helpful = GetItemSpell(item), IsHelpfulItem(item)
 			end
-			if not target and spell then
-				target = GuessMacroTarget(param)
-			end
+		end
+		if not target and spell then
+			target = GuessMacroTarget(param)
 		end
 	end
 
@@ -814,6 +814,9 @@ local function ParseAction(self)
 		end
 	end
 	if action and param and param ~= 0 and param ~= "" then
+		if action == "item" and not GetItemSpell(param) then
+			return
+		end
 		return action, param
 	end
 end

@@ -424,6 +424,7 @@ L["Border highlight colors"] = "邊緣高亮顏色"
 L["Bottom"] = "底部"
 L["Bottom left"] = "左下"
 L["Bottom right"] = "右下"
+L["COMBO_POINTS"] = "連擊點數"
 L["Center"] = "中央"
 L["Check to have a more accurate countdown display instead of default Blizzard rounding."] = "檢查有一個更準確的倒計時顯示，而不是默認的暴雪四捨五入。" -- Needs review
 L["Check to hide the aura application count (charges or stacks)."] = "隱藏光環疊加計數(衝能或堆疊)"

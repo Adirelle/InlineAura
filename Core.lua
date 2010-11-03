@@ -58,10 +58,11 @@ local IsHarmfulSpell, IsHelpfulSpell = IsHarmfulSpell, IsHelpfulSpell
 local unpack, type, pairs, rawget, next = unpack, type, pairs, rawget, next
 local strsplit, strtrim, strsub, select = strsplit, strtrim, strsub, select
 local format, ceil, floor, tostring, gsub = format, ceil, floor, tostring, gsub
-local GetTotemInfo, GetActionInfo = GetTotemInfo, GetActionInfo
+local GetTotemInfo, GetActionInfo, GetItemInfo = GetTotemInfo, GetActionInfo, GetItemInfo
 local GetNumTrackingTypes, GetTrackingInfo = GetNumTrackingTypes, GetTrackingInfo
 local SecureCmdOptionParse, GetMacroBody = SecureCmdOptionParse, GetMacroBody
 local GetCVarBool, SecureButton_GetModifiedUnit = GetCVarBool, SecureButton_GetModifiedUnit
+local GetMacroSpell, GetMacroItem, IsHelpfulItem = GetMacroSpell, GetMacroItem, IsHelpfulItem
 
 local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow -- Hook protection
 local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow -- Hook protection
@@ -812,7 +813,7 @@ local function ParseAction(self)
 		end
 	end
 	if action and param and param ~= 0 and param ~= "" then
-		if action == "item" and not GetItemSpell(param) then
+		if action == "item" and not GetItemSpell(GetItemInfo(param) or param) then
 			return
 		end
 		return action, param

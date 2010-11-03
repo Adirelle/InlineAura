@@ -48,20 +48,20 @@ function handler:Set(info, ...)
 		local color = db[key]
 		color[1], color[2], color[3], color[4] = ...
 	elseif info.type == 'multiselect' then
-		local k, v = ...
-		db[key][k] = v
+		local subKey, value = ...
+		db[key][subKey] = value
 	else
 		db[key] = ...
 	end
 	InlineAura:RequireUpdate(true)
 end
 
-function handler:Get(info, k)
+function handler:Get(info, subKey)
 	local db, key = self:GetDatabase(info)
 	if info.type == 'color' then
 		return unpack(db[key])
 	elseif info.type == 'multiselect' then
-		return db[key][key]
+		return db[key][subKey]
 	else
 		return db[key]
 	end

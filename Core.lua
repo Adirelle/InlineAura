@@ -526,51 +526,79 @@ local function GetSmartTarget(spell, target, helpful)
 end
 
 local isShaman = select(2, UnitClass("player")) == "SHAMAN"
-local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
-	local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
-	local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
-	for i = 1, select('#', ...) do
-		local aura = select(i, ...)
+
+local AuraLookup
+do
+	local function CheckAuraAny(aura, unit, helpfulFilter, harmfulFilter)
+		-- Look for debuff or buff
+		local isDebuff = false
+		local name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, harmfulFilter)
+		if name then
+			isDebuff = true
+		else
+			name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, helpfulFilter)
+		end
+		if name then
+			return name, count ~= 0 and count or nil, duration and duration ~= 0 and expirationTime or nil, isDebuff, caster and MY_UNITS[caster]
+		end
+	end
+
+	local trackings, totems = {}, {}
+	local function CheckAuraPlayer(aura, unit, helpfulFilter, harmfulFilter)
 		if SPECIALS[aura] then
 			-- Specials only exists on player
-			if unit == "player" then
-				local count, glowing = SPECIALS[aura]()
-				if count and count ~= 0 then
-					return aura, count, nil, false, true, glowing
-				end
+			local count, glowing = SPECIALS[aura]()
+			if count and count ~= 0 then
+				return aura, count, nil, false, true, glowing
 			end
 		else
-			-- Look for debuff or buff
-			local isDebuff = false
-			local name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, harmfulFilter)
+			-- Check buff or debuff, then trackings and totems
+			local name, count, expirationTime, isDebuff, isMine = CheckAuraAny(aura, unit, helpfulFilter, harmfulFilter)
 			if name then
-				isDebuff = true
-			else
-				name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, helpfulFilter)
+				return name, count, expirationTime, isDebuff, isMine
+			elseif trackings[name] then
+				return name, nil, nil, false, true
+			elseif totems[name] ~= nil then
+				return name, nil, totems[name] or nil, false, true
 			end
-			if name then
-				return name, count ~= 0 and count or nil, duration and duration ~= 0 and expirationTime or nil, isDebuff, caster and MY_UNITS[caster]
-			end
-			if unit == "player" then
-				-- Look for tracking
-				for index = 1, GetNumTrackingTypes() do
-					local name, _, active = GetTrackingInfo(index)
-					if name == aura and active then
-						return name, nil, nil, false, true
-					end
+		end
+	end
+
+	function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
+		local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
+		local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
+		local checkFunc = CheckAuraAny
+		if UnitIsUnit(unit, "player") then
+			checkFunc = CheckAuraPlayer
+			wipe(trackings)
+			for index = 1, GetNumTrackingTypes() do
+				local name, _, active, category = GetTrackingInfo(index)
+				if name and active and category == "spell" then
+					trackings[name] = true
 				end
-				if isShaman then
-					-- Look for totems
-					for slot = 1, 4 do
-						local haveTotem, name, startTime, duration = GetTotemInfo(slot)
-						if haveTotem and name == aura then
-							local expirationTime = startTime and duration and (startTime + duration) or nil
-							return name, nil, expirationTime, false, true
-						end
+			end
+			if isShaman then
+				wipe(totems)
+				for slot = 1, 4 do
+					local haveTotem, name, startTime, duration = GetTotemInfo(slot)
+					if name and name ~= "" and haveTotem then
+						totems[name] = startTime and duration and (startTime + duration) or false
 					end
 				end
 			end
 		end
+		local name, count, expirationTime, isDebuff, isMine
+		for i = 1, select('#', ...) do
+			local newName, newCount, newExpirationTime, newIsDebuff, newIsMine = checkFunc(select(i, ...), unit, helpfulFilter, harmfulFilter)
+			if newName then
+				if not newExpirationTime then -- no expiration time == forever
+					return newName, newCount, newExpirationTime, newIsDebuff, newIsMine
+				elseif not name or newExpirationTime > expirationTime then
+					name, count, expirationTime, isDebuff, isMine = newName, newCount, newExpirationTime, newIsDebuff, newIsMine
+				end
+			end
+		end
+		return name, count, expirationTime, isDebuff, isMine
 	end
 end
 

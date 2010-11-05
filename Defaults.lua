@@ -166,7 +166,7 @@ do
 		end
 		for i = 1, select('#', ...), 2 do
 			local spellClass, spellId = select(i, ...)
-			if spellClass == class then
+			if spellClass == class and IsPassiveSpell(spellId) then
 				Aliases(spellId, unpack(t)).onlyMine = false
 			end
 		end

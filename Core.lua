@@ -525,8 +525,6 @@ local function GetSmartTarget(spell, target, helpful)
 	return auraType, target
 end
 
-local isShaman = select(2, UnitClass("player")) == "SHAMAN"
-
 local AuraLookup
 do
 	local function CheckAuraAny(aura, unit, helpfulFilter, harmfulFilter)
@@ -543,7 +541,6 @@ do
 		end
 	end
 
-	local trackings, totems = {}, {}
 	local function CheckAuraPlayer(aura, unit, helpfulFilter, harmfulFilter)
 		if SPECIALS[aura] then
 			-- Specials only exists on player
@@ -552,41 +549,14 @@ do
 				return aura, count, nil, false, true, glowing
 			end
 		else
-			-- Check buff or debuff, then trackings and totems
-			local name, count, expirationTime, isDebuff, isMine = CheckAuraAny(aura, unit, helpfulFilter, harmfulFilter)
-			if name then
-				return name, count, expirationTime, isDebuff, isMine
-			elseif trackings[name] then
-				return name, nil, nil, false, true
-			elseif totems[name] ~= nil then
-				return name, nil, totems[name] or nil, false, true
-			end
+			return CheckAuraAny(aura, unit, helpfulFilter, harmfulFilter)
 		end
 	end
 
 	function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 		local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
 		local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
-		local checkFunc = CheckAuraAny
-		if UnitIsUnit(unit, "player") then
-			checkFunc = CheckAuraPlayer
-			wipe(trackings)
-			for index = 1, GetNumTrackingTypes() do
-				local name, _, active, category = GetTrackingInfo(index)
-				if name and active and category == "spell" then
-					trackings[name] = true
-				end
-			end
-			if isShaman then
-				wipe(totems)
-				for slot = 1, 4 do
-					local haveTotem, name, startTime, duration = GetTotemInfo(slot)
-					if name and name ~= "" and haveTotem then
-						totems[name] = startTime and duration and (startTime + duration) or false
-					end
-				end
-			end
-		end
+		local checkFunc = UnitIsUnit(unit, "player") and CheckAuraPlayer or CheckAuraAny
 		local name, count, expirationTime, isDebuff, isMine
 		for i = 1, select('#', ...) do
 			local newName, newCount, newExpirationTime, newIsDebuff, newIsMine = checkFunc(select(i, ...), unit, helpfulFilter, harmfulFilter)
@@ -638,6 +608,15 @@ local function GetAuraToDisplay(spell, target)
 	end
 	if name then
 		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, highlight
+	end
+end
+
+local function CheckTotem(spell)
+	for slot = 1, 4 do
+		local haveTotem, name, startTime, duration = GetTotemInfo(slot)
+		if haveTotem and name == spell then
+			return name, false, startTime and duration and (startTime + duration) or nil, false, true, false
+		end
 	end
 end
 
@@ -775,15 +754,20 @@ local function UpdateButtonAura(self, force)
 		end
 	end
 
-	local guid, auraType
+	local guid, auraType, isTotem
 	if spell then
-		if not target then
-			target = GuessSpellTarget(spell, helpful)
+		isTotem = InlineAura.TOTEMS and InlineAura.TOTEMS[spell]
+		if isTotem then
+			target = "player"
+		else
+			if not target then
+				target = GuessSpellTarget(spell, helpful)
+			end
+			auraType, target = GetSmartTarget(spell, target, helpful)
+			target = GetModifiedUnit(target)
+			guid = target and UnitGUID(target)
 		end
-		self:Debug('UpdateButtonAura', action, param, '=>', spell, target, helpful)
-		auraType, target = GetSmartTarget(spell, target, helpful)
-		target = GetModifiedUnit(target)
-		guid = target and UnitGUID(target)
+		self:Debug('UpdateButtonAura', action, param, '=>', spell, target, helpful, guid)
 	else
 		target = nil
 	end
@@ -801,7 +785,10 @@ local function UpdateButtonAura(self, force)
 		state.spell, state.guid, state.auraType = spell, guid, auraType
 
 		local name, count, expirationTime, isDebuff, isMine, highlight
-		if spell and target and auraType then
+
+		if isTotem then
+			name, count, expirationTime, isDebuff, isMine, highlight = CheckTotem(spell)
+		elseif spell and target and auraType then
 			name, count, expirationTime, isDebuff, isMine, highlight = GetAuraToDisplay(spell, target)
 			--@debug@
 			if name then
@@ -886,7 +873,7 @@ local function InitializeButton(self)
 	if buttons[self] then return end
 	buttons[self] = {}
 	--@debug@
-	if true or self == BonusActionButton1 then
+	if self == ActionButton10 then
 		self.Debug = dprint
 	else
 	--@end-debug@
@@ -1068,10 +1055,6 @@ function InlineAura:UNIT_PET(event, unit)
 	end
 end
 
-function InlineAura:MINIMAP_UPDATE_TRACKING(event)
-	self:AuraChanged("player")
-end
-
 function InlineAura:PLAYER_ENTERING_WORLD(event)
 	for unit, enabled in pairs(db.profile.enabledUnits) do
 		if enabled then
@@ -1161,12 +1144,11 @@ function InlineAura:VARIABLES_LOADED()
 	self:RegisterEvent('PLAYER_ENTERING_WORLD')
 	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
 	self:RegisterEvent('UNIT_EXITED_VEHICLE')
-	self:RegisterEvent('MINIMAP_UPDATE_TRACKING')
 	self:RegisterEvent('MODIFIER_STATE_CHANGED')
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
-	if isShaman then
-		self.PLAYER_TOTEM_UPDATE = self.MINIMAP_UPDATE_TRACKING
+	if self.TOTEMS then
+		function self:PLAYER_TOTEM_UPDATE() self:AuraChanged("player") end
 		self:RegisterEvent('PLAYER_TOTEM_UPDATE')
 	end
 

@@ -387,16 +387,7 @@ if class == 'HUNTER' then
 		 3045, -- Rapid Fire
 		19263, -- Deterrence
 		 5384, -- Feign Death
-		82692, -- Focus Fire
-		-- Trackings
-		 1494, -- Track Beasts
-		19883, -- Track Humanoids
-		19884, -- Track Undead
-		19885, -- Track Hidden
-		19878, -- Track Demons
-		19880, -- Track Elementals
-		19882, -- Track Giants
-		19879  -- Track Dragonkin
+		82692  -- Focus Fire
 	)
 
 	GroupBuffs(20043, 8184) -- Aspect of the Wild, Elemental Resistance Totem (Shaman)
@@ -446,8 +437,14 @@ elseif class == 'SHAMAN' then
 		16188, -- Nature's Swiftness
 		30823, -- Shamanistic Rage
 		52127, -- Water Shield
-		55198, -- Tidal Force
-		-- Totems
+		55198 -- Tidal Force
+	)
+
+	GroupBuffs(8184) -- Elemental Resistance Totem
+
+	-- Very special case : totems
+	local TOTEMS = {}
+	for i, id in pairs({
 		 8075, -- Strength of Earth Totem
 		 3599, -- Searing Totem
 		 8227, -- Flametongue Totem
@@ -465,10 +462,11 @@ elseif class == 'SHAMAN' then
 		 8184, -- Elemental Resistance Totem
 		 2894, -- Fire Elemental Totem
 		87718, -- Totem of Tranquil Mind
-		16190  -- Mana Tide Totem
-	)
-
-	GroupBuffs(8184) -- Elemental Resistance Totem
+		16190, -- Mana Tide Totem
+	}) do
+		TOTEMS[GetSpellName(id)] = id
+	end
+	InlineAura.TOTEMS = TOTEMS
 
 ------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
@@ -580,7 +578,6 @@ elseif class == 'DRUID' then
 		 1066, -- Aquatic Form
 		 1850, -- Dash
 		 5217, -- Tiger's Fury
-		 5225, -- Track Humanoids
 		 5229, -- Enrage
 		 5487, -- Bear Form
 		16689, -- Nature's Grasp

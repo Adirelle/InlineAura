@@ -347,6 +347,15 @@ SharedAuras(
 )
 
 ------------------------------------------------------------------------------
+-- Profession tracking
+------------------------------------------------------------------------------
+
+SelfBuffs(
+	2383, -- Find Herbs
+	2580  -- Find Minerals
+)
+
+------------------------------------------------------------------------------
 if class == 'HUNTER' then
 ------------------------------------------------------------------------------
 
@@ -378,7 +387,16 @@ if class == 'HUNTER' then
 		 3045, -- Rapid Fire
 		19263, -- Deterrence
 		 5384, -- Feign Death
-		82692  -- Focus Fire
+		82692, -- Focus Fire
+		-- Trackings
+		 1494, -- Track Beasts
+		19883, -- Track Humanoids
+		19884, -- Track Undead
+		19885, -- Track Hidden
+		19878, -- Track Demons
+		19880, -- Track Elementals
+		19882, -- Track Giants
+		19879  -- Track Dragonkin
 	)
 
 	GroupBuffs(20043, 8184) -- Aspect of the Wild, Elemental Resistance Totem (Shaman)
@@ -419,7 +437,26 @@ elseif class == 'SHAMAN' then
 		16188, -- Nature's Swiftness
 		30823, -- Shamanistic Rage
 		52127, -- Water Shield
-		55198  -- Tidal Force
+		55198, -- Tidal Force
+		-- Totems
+		 8075, -- Strength of Earth Totem
+		 3599, -- Searing Totem
+		 8227, -- Flametongue Totem
+		 2484, -- Earthbind Totem
+		 5394, -- Healing Stream Totem
+		 8512, -- Windfury Totem
+		 8190, -- Magma Totem
+		 8177, -- Grounding Totem
+		 5675, -- Mana Spring Totem
+		 3738, -- Wrath of Air Totem
+		 8071, -- Stoneskin Totem
+		 8143, -- Tremor Totem
+		 2062, -- Earth Elemental Totem
+		 5730, -- Stoneclaw Totem
+		 8184, -- Elemental Resistance Totem
+		 2894, -- Fire Elemental Totem
+		87718, -- Totem of Tranquil Mind
+		16190  -- Mana Tide Totem
 	)
 
 	GroupBuffs(8184) -- Elemental Resistance Totem
@@ -549,7 +586,6 @@ elseif class == 'DRUID' then
 		52610, -- Savage Roar
 		61336  -- Survival Instincts
 	)
-	
 	
 	Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
 	Aliases(93402,  8921) -- ... and conversely

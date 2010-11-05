@@ -133,6 +133,7 @@ local DEFAULT_OPTIONS = {
 				disabled = false,
 				auraType = 'regular',
 				highlight = 'border',
+				default = false,
 			},
 		},
 		enabledUnits = {

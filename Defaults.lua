@@ -67,6 +67,7 @@ local function GetSpellDefaults(id, level)
 	local name = GetSpellName(id, (level or 0) + 1)
 	if not SPELL_DEFAULTS[name] then
 		SPELL_DEFAULTS[name] = {
+			default = true,
 			hideStack = true,
 		}
 	end

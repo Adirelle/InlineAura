@@ -517,13 +517,17 @@ do
 		wipe(spellList)
 		for name, data in pairs(InlineAura.db.profile.spells) do
 			if type(data) == 'table' then
-				if self:HasDefault(name) then
-					spellList[name] = '|cff77ffff'..name..'|r';
+				if self:HasDefault(name) and data.default then
+					if GetSpellInfo(name) then
+						spellList[name] = '|cff77ffff'..name..'|r'
+					end
 				else
 					spellList[name] = name
 				end
 			elseif data == REMOVED then
-				spellList[name] = '|cff777777'..name..'|r';
+				if GetSpellInfo(name) then
+					spellList[name] = '|cff777777'..name..'|r'
+				end
 			end
 		end
 		return spellList
@@ -650,6 +654,7 @@ function spellSpecificHandler:Set(info, ...)
 	else
 		self.db[info.arg] = ...
 	end
+	self.db.default = nil
 	InlineAura:RequireUpdate(true)
 end
 
@@ -686,6 +691,7 @@ function spellSpecificHandler:SetAliases(info, value)
 	else
 		self.db.aliases = nil
 	end
+	self.db.default = nil
 	InlineAura:RequireUpdate(true)
 end
 

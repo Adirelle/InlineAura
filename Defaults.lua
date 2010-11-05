@@ -426,6 +426,15 @@ elseif class == 'WARRIOR' then
 		55694  -- Enraged Regeneration
 	)
 
+	-- Contribued by Moozhe
+	local exec = Aliases(5308, 90806)  -- Execute => Executioner stacks
+	exec.hideStack = false
+
+	Aliases(   78, 50685) -- Heroic Strike => Incite
+	Aliases(  845, 85738) -- Cleave => Meat Cleaver
+	Aliases( 1680, 85738) -- Whirlwind => Meat Cleaver
+	Aliases(85288, 12292, 18499, 12880) -- Raging Blow => Death Wish, Berserker Rage, Enrage
+
 ------------------------------------------------------------------------------
 elseif class == 'SHAMAN' then
 ------------------------------------------------------------------------------
@@ -586,7 +595,7 @@ elseif class == 'DRUID' then
 		52610, -- Savage Roar
 		61336  -- Survival Instincts
 	)
-	
+
 	Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
 	Aliases(93402,  8921) -- ... and conversely
 

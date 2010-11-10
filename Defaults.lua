@@ -443,32 +443,6 @@ elseif class == 'SHAMAN' then
 
 	GroupBuffs(8184) -- Elemental Resistance Totem
 
-	-- Very special case : totems
-	local TOTEMS = {}
-	for i, id in pairs({
-		 8075, -- Strength of Earth Totem
-		 3599, -- Searing Totem
-		 8227, -- Flametongue Totem
-		 2484, -- Earthbind Totem
-		 5394, -- Healing Stream Totem
-		 8512, -- Windfury Totem
-		 8190, -- Magma Totem
-		 8177, -- Grounding Totem
-		 5675, -- Mana Spring Totem
-		 3738, -- Wrath of Air Totem
-		 8071, -- Stoneskin Totem
-		 8143, -- Tremor Totem
-		 2062, -- Earth Elemental Totem
-		 5730, -- Stoneclaw Totem
-		 8184, -- Elemental Resistance Totem
-		 2894, -- Fire Elemental Totem
-		87718, -- Totem of Tranquil Mind
-		16190, -- Mana Tide Totem
-	}) do
-		TOTEMS[GetSpellName(id)] = id
-	end
-	InlineAura.TOTEMS = TOTEMS
-
 ------------------------------------------------------------------------------
 elseif class == 'WARLOCK' then
 ------------------------------------------------------------------------------

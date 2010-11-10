@@ -613,10 +613,11 @@ local function GetAuraToDisplay(spell, target)
 end
 
 local function CheckTotem(spell)
+	spell = strlower(spell)
 	for slot = 1, 4 do
 		local haveTotem, name, startTime, duration = GetTotemInfo(slot)
-		if haveTotem and name == spell then
-			return name, false, startTime and duration and (startTime + duration) or nil, false, true, false
+		if haveTotem and name and strlower(name) == spell then
+			return name, nil, startTime and duration and (startTime + duration) or nil, false, true, "border"
 		end
 	end
 end
@@ -724,6 +725,7 @@ local function GetModifiedUnit(unit)
 	return unit
 end
 
+local TOTEMS = {}
 local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
@@ -757,18 +759,17 @@ local function UpdateButtonAura(self, force)
 
 	local guid, auraType, isTotem
 	if spell then
-		isTotem = InlineAura.TOTEMS and InlineAura.TOTEMS[spell]
-		if isTotem then
-			target = "player"
+		if TOTEMS[spell] then
+			auraType, target = "totem", "player"
 		else
 			if not target then
 				target = GuessSpellTarget(spell, helpful)
 			end
 			auraType, target = GetSmartTarget(spell, target, helpful)
 			target = GetModifiedUnit(target)
-			guid = target and UnitGUID(target)
 		end
-		self:Debug('UpdateButtonAura', action, param, '=>', spell, target, helpful, guid)
+		guid = target and UnitGUID(target)
+		self:Debug('UpdateButtonAura', action, param, '=>', auraType, spell, target, helpful, guid)
 	else
 		target = nil
 	end
@@ -787,7 +788,7 @@ local function UpdateButtonAura(self, force)
 
 		local name, count, expirationTime, isDebuff, isMine, highlight
 
-		if isTotem then
+		if auraType == "totem" then
 			name, count, expirationTime, isDebuff, isMine, highlight = CheckTotem(spell)
 		elseif spell and target and auraType then
 			name, count, expirationTime, isDebuff, isMine, highlight = GetAuraToDisplay(spell, target)
@@ -874,7 +875,7 @@ local function InitializeButton(self)
 	if buttons[self] then return end
 	buttons[self] = {}
 	--@debug@
-	if self == ActionButton10 then
+	if true or self == ActionButton10 then
 		self.Debug = dprint
 	else
 	--@end-debug@
@@ -1149,7 +1150,10 @@ function InlineAura:VARIABLES_LOADED()
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
 	if self.TOTEMS then
-		function self:PLAYER_TOTEM_UPDATE() self:AuraChanged("player") end
+		TOTEMS = self.TOTEMS
+		function self:PLAYER_TOTEM_UPDATE(...)
+			self:AuraChanged("player")
+		end
 		self:RegisterEvent('PLAYER_TOTEM_UPDATE')
 	end
 
@@ -1176,7 +1180,7 @@ function InlineAura:VARIABLES_LOADED()
 	end
 	-- Miscellanous addon support
 	if Dominos then
-		self:RegisterButtons("DominosActionButton", 72)
+		self:RegisterButtons("DominosActionButton", 120)
 		hooksecurefunc(Dominos.ActionButton, "Skin", ActionButton_OnLoad_Hook)
 		if LBF then
 			LBF:RegisterSkinCallback("Dominos", LBF_Callback)

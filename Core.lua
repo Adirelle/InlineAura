@@ -883,6 +883,7 @@ local function InitializeButton(self)
 	if self.__LAB_Version then
 		self.__IA_GetAction = LAB_GetAction
 		self.__IA_UpdateState = LAB_UpdateState
+		self:HookScript('OnShow', UpdateAction_Hook)
 	else
 		self.__IA_GetAction = Blizzard_GetAction
 		self.__IA_UpdateState = ActionButton_UpdateState

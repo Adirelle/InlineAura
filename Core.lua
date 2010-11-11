@@ -556,9 +556,9 @@ do
 	local function CheckAuraPlayer(aura, unit, helpfulFilter, harmfulFilter)
 		if SPECIALS[aura] then
 			-- Specials only exists on player
-			local count, glowing = SPECIALS[aura]()
+			local count, highlight = SPECIALS[aura]()
 			if count and count ~= 0 then
-				return aura, count, nil, false, true, glowing
+				return aura, count, nil, false, true, highlight or "none"
 			end
 		elseif TOTEMS[aura] then
 			return CheckTotem(aura)
@@ -616,12 +616,9 @@ local function GetAuraToDisplay(spell, target)
 	end
 
 	-- Look for the aura or its aliases
-	local name, count, expirationTime, isDebuff, isMine, forceGlowing = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
-	if forceGlowing then
-		highlight = "glowing"
-	end
+	local name, count, expirationTime, isDebuff, isMine, highlightOverride = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
 	if name then
-		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, highlight
+		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, highlightOverride or highlight
 	end
 end
 

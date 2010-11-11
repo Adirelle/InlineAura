@@ -557,6 +557,9 @@ do
 		if SPECIALS[aura] then
 			-- Specials only exists on player
 			local count, highlight = SPECIALS[aura]()
+			--@debug@
+			dprint("CheckAuraPlayer:SPECIALS", aura, '=>', count, highlight)
+			--@end-debug@
 			if count and count ~= 0 then
 				return aura, count, nil, false, true, highlight or "none"
 			end
@@ -571,18 +574,18 @@ do
 		local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
 		local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
 		local checkFunc = UnitIsUnit(unit, "player") and CheckAuraPlayer or CheckAuraAny
-		local name, count, expirationTime, isDebuff, isMine
+		local name, count, expirationTime, isDebuff, isMine, highlight
 		for i = 1, select('#', ...) do
-			local newName, newCount, newExpirationTime, newIsDebuff, newIsMine = checkFunc(select(i, ...), unit, helpfulFilter, harmfulFilter)
+			local newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = checkFunc(select(i, ...), unit, helpfulFilter, harmfulFilter)
 			if newName then
 				if not newExpirationTime then -- no expiration time == forever
-					return newName, newCount, newExpirationTime, newIsDebuff, newIsMine
+					return newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
 				elseif not name or newExpirationTime > expirationTime then
-					name, count, expirationTime, isDebuff, isMine = newName, newCount, newExpirationTime, newIsDebuff, newIsMine
+					name, count, expirationTime, isDebuff, isMine, highlight = newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
 				end
 			end
 		end
-		return name, count, expirationTime, isDebuff, isMine
+		return name, count, expirationTime, isDebuff, isMine, highlight
 	end
 end
 

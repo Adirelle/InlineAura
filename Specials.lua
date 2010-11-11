@@ -28,7 +28,7 @@ if playerClass == "WARLOCK" then
 	local UnitPower = UnitPower
 	local SPELL_POWER_SOUL_SHARDS = SPELL_POWER_SOUL_SHARDS
 	InlineAura:RegisterSpecial(
-		"SOUL_SHARDS", function() return UnitPower("player", SPELL_POWER_SOUL_SHARDS), "none" end,
+		"SOUL_SHARDS", function() return UnitPower("player", SPELL_POWER_SOUL_SHARDS) end,
 		"UNIT_POWER", function(self, event, unit, type)
 			if unit == "player" and type == "SOUL_SHARDS" then
 				InlineAura:AuraChanged("player")
@@ -48,7 +48,7 @@ if playerClass == "PALADIN" then
 	InlineAura:RegisterSpecial(
 		"HOLY_POWER", function()
 			local power = UnitPower("player", SPELL_POWER_HOLY_POWER)
-			return power, power == MAX_HOLY_POWER and "glowing" or "none"
+			return power, power == MAX_HOLY_POWER and "glowing"
 		end,
 		"UNIT_POWER", function(self, event, unit, type)
 			if unit == "player" and type == "HOLY_POWER" then
@@ -70,7 +70,7 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	InlineAura:RegisterSpecial(
 		"COMBO_POINTS", function()
 			local points = GetComboPoints("player")
-			return points, points == MAX_COMBO_POINTS and "glowing" or "none"
+			return points, points == MAX_COMBO_POINTS and "glowing"
 		end,
 		"PLAYER_COMBO_POINTS", function()
 			return InlineAura:AuraChanged("player")
@@ -126,8 +126,8 @@ if playerClass == "DRUID" then
 		end
 	end
 
-	InlineAura:RegisterSpecial("LUNAR_ENERGY", function() return isMoonkin and direction == "moon" and -power, "none" end, "PLAYER_TALENT_UPDATE")
-	InlineAura:RegisterSpecial("SOLAR_ENERGY", function() return isMoonkin and direction == "sun" and power, "none" end, "PLAYER_TALENT_UPDATE")
+	InlineAura:RegisterSpecial("LUNAR_ENERGY", function() return isMoonkin and direction == "moon" and -power end, "PLAYER_TALENT_UPDATE")
+	InlineAura:RegisterSpecial("SOLAR_ENERGY", function() return isMoonkin and direction == "sun" and power end, "PLAYER_TALENT_UPDATE")
 end
 
 ------------------------------------------------------------------------------

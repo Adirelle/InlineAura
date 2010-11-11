@@ -526,6 +526,7 @@ local function GetSmartTarget(spell, target, helpful)
 	return auraType, target
 end
 
+local TOTEMS = {}
 local AuraLookup
 do
 	local function CheckAuraAny(aura, unit, helpfulFilter, harmfulFilter)
@@ -542,6 +543,16 @@ do
 		end
 	end
 
+	local function CheckTotem(spell)
+		spell = strlower(spell)
+		for slot = 1, 4 do
+			local haveTotem, name, startTime, duration = GetTotemInfo(slot)
+			if haveTotem and name and strlower(name) == spell then
+				return name, nil, startTime and duration and (startTime + duration) or nil, false, true, "border"
+			end
+		end
+	end
+
 	local function CheckAuraPlayer(aura, unit, helpfulFilter, harmfulFilter)
 		if SPECIALS[aura] then
 			-- Specials only exists on player
@@ -549,6 +560,8 @@ do
 			if count and count ~= 0 then
 				return aura, count, nil, false, true, glowing
 			end
+		elseif TOTEMS[aura] then
+			return CheckTotem(aura)
 		else
 			return CheckAuraAny(aura, unit, helpfulFilter, harmfulFilter)
 		end
@@ -609,16 +622,6 @@ local function GetAuraToDisplay(spell, target)
 	end
 	if name then
 		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, highlight
-	end
-end
-
-local function CheckTotem(spell)
-	spell = strlower(spell)
-	for slot = 1, 4 do
-		local haveTotem, name, startTime, duration = GetTotemInfo(slot)
-		if haveTotem and name and strlower(name) == spell then
-			return name, nil, startTime and duration and (startTime + duration) or nil, false, true, "border"
-		end
 	end
 end
 
@@ -725,7 +728,6 @@ local function GetModifiedUnit(unit)
 	return unit
 end
 
-local TOTEMS = {}
 local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
@@ -760,7 +762,7 @@ local function UpdateButtonAura(self, force)
 	local guid, auraType, isTotem
 	if spell then
 		if TOTEMS[spell] then
-			auraType, target = "totem", "player"
+			auraType, target = "self", "player"
 		else
 			if not target then
 				target = GuessSpellTarget(spell, helpful)
@@ -769,7 +771,7 @@ local function UpdateButtonAura(self, force)
 			target = GetModifiedUnit(target)
 		end
 		guid = target and UnitGUID(target)
-		self:Debug('UpdateButtonAura', action, param, '=>', auraType, spell, target, helpful, guid)
+		self:Debug('UpdateButtonAura', action, param, '=>', auraType, spell, target, guid)
 	else
 		target = nil
 	end
@@ -788,9 +790,7 @@ local function UpdateButtonAura(self, force)
 
 		local name, count, expirationTime, isDebuff, isMine, highlight
 
-		if auraType == "totem" then
-			name, count, expirationTime, isDebuff, isMine, highlight = CheckTotem(spell)
-		elseif spell and target and auraType then
+		if spell and target and auraType then
 			name, count, expirationTime, isDebuff, isMine, highlight = GetAuraToDisplay(spell, target)
 			--@debug@
 			if name then

@@ -728,6 +728,8 @@ local function GetModifiedUnit(unit)
 	return unit
 end
 
+local builtinGlows = {}
+
 local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
@@ -742,6 +744,12 @@ local function UpdateButtonAura(self, force)
 	if action == "spell" then
 		spell = GetSpellInfo(param)
 		helpful = spell and IsHelpfulSpell(spell)
+		if type(param) == "number" then
+			local glowing = IsSpellOverlayed(param) and true or nil
+			if glowing ~= builtinGlows[spell] then
+				builtinGlows[spell] = glowing
+			end
+		end
 	elseif action == "item" then
 		spell, helpful = GetItemSpell(param), IsHelpfulItem(param)
 	elseif action == "macro" then
@@ -797,6 +805,9 @@ local function UpdateButtonAura(self, force)
 				self:Debug("GetAuraToDisplay", spell, target, "=>", "name=", name, "count=", count, "expirationTime=", expirationTime, "isDebuff=", isDebuff, "isMine=", isMine, "highlight=", highlight)
 			end
 			--@end-debug@
+		end
+		if spell and builtinGlows[spell] then
+			highlight = "glowing"
 		end
 
 		if state.name ~= name or state.count ~= count or state.expirationTime ~= expirationTime or state.isDebuff ~= isDebuff or state.isMine ~= isMine or state.highlight ~= highlight then
@@ -1092,6 +1103,32 @@ function InlineAura:UPDATE_BINDINGS(event, name)
 	self:RequireUpdate(true)
 end
 
+local function UpdateBuiltinGlows(flag, ...)
+	flag = flag and true or nil
+	for i = 1, select('#', ...) do
+		local id = select(i, ...)
+		local spell = spell and GetSpellInfo(id)
+		if spell and builtinGlows[spell] ~= flag then
+			builtinGlows[spell] = flag
+			InlineAura:AuraChanged('player')
+		end
+	end
+end
+
+function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, ...)
+	--@debug@
+	dprint(event, ...)
+	--@end-debug@
+	return UpdateBuiltinGlows(true, ...)
+end
+
+function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(event, ...)
+	--@debug@
+	dprint(event, ...)
+	--@end-debug@
+	return UpdateBuiltinGlows(false, ...)
+end
+
 function InlineAura:VARIABLES_LOADED()
 	self.VARIABLES_LOADED = nil
 	self:UnregisterEvent('VARIABLES_LOADED')
@@ -1150,6 +1187,8 @@ function InlineAura:VARIABLES_LOADED()
 	self:RegisterEvent('MODIFIER_STATE_CHANGED')
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
+	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
+	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE')
 	if self.TOTEMS then
 		TOTEMS = self.TOTEMS
 		function self:PLAYER_TOTEM_UPDATE(...)

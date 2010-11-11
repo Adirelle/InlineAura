@@ -539,7 +539,7 @@ do
 			name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, helpfulFilter)
 		end
 		if name then
-			return name, count ~= 0 and count or nil, duration and duration ~= 0 and expirationTime or nil, isDebuff, caster and MY_UNITS[caster]
+			return name, count ~= 0 and count or nil, duration and duration ~= 0 and expirationTime or nil, isDebuff, caster and MY_UNITS[caster], true
 		end
 	end
 
@@ -548,7 +548,7 @@ do
 		for slot = 1, 4 do
 			local haveTotem, name, startTime, duration = GetTotemInfo(slot)
 			if haveTotem and name and strlower(name) == spell then
-				return name, nil, startTime and duration and (startTime + duration) or nil, false, true, "border"
+				return name, nil, startTime and duration and (startTime + duration) or nil, false, true, true
 			end
 		end
 	end
@@ -561,7 +561,7 @@ do
 			dprint("CheckAuraPlayer:SPECIALS", aura, '=>', count, highlight)
 			--@end-debug@
 			if count and count ~= 0 then
-				return aura, count, nil, false, true, highlight or "none"
+				return aura, count, nil, false, true, highlight
 			end
 		elseif TOTEMS[aura] then
 			return CheckTotem(aura)
@@ -612,16 +612,16 @@ local function GetAuraToDisplay(spell, target)
 		if specific.auraType == "self" then
 			onlyMyBuffs, onlyMyDebuffs = true, true
 		elseif specific.auraType == "special" then
-			onlyMyBuffs, onlyMyDebuffs, hideStack, hideCountdown, highlight = true, true, false, false, "none"
+			onlyMyBuffs, onlyMyDebuffs, hideStack, hideCountdown = true, true, false, false
 		elseif specific.onlyMine ~= nil then
 			onlyMyBuffs, onlyMyDebuffs = specific.onlyMine, specific.onlyMine
 		end
 	end
 
 	-- Look for the aura or its aliases
-	local name, count, expirationTime, isDebuff, isMine, highlightOverride = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
+	local name, count, expirationTime, isDebuff, isMine, showHighlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
 	if name then
-		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, highlightOverride or highlight
+		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, showHighlight and highlight or "none"
 	end
 end
 
@@ -875,7 +875,7 @@ local function InitializeButton(self)
 	if buttons[self] then return end
 	buttons[self] = {}
 	--@debug@
-	if true or self == ActionButton10 then
+	if self == ActionButton10 then
 		self.Debug = dprint
 	else
 	--@end-debug@

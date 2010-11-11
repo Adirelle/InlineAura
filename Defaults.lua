@@ -132,7 +132,7 @@ local function ShowSpecial(special, ...)
 			defaults.auraType = 'self'
 		end
 		defaults.hideStack = false
-		defaults.highlight = 'none'
+		defaults.highlight = 'glowing'
 	end
 end
 

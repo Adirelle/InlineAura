@@ -484,7 +484,6 @@ local spellOptions = {
 					type = 'select',
 					arg = 'highlight',
 					disabled = 'IsSpellDisabled',
-					hidden = 'IsSpecial',
 					order = 50,
 					values = {
 						none = L['None'],

@@ -48,7 +48,7 @@ if playerClass == "PALADIN" then
 	InlineAura:RegisterSpecial(
 		"HOLY_POWER", function()
 			local power = UnitPower("player", SPELL_POWER_HOLY_POWER)
-			return power, power == MAX_HOLY_POWER and "glowing"
+			return power, power == MAX_HOLY_POWER
 		end,
 		"UNIT_POWER", function(self, event, unit, type)
 			if unit == "player" and type == "HOLY_POWER" then
@@ -56,9 +56,7 @@ if playerClass == "PALADIN" then
 			end
 		end
 	)
-
 end
-
 
 ------------------------------------------------------------------------------
 -- Rogue and druid: combo points
@@ -70,7 +68,7 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	InlineAura:RegisterSpecial(
 		"COMBO_POINTS", function()
 			local points = GetComboPoints("player")
-			return points, points == MAX_COMBO_POINTS and "glowing"
+			return points, points == MAX_COMBO_POINTS
 		end,
 		"PLAYER_COMBO_POINTS", function()
 			return InlineAura:AuraChanged("player")

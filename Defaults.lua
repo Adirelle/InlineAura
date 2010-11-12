@@ -574,13 +574,12 @@ elseif class == 'DRUID' then
 		40120, -- Swift Flight Form
 		50334, -- Berserk
 		52610, -- Savage Roar
-		61336  -- Survival Instincts
+		61336, -- Survival Instincts
+		80313  -- Pulverize
 	)
 
 	Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
 	Aliases(93402,  8921) -- ... and conversely
-
-	Aliases(80313, 33745) -- Pulverize => Lacerate
 
 ------------------------------------------------------------------------------
 elseif class == 'PALADIN' then

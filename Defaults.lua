@@ -329,7 +329,7 @@ SharedAuras(
 	"HUNTER",      50256, -- Demoralizing Roar (pet ability)
 	"WARRIOR",      1160, -- Demoralizing Shout
 	"DEATHKNIGHT", 81130, -- Scarlet Fever
-	"PALADIN"      26017, -- Vindication
+	"PALADIN"      26017  -- Vindication
 )
 
 -- Trying a big crowd control category (using Phanx's list)

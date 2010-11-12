@@ -556,6 +556,12 @@ elseif class == 'DRUID' then
 	ShowSpecial("LUNAR_ENERGY", 5176) -- Wrath
 	ShowSpecial("SOLAR_ENERGY", 2912) -- Starfire
 
+	-- Kitty combo points
+	ShowSpecial("COMBO_POINTS",
+		22570, -- Maim
+		22568  -- Ferocious Bite
+	)
+
 	SelfBuffs(
 		  768, -- Cat Form
 		  783, -- Travel Form
@@ -614,6 +620,25 @@ elseif class == 'PALADIN' then
 	Aliases(1022, 25771) -- Hand of Protection / Forbearance
 
 	Aliases(53563, 53651).onlyMine = true -- Beacon of Light => Light's Beacon
+
+
+------------------------------------------------------------------------------
+elseif class == 'ROGUE' then
+------------------------------------------------------------------------------
+
+	SelfBuffs(
+		 5171, -- Slice and Dice
+		 5277, -- Evasion
+		31224, -- Cloak of Shadows
+		32645, -- Envenom
+		73651  -- Recuperate
+	)
+
+	-- Combo points
+	ShowSpecial("COMBO_POINTS",
+		  408, -- Kidney Shot
+		 2098  -- Eviscerate
+	)
 
 end
 

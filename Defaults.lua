@@ -580,6 +580,8 @@ elseif class == 'DRUID' then
 	Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
 	Aliases(93402,  8921) -- ... and conversely
 
+	Aliases(80313, 33745) -- Pulverize => Lacerate
+
 ------------------------------------------------------------------------------
 elseif class == 'PALADIN' then
 ------------------------------------------------------------------------------

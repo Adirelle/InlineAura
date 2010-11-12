@@ -1,0 +1,36 @@
+Inline Aura displays aura information directly inside action buttons. It is heavily inspired from two addons writen by Tuller: OmniCC and the Buff module of Dominos.
+
+h2. Features
+
+* color the button border depending on aura type and caster:
+** buff cast by the player: green border,
+** buff cast by other players: cyan border,
+** debuff cast by the player: red border,
+** debuff cast by other players: yellow border.
+* use Blizzard animated glow for talent procs.
+* display aura remaining time as a countdown inside the action button, à la OmniCC or along the bottom side if OmniCC is used,
+* display aura application time in the bottom-right corner,
+* display additional useful information: holy power, soul shards, eclipse energy and combo points.
+* mimics built-in target selection, taking into account spell type (helpful/harmfull) and self/focus key modifiers as well as the auto self cast setting.
+* support macro targets, though it is restricted to "@target", "@player", "@pet", "@focus" and "@mouseover". For performance reasons, "@mouseover" support is disabled by default ; enable it if you really use it.
+
+h2. Addon support
+
+* support default Blizzard action bars, Dominos and any action bar addon using built-in Blizzard code.
+* support Bartender4 and any action bar addon using LibActionButton-1.0.
+* support (Lib)ButtonFacade.
+* compatible with OmniCC, CooldownCount and tullaCC.
+
+h2. Configuration
+
+* graphical configuration through Blizzard addon options. Use "/inlineaura" to open it directly.
+* optional spell specific configuration.
+* helpful defaults for most classes ; if you don't like them, just disable the "InlineAura_Defaults" addon.
+
+h2. Caveats
+
+Starting with v1.1-beta-2, by default Inline Aura shows only the buffs and debuffs created by your character. This is the contrary of what has been defined before. Several common buffs and debuffs have been defined though. You can obviously change this using the configuration panel.
+
+h2. Suggestions and feedback
+
+Please report any bug you encounter using the WowAce ticket system. There is also a forum thread about Inline Aura for discussion.

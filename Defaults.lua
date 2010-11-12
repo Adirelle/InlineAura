@@ -187,7 +187,6 @@ Fully passive (de)buffs:
 - Physical Damage Taken (4%)
 - Spell Crit Taken (5%)
 - Reduced Attack Speed (20%)
-- Reduced Physical Damage Done (10%)
 ]]
 
 --- Buffs ---
@@ -321,6 +320,16 @@ SharedAuras(
 	"HUNTER",  82654, -- Widow Venom
 	"WARLOCK", 30213, -- Legion Strike (felguard ability)
 	"HUNTER",  54680  -- Monstrous Bite (exotic pet ability)
+)
+
+-- Physical Damage Done (10%)
+SharedAuras(
+	"WARLOCK",       702, -- Curse of Weakness
+	"DRUID",          99, -- Demoralizing Roar
+	"HUNTER",      50256, -- Demoralizing Roar (pet ability)
+	"WARRIOR",      1160, -- Demoralizing Shout
+	"DEATHKNIGHT", 81130, -- Scarlet Fever
+	"PALADIN"      26017, -- Vindication
 )
 
 -- Trying a big crowd control category (using Phanx's list)

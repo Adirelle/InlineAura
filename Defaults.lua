@@ -602,7 +602,10 @@ elseif class == 'PALADIN' then
 		25780, -- Righteous Fury
 		31801, -- Seal of Truth
 		31842, -- Divine Illumination
-		31884  -- Avenging Wrath
+		31850, -- Ardent Defender
+		31884, -- Avenging Wrath
+		54428, -- Divine Plea
+		85696  -- Zealotry
 	)
 
 	ShowSpecial(
@@ -622,7 +625,6 @@ elseif class == 'PALADIN' then
 	Aliases(1022, 25771) -- Hand of Protection / Forbearance
 
 	Aliases(53563, 53651).onlyMine = true -- Beacon of Light => Light's Beacon
-
 
 ------------------------------------------------------------------------------
 elseif class == 'ROGUE' then

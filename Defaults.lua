@@ -423,6 +423,7 @@ elseif class == 'WARRIOR' then
 		18499, -- Berserker Rage
 		20230, -- Retaliation
 		23920, -- Spell Reflection
+		34428, -- Victory Rush
 		46924, -- Bladestorm
 		55694  -- Enraged Regeneration
 	)
@@ -434,6 +435,7 @@ elseif class == 'WARRIOR' then
 	Aliases(   78, 50685) -- Heroic Strike => Incite
 	Aliases(  845, 85738) -- Cleave => Meat Cleaver
 	Aliases( 1680, 85738) -- Whirlwind => Meat Cleaver
+	Aliases(34428, 32216) -- Victory Rush => Victorious
 	Aliases(85288, 12292, 18499, 12880) -- Raging Blow => Death Wish, Berserker Rage, Enrage
 
 ------------------------------------------------------------------------------

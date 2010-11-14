@@ -164,18 +164,23 @@ local SharedAuras
 do
 	local t = {}
 	function SharedAuras(...)
+		local start = 1
+		local isSelf
+		if ... == "buff" then
+			start, isSelf = 2, true
+		end
 		wipe(t)
-		for i = 2, select('#', ...), 2 do
+		for i = start+1, select('#', ...), 2 do
 			local id = select(i, ...)
 			tinsert(t, id)
 		end
-		for i = 1, select('#', ...), 2 do
+		for i = start, select('#', ...), 2 do
 			local spellClass, spellId = select(i, ...)
 			if spellClass == class and not IsPassiveSpell(spellId) then
-				local settings = Aliases(spellId, unpack(t))
-				settings.onlyMine = false
-				if IsHelpfulSpell(spellId) then
-					settings.auraType = "self"
+				local defaults = Aliases(spellId, unpack(t))
+				defaults.onlyMine = false
+				if isSelf then
+					defaults.auraType = "self"
 				end
 			end
 		end
@@ -200,14 +205,14 @@ Fully passive (de)buffs:
 --- Buffs ---
 
 -- Increased Stats (5%)
-SharedAuras(
+SharedAuras("buff",
 	"PALADIN", 20217, -- Blessing of Kings
 	"DRUID",    1126, -- Mark of the Wild
 	"HUNTER",  90363  -- Embrace of the Shale Spider (exotic pet ability)
 )
 
 -- Increased Attack Power (10%)
-SharedAuras(
+SharedAuras("buff",
 	"PALADIN",     19740, -- Blessing of Might
 	"DEATHKNIGHT", 53138, -- Abomination's Might (passive)
 	"HUNTER",      19506, -- Trueshot Aura (passive)
@@ -215,34 +220,34 @@ SharedAuras(
 )
 
 -- Increased Spell Power (6%)
-SharedAuras(
+SharedAuras("buff",
 	"MAGE",   1459, -- Arcane Brillance
 	"SHAMAN", 8227  -- Flametongue Totem
 )
 
 -- Increased Physical Haste (10%)
-SharedAuras(
+SharedAuras("buff",
 	"DEATHKNIGHT", 55610, -- Improved Icy Talons (passive)
 	"HUNTER",      53290, -- Hunting Party (passive)
 	"SHAMAN",       8512  -- Windfury Totem
 )
 
 -- Increased Spell Haste (5%)
-SharedAuras(
+SharedAuras("buff",
 	"SHAMAN",  3738, -- Wrath of Air Totem
 	"PRIEST", 49868, -- Mind Quickening (passive)
 	"DRUID",  24907  -- Moonkin Aura (passive)
 )
 
 -- Burst Haste (30%)
-SharedAuras(
+SharedAuras("buff",
 	"SHAMAN", (UnitFactionGroup("player") == "Horde" and 2825 or 32182), -- Bloodlust/Heroism
 	"MAGE",   80353, -- Time Warp
 	"HUNTER", 90355  -- Ancient Hysteria (exotic pet ability)
 )
 
 -- Agility & Strength bonuses
-SharedAuras(
+SharedAuras("buff",
 	"WARRIOR",      6673, -- Battle Shout
 	"SHAMAN",       8075, -- Strength of Earth Totem
 	"DEATHKNIGHT", 57330, -- Horn of Winter
@@ -250,7 +255,7 @@ SharedAuras(
 )
 
 -- Stamina Bonus
-SharedAuras(
+SharedAuras("buff",
 	"PRIEST",  21562, -- Power Word: Fortitude
 	"WARRIOR",   469, -- Commanding Shout
 	"WARLOCK",  6307, -- Blood Pact (imp ability)
@@ -258,19 +263,19 @@ SharedAuras(
 )
 
 -- Armor Bonus
-SharedAuras(
+SharedAuras("buff",
 	"PALADIN",  465, -- Devotion Aura
 	"SHAMAN",  8071  -- Stoneskin Totem
 )
 
 -- Mana Bonus
-SharedAuras(
+SharedAuras("buff",
 	"MAGE",     1459, -- Arcane Brillance
 	"WARLOCK", 54424  -- Fel Intelligence (felhunter ability)
 )
 
 -- Pushback Resistance
-SharedAuras(
+SharedAuras("buff",
 	"PALADIN", 19746, -- Concentration Aura
 	"SHAMAN",  87718  -- Totem of Tranquil Mind
 )

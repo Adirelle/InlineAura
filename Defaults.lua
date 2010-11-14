@@ -249,7 +249,7 @@ SharedAuras("buff",
 -- Agility & Strength bonuses
 SharedAuras("buff",
 	"WARRIOR",      6673, -- Battle Shout
-	"SHAMAN",       8075, -- Strength of Earth Totem
+	"SHAMAN",       8076, -- Strength of Earth (Totem)
 	"DEATHKNIGHT", 57330, -- Horn of Winter
 	"HUNTER",      93435  -- Roar of Courage (pet ability)
 )

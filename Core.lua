@@ -499,33 +499,6 @@ end
 -- Aura lookup
 ------------------------------------------------------------------------------
 
-local function GetSmartTarget(spell, target, helpful)
-	if not spell then return end
-	local auraType = "regular"
-	local specific = rawget(db.profile.spells, spell)
-	if specific then
-		if specific.disabled then
-			return
-		end
-		auraType = specific.auraType or "regular"
-		if auraType == "self" or auraType == "special" then
-			target = "player"
-		elseif auraType == "pet" then
-			target = "pet"
-		end
-	end
-	if auraType == "regular" and target then
-		if helpful then
-			if not UnitIsBuffable(target) then
-				return
-			end
-		elseif not UnitIsDebuffable(target) then
-			return
-		end
-	end
-	return auraType, target
-end
-
 local TOTEMS = {}
 local AuraLookup
 do
@@ -590,7 +563,7 @@ do
 end
 
 local EMPTY_TABLE = {}
-local function GetAuraToDisplay(spell, target)
+local function GetAuraToDisplay(spell, target, specific)
 	local aliases
 	local highlight = "border"
 	local hideStack = db.profile.hideStack
@@ -598,9 +571,8 @@ local function GetAuraToDisplay(spell, target)
 	local onlyMyBuffs = db.profile.onlyMyBuffs
 	local onlyMyDebuffs = db.profile.onlyMyDebuffs
 
-	-- Specific spell overrides global settings and targeting
-	local specific = rawget(db.profile.spells, spell) -- Bypass AceDB auto-creation
-	if type(specific) == 'table' then
+	-- Specific spell overrides global settings
+	if specific then
 		highlight = specific.highlight
 		aliases = specific.aliases
 		if specific.hideStack ~= nil then
@@ -715,7 +687,7 @@ local function GuessSpellTarget(spell, helpful)
 	end
 end
 
-local function GetModifiedUnit(unit)
+local function ApplyVehicleModifier(unit)
 	if UnitHasVehicleUI("player") then
 		if unit == "player" then
 			return "vehicle"
@@ -728,53 +700,91 @@ local function GetModifiedUnit(unit)
 	return unit
 end
 
+local function GetSpellTargetAndType(self, action, param)
+	local isMacro, isItem, key, spell
+
+	-- Extract spell info from action and parameter
+	if action == "macro" then
+		isMacro = true
+		local macroSpell = GetMacroSpell(param)
+		if macroSpell then
+			spell = macroSpell, macroSpell
+		else
+			local _, macroItem = GetMacroItem(param)
+			if macroItem then
+				isItem, key, spell = true, macroItem, GetItemSpell(macroItem)
+			else
+				return -- Can't handle
+			end
+		end
+	elseif action == "item" then
+		isItem, key, spell = true, GetItemInfo(param), GetItemSpell(param)
+	elseif action == "spell" then
+		spell = GetSpellInfo(param)
+	else
+		return -- Can't handle
+	end
+
+	-- Check for specific settings
+	local specific = rawget(db.profile.spells, key or spell)
+	if type(specific) == "table" then
+		if specific.disabled then
+			return -- Don't want to handle
+		end
+		auraType = specific.auraType or "regular"
+		if auraType == "self" or auraType == "special" then
+			return spell, "player", auraType, specific
+		elseif auraType == "pet" then
+			return spell, "pet", auraType, specific
+		end
+	else
+		specific = nil
+	end
+
+	-- Check for totems and items
+	if TOTEMS[spell] or isItem then
+		return spell, "player", "self", specific
+	end
+
+	-- Regular aura
+
+	-- GetModifiedUnit always has precedence
+	local target = SecureButton_GetModifiedUnit(self)
+	if target and target ~= "" then
+		return spell, target, "regular", specific
+	end
+
+	-- Check macro target modifiers
+	if isMacro then
+		target = GuessMacroTarget(param)
+		if target then
+			return spell, target, "regular", specific
+		end
+	end
+
+	-- Educated guess
+	local helpful
+	if isItem then
+		helpful = IsHelpfulItem(param)
+	else
+		helpful = IsHelpfulSpell(param)
+	end
+	return spell, GuessSpellTarget(spell, helpful), "regular", specific
+end
+
 local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
 
-	local action, param = state.action, state.param, state
-
-	local target = SecureButton_GetModifiedUnit(self)
-	if target == "" then target = nil end
-
-	local spell, helpful
-
-	if action == "spell" then
-		spell = GetSpellInfo(param)
-		helpful = spell and IsHelpfulSpell(spell)
-	elseif action == "item" then
-		spell, helpful = GetItemSpell(param), IsHelpfulItem(param)
-	elseif action == "macro" then
-		spell = GetMacroSpell(param)
-		if spell then
-			helpful = IsHelpfulSpell(spell)
-		else
-			local _, item = GetMacroItem(param)
-			if item then
-				spell, helpful = GetItemSpell(item), IsHelpfulItem(item)
-			end
-		end
-		if not target and spell then
-			target = GuessMacroTarget(param)
-		end
+	local guid, spell, target, auraType, specific
+	spell, target, auraType, specific = GetSpellTargetAndType(self, state.action, state.param)
+	if spell and target then
+		target = ApplyVehicleModifier(target)
 	end
-
-	local guid, auraType, isTotem
-	if spell then
-		if TOTEMS[spell] then
-			auraType, target = "self", "player"
-		else
-			if not target then
-				target = GuessSpellTarget(spell, helpful)
-			end
-			auraType, target = GetSmartTarget(spell, target, helpful)
-			target = GetModifiedUnit(target)
-		end
-		guid = target and UnitGUID(target)
-		self:Debug('UpdateButtonAura', action, param, '=>', auraType, spell, target, guid)
-	else
-		target = nil
-	end
+	guid = target and UnitGUID(target)
+	--@debug@
+	self:Debug('UpdateButtonAura', state.action, state.param, '=>', auraType, spell, target, guid)
+	--@end-debug@
 
 	if force or auraChanged[guid or state.guid or false] or auraType ~= state.auraType or spell ~= state.spell or guid ~= state.guid then
 		--@debug@
@@ -791,10 +801,10 @@ local function UpdateButtonAura(self, force)
 		local name, count, expirationTime, isDebuff, isMine, highlight
 
 		if spell and target and auraType then
-			name, count, expirationTime, isDebuff, isMine, highlight = GetAuraToDisplay(spell, target)
+			name, count, expirationTime, isDebuff, isMine, highlight = GetAuraToDisplay(spell, target, specific)
 			--@debug@
 			if name then
-				self:Debug("GetAuraToDisplay", spell, target, "=>", "name=", name, "count=", count, "expirationTime=", expirationTime, "isDebuff=", isDebuff, "isMine=", isMine, "highlight=", highlight)
+				self:Debug("GetAuraToDisplay", spell, target, specific, "=>", "name=", name, "count=", count, "expirationTime=", expirationTime, "isDebuff=", isDebuff, "isMine=", isMine, "highlight=", highlight)
 			end
 			--@end-debug@
 		end
@@ -1026,7 +1036,7 @@ end
 
 function InlineAura:AuraChanged(unit)
 	local oldGUID = unitGUIDs[unit]
-	local realUnit = GetModifiedUnit(unit)
+	local realUnit = ApplyVehicleModifier(unit)
 	local guid = realUnit and db.profile.enabledUnits[unit] and UnitGUID(realUnit)
 	if oldGUID then
 		auraChanged[oldGUID] = true

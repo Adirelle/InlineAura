@@ -167,8 +167,12 @@ do
 		end
 		for i = 1, select('#', ...), 2 do
 			local spellClass, spellId = select(i, ...)
-			if spellClass == class and IsPassiveSpell(spellId) then
-				Aliases(spellId, unpack(t)).onlyMine = false
+			if spellClass == class and not IsPassiveSpell(spellId) then
+				local settings = Aliases(spellId, unpack(t))
+				settings.onlyMine = false
+				if IsHelpfulSpell(spellId) then
+					settings.auraType = "self"
+				end
 			end
 		end
 	end

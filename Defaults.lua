@@ -107,7 +107,9 @@ end
 local function SelfBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
-		GetSpellDefaults(id, 1).auraType = 'self'
+		local defaults = GetSpellDefaults(id, 1)
+		defaults.auraType = 'self'
+		defaults.onlyMine = true
 	end
 end
 
@@ -130,6 +132,7 @@ local function ShowSpecial(special, ...)
 			defaults.auraType = 'special'
 		else
 			defaults.auraType = 'self'
+			defaults.onlyMine = true
 		end
 		defaults.hideStack = false
 		defaults.highlight = 'glowing'
@@ -140,6 +143,7 @@ end
 local function SelfTalentProc(spellId, ...)
 	local defaults = Aliases(spellId, ...)
 	defaults.auraType = 'self'
+	defaults.onlyMine = true
 	defaults.highlight = 'glowing'
 	return defaults
 end

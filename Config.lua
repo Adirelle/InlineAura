@@ -455,7 +455,7 @@ local spellOptions = {
 					arg = 'onlyMine',
 					tristate = true,
 					disabled = 'IsSpellDisabled',
-					hidden = function(info) return info.handler:IsSpecial() or info.handler.db.auraType == "self" end,
+					hidden = 'IsSpecial',
 					order = 30,
 				},
 				hideCountdown = {

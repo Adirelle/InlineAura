@@ -35,7 +35,7 @@ local reported = {}
 -- Get the spell name, throwing error if not found
 local function GetSpellName(id, level, noStrict)
 	local name
-	if type(id) == "string" and strmatch(id, "^[A-Z]%w*$") and noStrict then
+	if type(id) == "string" and strmatch(id, "^[A-Z][%w_]*$") and noStrict then
 		name = id
 	else
 		name = GetSpellInfo(id)

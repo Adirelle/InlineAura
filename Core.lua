@@ -423,75 +423,67 @@ local function LBF_Callback()
 end
 
 ------------------------------------------------------------------------------
--- Special "auras" handling
+-- State plugins
 ------------------------------------------------------------------------------
 
-local specialNames = {}
-local specialModules = {}
-InlineAura.specialModules = specialModules
-InlineAura.specialNames = specialNames
-InlineAura.specialPrototype = { auraType = "special", aliases = {} }
+local stateModules = {}
+local stateKeywords = {}
+local stateSpellHooks = {}
+local statePrototype = {}
 
-function InlineAura.specialPrototype:OnEnable()
-	specialNames[self.moduleName] = self
-	for name in pairs(self.aliases) do
-		specialNames[name] = self
-	end
-	if self.PostEnable then
-		self:PostEnable()
-	end
-end
+InlineAura.stateModules = stateModules
+InlineAura.stateKeywords = stateKeywords
+InlineAura.stateSpellHooks = stateSpellHooks
+InlineAura.statePrototype = statePrototype
 
-function InlineAura.specialPrototype:OnDisable()
-	for name, module in pairs(specialNames) do
+function statePrototype:OnDisable()
+	for keyword, module in pairs(stateKeywords) do
 		if module == self then
-			specialNames[name] = nil
+			stateKeywords[keyword] = nil
 		end
 	end
-	if self.PostDisable then
-		self:PostDisable()
+	for spell, module in pairs(stateSpellHooks) do
+		if module == self then
+			stateSpellHooks[spell] = nil
+		end
 	end
 end
 
-function InlineAura.specialPrototype:AcceptUnit(unit)
+function statePrototype:RegisterKeywords(...)
+	for i = 1, select('#', ...) do
+		local keyword = select(i, ...)
+		assert(not stateKeywords[keyword] or stateKeywords[keyword] == self, format("Keyword %q already registerd by %q", keyword, stateKeywords[keyword].moduleName))
+		stateKeywords[keyword] = self
+	end
+end
+
+function statePrototype:RegisterSpellHooks(...)
+	for i = 1, select('#', ...) do
+		local spell = select(i, ...)
+		assert(not stateSpellHooks[spell] or stateSpellHooks[spell] == self, format("Spell %q already registerd by %q", spell, stateSpellHooks[spell].moduleName))
+		stateSpellHooks[spell] = self
+	end
+end
+
+function statePrototype:CanTestUnit(unit)
 	return true
 end
 
-function InlineAura.specialPrototype:Test(aura, unit, helpfulFilter, harmfulFilter)
+function statePrototype:Test(spell, aura, unit, onlyMyBuffs, onlyMyDebuffs)
 	-- Return something meaningful there
-end
-
--- Old-style special support
-
-local compatSpecialPrototype = setmetatable({}, {__index = InlineAura.specialPrototype})
-
-function compatSpecialPrototype:PostEnable()
-	if self.event then
-		self:RegisterEvent(event, "OnEvent")
-	end
-end
-
-function compatSpecialPrototype:AcceptUnit(unit)
-	return unit == "player"
-end
-
-function compatSpecialPrototype:Test(aura)
-	local count, highlight = self.DoTest()
-	if count and count > 0 or highlight then
-		return aura, count, nil, false, true, highlight
-	end
 end
 
 -- Registry methods
 
-function InlineAura:NewSpecial(name, ...)
-	assert(not specialModules[name])
-	local special = self:NewModule(name, InlineAura.specialPrototype, 'AceEvent-3.0', ...)
-	specialModules[name] = special
+function InlineAura:NewStateModule(name, ...)
+	assert(not stateModules[name], format("State module %q already defined", name))
+	local special = self:NewModule(name, statePrototype, 'AceEvent-3.0', ...)
+	stateModules[name] = special
 	return special
 end
 
 function InlineAura:RegisterSpecial(name, testFunc, event, handler)
+	--[[
 	assert(not specialModules[name])
 	local special = self:NewModule(name, compatSpecialPrototype, 'AceEvent-3.0')
 	specialModules[name] = special
@@ -500,6 +492,7 @@ function InlineAura:RegisterSpecial(name, testFunc, event, handler)
 	special.event = event
 	special.OnEvent = handler
 	return special
+	--]]
 end
 
 ------------------------------------------------------------------------------
@@ -507,11 +500,6 @@ end
 ------------------------------------------------------------------------------
 
 local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
-	local special = specialNames[aura]
-	if special and special:AcceptUnit(unit) then
-		return special:Test(aura, unit, helpfulFilter, harmfulFilter)
-	end
-	-- Look for debuff or buff
 	local isDebuff = false
 	local name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, harmfulFilter)
 	if name then
@@ -528,8 +516,16 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
 	local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
 	local name, count, expirationTime, isDebuff, isMine, highlight
+	local newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
+	local spell = ...
 	for i = 1, select('#', ...) do
-		local newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = CheckAura(select(i, ...), unit, helpfulFilter, harmfulFilter)
+		local aura = select(i, ...)
+		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]
+		if stateModule and stateModule:CanTestUnit(unit) then
+			newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = stateModule:Test(spell, aura, unit, onlyMyBuffs, onlyMyDebuffs)
+		else
+			newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)
+		end
 		if newName then
 			if not newExpirationTime then -- no expiration time == forever
 				return newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
@@ -717,10 +713,21 @@ local function GetSpellTargetAndType(self, action, param)
 
 	local auraType = "regular"
 
-	-- Check specials
-	local special = specialNames[key or spell]
-	if special then
-		auraType = special.auraType
+	-- Check spell hooks
+	local spellHook = stateSpellHooks[key or spell]
+	if spellHook then
+		local overrideAuraType = spellHook.OverrideAuraType
+		if type(overrideAuraType) == "string" then
+			auraType = overrideAuraType
+		elseif type(overrideAuraType) == "function" then
+			auraType = overrideAuraType(spellHook, key or spell) or auraType
+		end
+		local overrideTarget = spellHook.OverrideTarget
+		if type(overrideTarget) == "string" then
+			target = overrideTarget
+		elseif type(overrideTarget) == "function" then
+			target = overrideTarget(spellHook, key or spell) or nil
+		end
 	end
 
 	-- Check for specific settings
@@ -737,8 +744,10 @@ local function GetSpellTargetAndType(self, action, param)
 	end
 
 	-- Solve special aura types ASAP
-	if auraType == "self" or auraType == "special" then
+	if auraType == "self" then
 		return spell, "player", auraType, specific
+	elseif auraType == "special" then
+		return spell, target or "player", auraType, specific
 	elseif auraType == "pet" then
 		return spell, "pet", auraType, specific
 	end
@@ -746,9 +755,11 @@ local function GetSpellTargetAndType(self, action, param)
 	-- Regular aura
 
 	-- GetModifiedUnit always has precedence
-	local target = SecureButton_GetModifiedUnit(self)
-	if target and target ~= "" then
-		return spell, target, "regular", specific
+	if not target then
+		target = SecureButton_GetModifiedUnit(self)
+		if target and target ~= "" then
+			return spell, target, "regular", specific
+		end
 	end
 
 	-- Check macro target modifiers
@@ -923,18 +934,8 @@ end
 local function UpdateUnitListeners()
 	for unit, event in pairs(UNIT_EVENTS) do
 		if db.profile.enabledUnits[unit] then
-			--@debug@
-			if not InlineAura:IsEventRegistered(event) then
-				dprint("Starting listening for event", event, 'for unit', unit)
-			end
-			--@end-debug@
 			InlineAura:RegisterEvent(event)
 		else
-			--@debug@
-			if InlineAura:IsEventRegistered(event) then
-				dprint("Stopping listening for event", event, 'for unit', unit)
-			end
-			--@end-debug@
 			InlineAura:UnregisterEvent(event)
 		end
 	end

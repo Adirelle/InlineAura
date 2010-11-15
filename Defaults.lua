@@ -31,19 +31,12 @@ function InlineAura_LoadDefaults(self)
 	version = "developer"
 	--@end-debug@
 	local reported = {}
-	local SPECIALS = self.SPECIALS
 
 	-- Get the spell name, throwing error if not found
 	local function GetSpellName(id, level)
 		local name
-		if SPECIALS[id] then
-			return id
-		end
-		local rawId = tonumber(string.match(id, "^#(%d+)$"))
-		if rawId then
-			if GetSpellInfo(rawId) then
-				name = '#'..rawId
-			end
+		if strmatch(id, "^[A-Z]%w+$") then
+			name = id
 		else
 			name = GetSpellInfo(id)
 		end

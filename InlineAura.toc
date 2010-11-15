@@ -28,5 +28,5 @@ libs\LibDualSpec-1.0\LibDualSpec-1.0.lua
 
 Localization.lua
 Core.lua
-Specials.lua
+StateModules.lua
 

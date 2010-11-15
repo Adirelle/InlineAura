@@ -89,40 +89,15 @@ if playerClass == "DRUID" then
 
 	local isMoonkin, direction, power
 
-	local eclipse = InlineAura:NewSpecial("ECLIPSE")
-	eclipse.aliases = {
-		LUNAR_ENERGY = true,
-		SOLAR_ENERGY = true,
-	}
+	local eclipseState = InlineAura:NewStateModule("Eclipse")
 
-	function eclipse:AcceptUnit(unit)
-		return unit == "player"
-	end
-
-	function eclipse:PostEnable()
+	function eclipseState:OnEnable()
+		self:RegisterKeywords("LUNAR_ENERGY", "SOLAR_ENERGY")
 		self:RegisterEvent('PLAYER_TALENT_UPDATE')
 		self:PLAYER_TALENT_UPDATE("OnEnable")
 	end
 
-	function eclipse:UNIT_POWER(event, unit, type)
-		if unit == "player" and type == "ECLIPSE" then
-			local newPower = math.ceil(100 * UnitPower("player", SPELL_POWER_ECLIPSE) / UnitPowerMax("player", SPELL_POWER_ECLIPSE))
-			if newPower ~= power then
-				power = newPower
-				InlineAura:AuraChanged("player")
-			end
-		end
-	end
-
-	function eclipse:ECLIPSE_DIRECTION_CHANGE(event)
-		local newDirection = GetEclipseDirection()
-		if newDirection ~= direction then
-			direction = newDirection
-			InlineAura:AuraChanged("player")
-		end
-	end
-
-	function eclipse:PLAYER_TALENT_UPDATE(event)
+	function eclipseState:PLAYER_TALENT_UPDATE(event)
 		local newIsMoonkin = (GetPrimaryTalentTree() == 1)
 		if isMoonkin ~= newIsMoonkin then
 			isMoonkin = newIsMoonkin
@@ -139,8 +114,32 @@ if playerClass == "DRUID" then
 		end
 	end
 
-	InlineAura:RegisterSpecial("LUNAR_ENERGY", function() return isMoonkin and direction == "moon" and -power end, "PLAYER_TALENT_UPDATE")
-	InlineAura:RegisterSpecial("SOLAR_ENERGY", function() return isMoonkin and direction == "sun" and power end, "PLAYER_TALENT_UPDATE")
+	function eclipseState:UNIT_POWER(event, unit, type)
+		if unit == "player" and type == "ECLIPSE" then
+			local newPower = math.ceil(100 * UnitPower("player", SPELL_POWER_ECLIPSE) / UnitPowerMax("player", SPELL_POWER_ECLIPSE))
+			if newPower ~= power then
+				power = newPower
+				InlineAura:AuraChanged("player")
+			end
+		end
+	end
+
+	function eclipseState:ECLIPSE_DIRECTION_CHANGE(event)
+		local newDirection = GetEclipseDirection()
+		if newDirection ~= direction then
+			direction = newDirection
+			InlineAura:AuraChanged("player")
+		end
+	end
+
+	function eclipseState:Test(aura)
+		if aura == "LUNAR_ENERGY" then
+			return aura, isMoonkin and direction == "moon" and -power, nil, false, true, true
+		elseif aura == "SOLAR_ENERGY" then
+			return aura, isMoonkin and direction == "sun" and power, nil, false, true, true
+		end
+	end
+
 end
 
 ------------------------------------------------------------------------------

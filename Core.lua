@@ -527,7 +527,7 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 		local aura = select(i, ...)
 		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]
 		if stateModule and stateModule:CanTestUnit(unit) then
-			newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = stateModule:Test(spell, aura, unit, onlyMyBuffs, onlyMyDebuffs)
+			newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
 		else
 			newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 		end

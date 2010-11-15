@@ -193,7 +193,7 @@ if playerClass == "SHAMAN" then
 		return unit == "player"
 	end
 
-	function totemState:Test(_, spell)
+	function totemState:Test(spell)
 		spell = strlower(spell)
 		for index = 1, 4 do
 			local haveTotem, name, startTime, duration = GetTotemInfo(index)

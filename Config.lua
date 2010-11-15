@@ -492,8 +492,8 @@ local spellOptions = {
 					}
 				},
 				invertHighlight = {
-					name = L['Invert hightlight'],
-					desc = L["Check to invert highlight display. Countdown and application count display isn't affected by this setting."],
+					name = L['Invert highlight'],
+					desc = L["Check to invert highlight display. Countdown and application count display aren't affected by this setting."],
 					type = 'toggle',
 					arg = 'invertHighlight',
 					disabled = function(info) return info.handler:IsSpellDisabled(info) or info.handler.db.highlight == "none" end,

@@ -1132,44 +1132,6 @@ function InlineAura:UPDATE_BINDINGS(event, name)
 	return self:RequireUpdate(true)
 end
 
-function InlineAura:OnInitialize()
-	-- Saved variables setup
-	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
-	db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
-	db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
-	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
-	self.db = db
-
-	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
-
-	-- Update the database from previous versions
-	for name, spell in pairs(db.profile.spells) do
-		if type(spell) == "table" then
-			local units = spell.unitsToScan
-			if type(units) ~= "table" then units = nil end
-			local auraType = spell.auraType
-			if auraType == "buff" then
-				if units and units.pet then
-					auraType = "pet"
-				elseif units and units.player and not units.target and not units.focus then
-					auraType = "self"
-				else
-					auraType = "regular"
-				end
-			elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
-				auraType = "regular"
-			end
-			if spell.alternateColor then
-				spell.highlight = "glowing"
-				spell.alternateColor = nil
-			end
-			spell.auraType = auraType
-			spell.unitsToScan = nil
-		end
-	end
-
-end
-
 local updateFrame
 function InlineAura:OnEnable()
 
@@ -1177,6 +1139,43 @@ function InlineAura:OnEnable()
 	if InlineAura_LoadDefaults then
 		safecall(InlineAura_LoadDefaults, self)
 		InlineAura_LoadDefaults = nil
+	end
+
+	if not self.db then
+		-- Saved variables setup
+		db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
+		db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
+		db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
+		db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
+		self.db = db
+
+		LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
+
+		-- Update the database from previous versions
+		for name, spell in pairs(db.profile.spells) do
+			if type(spell) == "table" and not spell.default then
+				local units = spell.unitsToScan
+				if type(units) ~= "table" then units = nil end
+				local auraType = spell.auraType
+				if auraType == "buff" then
+					if units and units.pet then
+						auraType = "pet"
+					elseif units and units.player and not units.target and not units.focus then
+						auraType = "self"
+					else
+						auraType = "regular"
+					end
+				elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
+					auraType = "regular"
+				end
+				if spell.alternateColor then
+					spell.highlight = "glowing"
+					spell.alternateColor = nil
+				end
+				spell.auraType = auraType
+				spell.unitsToScan = nil
+			end
+		end
 	end
 
 	-- Setup

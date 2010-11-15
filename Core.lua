@@ -457,7 +457,6 @@ end
 function statePrototype:RegisterKeywords(...)
 	for i = 1, select('#', ...) do
 		local keyword = select(i, ...)
-		assert(not stateKeywords[keyword] or stateKeywords[keyword] == self, format("Keyword %q already registerd by %q", keyword, stateKeywords[keyword].moduleName))
 		stateKeywords[keyword] = self
 	end
 end
@@ -465,7 +464,6 @@ end
 function statePrototype:RegisterSpellHooks(...)
 	for i = 1, select('#', ...) do
 		local spell = select(i, ...)
-		assert(not stateSpellHooks[spell] or stateSpellHooks[spell] == self, format("Spell %q already registerd by %q", spell, stateSpellHooks[spell].moduleName))
 		stateSpellHooks[spell] = self
 	end
 end

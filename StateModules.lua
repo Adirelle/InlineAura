@@ -134,9 +134,9 @@ if playerClass == "DRUID" then
 
 	function eclipseState:Test(aura)
 		if aura == "LUNAR_ENERGY" then
-			return aura, isMoonkin and direction == "moon" and -power, nil, false, true, true
+			return aura, isMoonkin and direction == "moon" and -power, nil, false, true
 		elseif aura == "SOLAR_ENERGY" then
-			return aura, isMoonkin and direction == "sun" and power, nil, false, true, true
+			return aura, isMoonkin and direction == "sun" and power, nil, false, true
 		end
 	end
 

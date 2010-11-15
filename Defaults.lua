@@ -21,34 +21,30 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ------------------------------------------------------------------------------
 
 function InlineAura_LoadDefaults(self)
-	-- No identation there to avoid messing up with source control
+-- No identation there to avoid messing up with source control
 
-	local SPELL_DEFAULTS = self.DEFAULT_OPTIONS.profile.spells
+local SPELL_DEFAULTS = self.DEFAULT_OPTIONS.profile.spells
 
-	local _, class = UnitClass('player')
-	local version = "@file-hash@/@project-version@"
-	--@debug@
-	version = "developer"
-	--@end-debug@
-	local reported = {}
+local _, class = UnitClass('player')
+local version = "@file-hash@/@project-version@"
+--@debug@
+version = "developer"
+--@end-debug@
+local reported = {}
 
-	-- Get the spell name, throwing error if not found
-	local function GetSpellName(id, level)
-		local name
-		if strmatch(id, "^[A-Z]%w+$") then
-			name = id
-		else
-			name = GetSpellInfo(id)
-		end
-		if not name then
-			if not reported[id] then
-				local source = debugstack((level or 0)+2, 1,0):match(":(%d+)")
-				geterrorhandler()(format("Wrong spell id. Please report this error with the following information: id=%s, class=%s, version=%s, line=%s", tostringall(id, class, version, source)))
-				reported[id] = true
-			end
-			return "Unknown spell #"..tostring(id)
-		else
-			return name
+-- Get the spell name, throwing error if not found
+local function GetSpellName(id, level, noStrict)
+	local name
+	if type(id) == "string" and strmatch(id, "^[A-Z]%w*$") and noStrict then
+		name = id
+	else
+		name = GetSpellInfo(id)
+	end
+	if not name then
+		if not reported[id] then
+			local source = debugstack((level or 0)+2, 1,0):match(":(%d+)")
+			geterrorhandler()(format("Wrong spell id. Please report this error with the following information: id=%s, class=%s, version=%s, line=%s", tostringall(id, class, version, source)))
+			reported[id] = true
 		end
 	end
 

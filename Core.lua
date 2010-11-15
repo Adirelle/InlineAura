@@ -22,7 +22,8 @@ local addonName, ns = ...
 -- Our main frame
 ------------------------------------------------------------------------------
 
-local InlineAura = CreateFrame('Frame', 'InlineAura')
+InlineAura = LibStub('AceAddon-3.0'):NewAddon('InlineAura', 'AceEvent-3.0')
+local InlineAura = InlineAura
 
 ------------------------------------------------------------------------------
 -- Retrieve the localization table
@@ -142,64 +143,6 @@ local MY_UNITS = { player = true, pet = true, vehicle = true }
 -- These two functions return nil when unit does not exist
 local UnitIsBuffable = function(unit) return MY_UNITS[unit] or UnitCanAssist('player', unit) end
 local UnitIsDebuffable = function(unit) return UnitCanAttack('player', unit) end
-
-------------------------------------------------------------------------------
--- Special "auras" handling
-------------------------------------------------------------------------------
-
-local SPECIALS = {}
-local SPECIALS_EVENTS = {}
-InlineAura.SPECIALS = SPECIALS
-
-function InlineAura:RegisterSpecial(name, testFunc, event, handler)
-	SPECIALS[name] = testFunc
-	SPECIALS_EVENTS[name] = event
-	if event and handler then
-		if self[event] then
-			hooksecurefunc(self, event, handler)
-		else
-			self[event] = handler
-		end
-	end
-end
-
-local UpdateSpecialListeners
-do
-	local t = {}
-	function UpdateSpecialListeners()
-		wipe(t)
-		for special, event in pairs(SPECIALS_EVENTS) do
-			t[event] = false
-		end
-		for name, spell in pairs(db.profile.spells) do
-			if not spell.disabled and spell.aliases then
-				for i, alias in pairs(spell.aliases) do
-					local event = SPECIALS_EVENTS[alias]
-					if event then
-						t[event] = alias
-					end
-				end
-			end
-		end
-		for event, enabled in pairs(t) do
-			if enabled then
-				if not InlineAura:IsEventRegistered(event) then
-					--@debug@
-					dprint("Starting listening for event", event, "for special", enabled)
-					--@end-debug@
-					InlineAura:RegisterEvent(event)
-					InlineAura[event](InlineAura, "UpdateSpecialListeners")
-				end
-			elseif InlineAura:IsEventRegistered(event) then
-				--@debug@
-				dprint("Stopping listening for", event)
-				--@end-debug@
-				InlineAura:UnregisterEvent(event)
-				InlineAura[event](InlineAura, "UpdateSpecialListeners")
-			end
-		end
-	end
-end
 
 ------------------------------------------------------------------------------
 -- Countdown formatting
@@ -485,70 +428,122 @@ local function LBF_Callback()
 end
 
 ------------------------------------------------------------------------------
+-- Special "auras" handling
+------------------------------------------------------------------------------
+
+local specialNames = {}
+local specialModules = {}
+InlineAura.specialModules = specialModules
+InlineAura.specialNames = specialNames
+InlineAura.specialPrototype = { auraType = "special", aliases = {} }
+
+function InlineAura.specialPrototype:OnEnable()
+	specialNames[self.moduleName] = self
+	for name in pairs(self.aliases) do
+		specialNames[name] = self
+	end
+	if self.PostEnable then
+		self:PostEnable()
+	end
+end
+
+function InlineAura.specialPrototype:OnDisable()
+	for name, module in pairs(specialNames) do
+		if module == self then
+			specialNames[name] = nil
+		end
+	end
+	if self.PostDisable then
+		self:PostDisable()
+	end
+end
+
+function InlineAura.specialPrototype:AcceptUnit(unit)
+	return true
+end
+
+function InlineAura.specialPrototype:Test(aura, unit, helpfulFilter, harmfulFilter)
+	-- Return something meaningful there
+end
+
+-- Old-style special support
+
+local compatSpecialPrototype = setmetatable({}, {__index = InlineAura.specialPrototype})
+
+function compatSpecialPrototype:PostEnable()
+	if self.event then
+		self:RegisterEvent(event, "OnEvent")
+	end
+end
+
+function compatSpecialPrototype:AcceptUnit(unit)
+	return unit == "player"
+end
+
+function compatSpecialPrototype:Test(aura)
+	local count, highlight = self.DoTest()
+	if count and count > 0 or highlight then
+		return aura, count, nil, false, true, highlight
+	end
+end
+
+-- Registry methods
+
+function InlineAura:NewSpecial(name, ...)
+	assert(not specialModules[name])
+	local special = self:NewModule(name, InlineAura.specialPrototype, 'AceEvent-3.0', ...)
+	specialModules[name] = special
+	return special
+end
+
+function InlineAura:RegisterSpecial(name, testFunc, event, handler)
+	assert(not specialModules[name])
+	local special = self:NewModule(name, compatSpecialPrototype, 'AceEvent-3.0')
+	specialModules[name] = special
+	special.auraType = "self"
+	special.DoTest = testFunc
+	special.event = event
+	special.OnEvent = handler
+	return special
+end
+
+------------------------------------------------------------------------------
 -- Aura lookup
 ------------------------------------------------------------------------------
 
-local TOTEMS = {}
-local AuraLookup
-do
-	local function CheckAuraAny(aura, unit, helpfulFilter, harmfulFilter)
-		-- Look for debuff or buff
-		local isDebuff = false
-		local name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, harmfulFilter)
-		if name then
-			isDebuff = true
-		else
-			name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, helpfulFilter)
-		end
-		if name then
-			return name, count ~= 0 and count or nil, duration and duration ~= 0 and expirationTime or nil, isDebuff, caster and MY_UNITS[caster], true
-		end
+local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
+	local special = specialNames[aura]
+	if special and special:AcceptUnit(unit) then
+		return special:Test(aura, unit, helpfulFilter, harmfulFilter)
 	end
+	-- Look for debuff or buff
+	local isDebuff = false
+	local name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, harmfulFilter)
+	if name then
+		isDebuff = true
+	else
+		name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, helpfulFilter)
+	end
+	if name then
+		return name, count ~= 0 and count or nil, duration and duration ~= 0 and expirationTime or nil, isDebuff, caster and MY_UNITS[caster], true
+	end
+end
 
-	local function CheckTotem(spell)
-		spell = strlower(spell)
-		for slot = 1, 4 do
-			local haveTotem, name, startTime, duration = GetTotemInfo(slot)
-			if haveTotem and name and strlower(name) == spell then
-				return name, nil, startTime and duration and (startTime + duration) or nil, false, true, true
+local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
+	local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
+	local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
+	local name, count, expirationTime, isDebuff, isMine, highlight
+	for i = 1, select('#', ...) do
+		local newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = CheckAura(select(i, ...), unit, helpfulFilter, harmfulFilter)
+		if newName then
+			if not newExpirationTime then -- no expiration time == forever
+				return newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
+			elseif not name or newExpirationTime > expirationTime then
+				name, count, expirationTime, isDebuff, isMine, highlight = newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
 			end
 		end
 	end
-
-	local function CheckAuraPlayer(aura, unit, helpfulFilter, harmfulFilter)
-		if SPECIALS[aura] then
-			-- Specials only exists on player
-			local count, highlight = SPECIALS[aura]()
-			--@debug@
-			dprint("CheckAuraPlayer:SPECIALS", aura, '=>', count, highlight)
-			--@end-debug@
-			if count and count ~= 0 then
-				return aura, count, nil, false, true, highlight
-			end
-		elseif TOTEMS[aura] then
-			return CheckTotem(aura)
-		else
-			return CheckAuraAny(aura, unit, helpfulFilter, harmfulFilter)
-		end
-	end
-
-	function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
-		local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
-		local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
-		local checkFunc = UnitIsUnit(unit, "player") and CheckAuraPlayer or CheckAuraAny
-		local name, count, expirationTime, isDebuff, isMine, highlight
-		for i = 1, select('#', ...) do
-			local newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = checkFunc(select(i, ...), unit, helpfulFilter, harmfulFilter)
-			if newName then
-				if not newExpirationTime then -- no expiration time == forever
-					return newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
-				elseif not name or newExpirationTime > expirationTime then
-					name, count, expirationTime, isDebuff, isMine, highlight = newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
-				end
-			end
-		end
-		return name, count, expirationTime, isDebuff, isMine, highlight
-	end
+	return name, count, expirationTime, isDebuff, isMine, highlight
 end
 
 local EMPTY_TABLE = {}
@@ -725,25 +720,32 @@ local function GetSpellTargetAndType(self, action, param)
 		return -- Nothing to handle
 	end
 
+	local auraType = "regular"
+
+	-- Check specials
+	local special = specialNames[key or spell]
+	if special then
+		auraType = special.auraType
+	end
+
 	-- Check for specific settings
 	local specific = rawget(db.profile.spells, item or spell)
 	if type(specific) == "table" then
 		if specific.disabled then
 			return -- Don't want to handle
 		end
-		auraType = specific.auraType or "regular"
-		if auraType == "self" or auraType == "special" then
-			return spell, "player", auraType, specific
-		elseif auraType == "pet" then
-			return spell, "pet", auraType, specific
+		if specific.auraType then
+			auraType = specific.auraType
 		end
 	else
 		specific = nil
 	end
 
-	-- Check for totems and items
-	if TOTEMS[spell] or item then
-		return spell, "player", "self", specific
+	-- Solve special aura types ASAP
+	if auraType == "self" or auraType == "special" then
+		return spell, "player", auraType, specific
+	elseif auraType == "pet" then
+		return spell, "pet", auraType, specific
 	end
 
 	-- Regular aura
@@ -951,9 +953,6 @@ local function UpdateConfig()
 	-- Update event listening based on units
 	UpdateUnitListeners()
 
-	-- Update event listening based on SPECIALS
-	UpdateSpecialListeners()
-
 	-- Update timer skins
 	for button, timerFrame in pairs(timerFrames) do
 		TimerFrame_Skin(timerFrame)
@@ -1056,8 +1055,6 @@ function InlineAura:UNIT_ENTERED_VEHICLE(event, unit)
 	end
 end
 
-InlineAura.UNIT_EXITED_VEHICLE = InlineAura.UNIT_ENTERED_VEHICLE
-
 function InlineAura:UNIT_AURA(event, unit)
 	return self:AuraChanged(unit)
 end
@@ -1139,16 +1136,7 @@ function InlineAura:UPDATE_BINDINGS(event, name)
 	return self:RequireUpdate(true)
 end
 
-function InlineAura:VARIABLES_LOADED()
-	self.VARIABLES_LOADED = nil
-	self:UnregisterEvent('VARIABLES_LOADED')
-
-	-- Retrieve default spell configuration, if loaded
-	if InlineAura_LoadDefaults then
-		safecall(InlineAura_LoadDefaults, self)
-		InlineAura_LoadDefaults = nil
-	end
-
+function InlineAura:OnInitialize()
 	-- Saved variables setup
 	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
 	db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
@@ -1184,6 +1172,17 @@ function InlineAura:VARIABLES_LOADED()
 		end
 	end
 
+end
+
+local updateFrame
+function InlineAura:OnEnable()
+
+	-- Retrieve default spell configuration, if loaded
+	if InlineAura_LoadDefaults then
+		safecall(InlineAura_LoadDefaults, self)
+		InlineAura_LoadDefaults = nil
+	end
+
 	-- Setup
 	self.bigCountdown = true
 
@@ -1193,17 +1192,10 @@ function InlineAura:VARIABLES_LOADED()
 	self:RegisterEvent('PLAYER_TARGET_CHANGED')
 	self:RegisterEvent('PLAYER_ENTERING_WORLD')
 	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
-	self:RegisterEvent('UNIT_EXITED_VEHICLE')
+	self:RegisterEvent('UNIT_EXITED_VEHICLE', 'UNIT_ENTERED_VEHICLE')
 	self:RegisterEvent('MODIFIER_STATE_CHANGED')
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
-	if self.TOTEMS then
-		TOTEMS = self.TOTEMS
-		function self:PLAYER_TOTEM_UPDATE(...)
-			self:AuraChanged("player")
-		end
-		self:RegisterEvent('PLAYER_TOTEM_UPDATE')
-	end
 
 	-- standard buttons
 	self:RegisterButtons("ActionButton", 12)
@@ -1265,42 +1257,13 @@ function InlineAura:VARIABLES_LOADED()
 	self:RequireUpdate(true)
 
 	-- Our bucket thingy
-	self.mouseoverTimer = 0
-	self:SetScript('OnUpdate', self.OnUpdate)
+	self.mouseoverTimer = 1
+	updateFrame = CreateFrame("Frame")
+	updateFrame:SetScript('OnUpdate', function(_, elapsed) return self:OnUpdate(elapsed) end)
 
 	-- Scan unit in case of delayed loading
-	if IsLoggedIn() then
-		self:PLAYER_ENTERING_WORLD()
-	end
+	self:PLAYER_ENTERING_WORLD()
 end
-
-function InlineAura:ADDON_LOADED(event, name)
-	if name ~= addonName then return end
-	self:UnregisterEvent('ADDON_LOADED')
-	self.ADDON_LOADED = nil
-
-	if IsLoggedIn() then
-		self:VARIABLES_LOADED()
-	else
-		self:RegisterEvent('VARIABLES_LOADED')
-	end
-end
-
--- Event handler
-InlineAura:SetScript('OnEvent', function(self, event, ...)
-	--@debug@
-	if type(self[event]) == 'function' then
-	--@end-debug@
-		safecall(self[event], self, event, ...)
-	--@debug@
-	else
-		dprint('InlineAura: registered event has no handler: '..event)
-	end
-	--@end-debug@
-end)
-
--- Initialize on ADDON_LOADED
-InlineAura:RegisterEvent('ADDON_LOADED')
 
 ------------------------------------------------------------------------------
 -- Configuration GUI loader

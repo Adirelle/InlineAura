@@ -340,11 +340,15 @@ local options = {
 local _, playerClass = UnitClass("player")
 local isPetClass = (playerClass == "WARLOCK" or playerclass == "MAGE" or playerClass == "DEATHKNIGHT" or playerClass == "HUNTER")
 
-local SPECIALS = InlineAura.SPECIALS
-if next(SPECIALS) then
-	specialValues = {}
-	for name in pairs(SPECIALS) do
-		specialValues[name] = L[name]
+local GetSpecialList
+do
+	local t = {}
+	function GetSpecialList()
+		wipe(t)
+		for name, module in pairs(InlineAura.specialModules) do
+			t[name] = module.uiName or L[name]
+		end
+		return t
 	end
 end
 
@@ -466,11 +470,11 @@ local spellOptions = {
 						regular = L['Regular buff or debuff'],
 						self = L['Self buff or debuff'],
 						pet = isPetClass and L['Pet buff or debuff'] or nil,
-						special = specialValues and L['Special'] or nil,
+						special = L['Special'] or nil,
 					},
 					order = 20,
 				},
-				specialAlias = specialValues and {
+				specialAlias = {
 					name = L['Value to display'],
 					desc = L['Select which special value should be displayed.'],
 					type = 'select',
@@ -485,7 +489,7 @@ local spellOptions = {
 						end
 						InlineAura:RequireUpdate(true)
 					end,
-					values = specialValues,
+					values = GetSpecialList,
 					hidden = function(info) return not info.handler:IsSpecial() end,
 					order = 30,
 				} or nil,
@@ -763,7 +767,7 @@ do
 		__mode = 'kv',
 		__index = function(self, key)
 			local result = false
-			if SPECIALS[key] then
+			if InlineAura.specialNames[key] then
 				result = key
 			else
 				local rawId = tonumber(string.match(tostring(key), '^#(%d+)$'))

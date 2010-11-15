@@ -345,8 +345,8 @@ do
 	local t = {}
 	function GetSpecialList()
 		wipe(t)
-		for name, module in pairs(InlineAura.specialModules) do
-			t[name] = module.uiName or L[name]
+		for keyword, module in pairs(InlineAura.stateKeywords) do
+			t[keyword] = L[keyword]
 		end
 		return t
 	end
@@ -767,7 +767,7 @@ do
 		__mode = 'kv',
 		__index = function(self, key)
 			local result = false
-			if InlineAura.specialNames[key] then
+			if InlineAura.stateKeywords[key] then
 				result = key
 			else
 				local rawId = tonumber(string.match(tostring(key), '^#(%d+)$'))

@@ -88,19 +88,19 @@ if playerClass == "DRUID" then
 	local GetPrimaryTalentTree = GetPrimaryTalentTree
 
 	local isMoonkin, direction, power
-	
+
 	local eclipse = InlineAura:NewSpecial("ECLIPSE")
 	eclipse.aliases = {
 		LUNAR_ENERGY = true,
 		SOLAR_ENERGY = true,
 	}
-	
+
 	function eclipse:AcceptUnit(unit)
 		return unit == "player"
 	end
-	
+
 	function eclipse:PostEnable()
-		self:RegisterEvent('PLAYER_TALENT_UPDATE')		
+		self:RegisterEvent('PLAYER_TALENT_UPDATE')
 		self:PLAYER_TALENT_UPDATE("OnEnable")
 	end
 
@@ -149,46 +149,51 @@ end
 
 if playerClass == "SHAMAN" then
 
-	local totem = InlineAura:NewSpecial("TOTEM")
-	
-	function totem:OnInitialize()
-		for i, id in pairs({
-			 8075, -- Strength of Earth Totem
-			 3599, -- Searing Totem
-			 8227, -- Flametongue Totem
-			 2484, -- Earthbind Totem
-			 5394, -- Healing Stream Totem
-			 8512, -- Windfury Totem
-			 8190, -- Magma Totem
-			 8177, -- Grounding Totem
-			 5675, -- Mana Spring Totem
-			 3738, -- Wrath of Air Totem
-			 8071, -- Stoneskin Totem
-			 8143, -- Tremor Totem
-			 2062, -- Earth Elemental Totem
-			 5730, -- Stoneclaw Totem
-			 8184, -- Elemental Resistance Totem
-			 2894, -- Fire Elemental Totem
-			87718, -- Totem of Tranquil Mind
-			16190, -- Mana Tide Totem
-		}) do
-			self.aliases[GetSpellInfo(id)] = true
+	local totemState = InlineAura:NewStateModule("Totems")
+	totemState.OverrideAuraType = "self"
+
+	local TOTEMS = {
+		 8075, -- Strength of Earth Totem
+		 3599, -- Searing Totem
+		 8227, -- Flametongue Totem
+		 2484, -- Earthbind Totem
+		 5394, -- Healing Stream Totem
+		 8512, -- Windfury Totem
+		 8190, -- Magma Totem
+		 8177, -- Grounding Totem
+		 5675, -- Mana Spring Totem
+		 3738, -- Wrath of Air Totem
+		 8071, -- Stoneskin Totem
+		 8143, -- Tremor Totem
+		 2062, -- Earth Elemental Totem
+		 5730, -- Stoneclaw Totem
+		 8184, -- Elemental Resistance Totem
+		 2894, -- Fire Elemental Totem
+		87718, -- Totem of Tranquil Mind
+		16190, -- Mana Tide Totem
+	}
+
+	local function GetSpellNames(id, ...)
+		if id then
+			return GetSpellInfo(id), GetSpellNames(...)
 		end
 	end
 
-	function totem:PostEnable()
+	function totemState:OnEnable()
+		self:RegisterKeywords("TOTEM")
+		self:RegisterSpellHooks(GetSpellNames(unpack(TOTEMS)))
 		self:RegisterEvent('PLAYER_TOTEM_UPDATE')
 	end
 
-	function totem:PLAYER_TOTEM_UPDATE()
+	function totemState:PLAYER_TOTEM_UPDATE()
 		InlineAura:AuraChanged("player")
 	end
 
-	function totem:AcceptUnit(unit)
+	function totemState:CanTestUnit(unit)
 		return unit == "player"
 	end
 
-	function totem:Test(spell)
+	function totemState:Test(_, spell)
 		spell = strlower(spell)
 		for index = 1, 4 do
 			local haveTotem, name, startTime, duration = GetTotemInfo(index)

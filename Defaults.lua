@@ -152,12 +152,20 @@ end
 local function GroupBuffs(...)
 	for i = 1, select('#', ...) do
 		local id = select(i, ...)
-		Aliases(id, ...).onlyMine = false
+		local defaults = Aliases(id, ...)
+		defaults.onlyMine = false
+		defaults.auraType = "self"
 	end
 end
 
 -- Declare a category of group-wide debuffs
-local GroupDebuffs = GroupBuffs
+local function GroupDebuffs(...)
+	for i = 1, select('#', ...) do
+		local id = select(i, ...)
+		local defaults = Aliases(id, ...)
+		defaults.onlyMine = false
+	end
+end
 
 -- Declare (de)buffs that are brought by several classes
 local SharedAuras

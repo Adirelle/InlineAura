@@ -590,6 +590,20 @@ local function GetAuraToDisplay(spell, target, specific)
 
 	-- Look for the aura or its aliases
 	local name, count, expirationTime, isDebuff, isMine, showHighlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
+
+	if specific and specific.invertHighlight then
+		showHighlight = not showHighlight
+		if not name then
+			name = spell
+			isDebuff = UnitIsDebuffable(target)
+			if isDebuff then
+				isMine = onlyMyDebuffs
+			else
+				isMine = onlyMyBuffs
+			end
+		end
+	end
+
 	if name then
 		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, showHighlight and highlight or "none"
 	end

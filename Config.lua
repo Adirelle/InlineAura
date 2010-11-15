@@ -491,6 +491,14 @@ local spellOptions = {
 						glowing = L['Glowing animation'],
 					}
 				},
+				invertHighlight = {
+					name = L['Invert hightlight'],
+					desc = L["Check to invert highlight display. Countdown and application count display isn't affected by this setting."],
+					type = 'toggle',
+					arg = 'invertHighlight',
+					disabled = function(info) return info.handler:IsSpellDisabled(info) or info.handler.db.highlight == "none" end,
+					order = 55,
+				},
 				aliases = {
 					name = L['Auras to look up'],
 					desc = L['Enter additional aura names to check. This allows to check for alternative or equivalent auras. Some spells also apply auras that do not have the same name as the spell.'],
@@ -781,5 +789,3 @@ InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileChanged', 'ListUp
 InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileCopied', 'ListUpdated')
 InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')
 spellSpecificHandler:ListUpdated()
-
-

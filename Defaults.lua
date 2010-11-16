@@ -130,7 +130,7 @@ local function GetSpellName(id, level, noStrict)
 			for i = 1, select('#', ...) do
 				local id = select(i, ...)
 				if id ~= spell.id then
-					local name = GetSpellName(id, 1)
+					local name = GetSpellName(id, 1, true)
 					if not spell.aliases then
 						spell.aliases = {}
 					end

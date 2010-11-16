@@ -472,7 +472,7 @@ function statePrototype:CanTestUnit(unit)
 	return true
 end
 
-function statePrototype:Test(spell, aura, unit, onlyMyBuffs, onlyMyDebuffs)
+function statePrototype:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
 	-- Return something meaningful there
 end
 

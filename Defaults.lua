@@ -166,7 +166,7 @@ function InlineAura_LoadDefaults(self)
 	local function SelfBuffs(...) return Spells(...):OnSelf():OnlyMine() end
 
 	-- Define pet buffs
-	local function PetBuffs(id, ...) return Spells(...):OnPet() end
+	local function PetBuffs(...) return Spells(...):OnPet() end
 
 	-- Add special display
 	local function ShowSpecial(special, ...) return Spells(...):WithStack():Glowing():ShowSpecial(special) end

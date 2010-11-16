@@ -21,41 +21,41 @@ if not InlineAura then return end
 local _, playerClass = UnitClass("player")
 
 ------------------------------------------------------------------------------
--- Warlock: soul shards
+-- Warlocks' Soul Shards and Paladins' Holy Power
 ------------------------------------------------------------------------------
 
-if playerClass == "WARLOCK" then
+if playerClass == "WARLOCK" or playerClass == "PALADIN" then
+	local POWER_TYPE, SPELL_POWER
+	if playerClass == "WARLOCK"  then
+		POWER_TYPE, MAX_POWER = "SOUL_SHARDS", 10
+	else
+		POWER_TYPE, MAX_POWER = "HOLY_POWER", MAX_HOLY_POWER
+	end
+	local SPELL_POWER = _G["SPELL_POWER_"..POWER_TYPE]
 	local UnitPower = UnitPower
-	local SPELL_POWER_SOUL_SHARDS = SPELL_POWER_SOUL_SHARDS
-	InlineAura:RegisterSpecial(
-		"SOUL_SHARDS", function() return UnitPower("player", SPELL_POWER_SOUL_SHARDS) end,
-		"UNIT_POWER", function(self, event, unit, type)
-			if unit == "player" and type == "SOUL_SHARDS" then
-				InlineAura:AuraChanged("player")
-			end
-		end
-	)
-end
 
-------------------------------------------------------------------------------
--- Paladin: holy power
-------------------------------------------------------------------------------
+	local powerState = InlineAura:NewStateModule(POWER_TYPE)
 
-if playerClass == "PALADIN" then
-	local UnitPower = UnitPower
-	local SPELL_POWER_HOLY_POWER = SPELL_POWER_HOLY_POWER
-	local MAX_HOLY_POWER = MAX_HOLY_POWER
-	InlineAura:RegisterSpecial(
-		"HOLY_POWER", function()
-			local power = UnitPower("player", SPELL_POWER_HOLY_POWER)
-			return power, power == MAX_HOLY_POWER
-		end,
-		"UNIT_POWER", function(self, event, unit, type)
-			if unit == "player" and type == "HOLY_POWER" then
-				return InlineAura:AuraChanged("player")
-			end
+	function powerState:OnEnable()
+		self:RegisterKeywords(POWER_TYPE)
+		self:RegisterEvent("UNIT_POWER")
+	end
+
+	function powerState:AcceptUnit(unit)
+		return unit == "player"
+	end
+
+	function powerState:Test(aura)
+		local power = UnitPower("player", SPELL_POWER)
+		return aura, power, nil, false, true, power == MAX_POWER
+	end
+
+	function powerState:UNIT_POWER(event, unit, type)
+		if unit == "player" and type == POWER_TYPE then
+			InlineAura:AuraChanged("player")
 		end
-	)
+	end
+
 end
 
 ------------------------------------------------------------------------------
@@ -65,15 +65,26 @@ end
 if playerClass == "ROGUE" or playerClass == "DRUID" then
 	local GetComboPoints = GetComboPoints
 	local MAX_COMBO_POINTS = MAX_COMBO_POINTS
-	InlineAura:RegisterSpecial(
-		"COMBO_POINTS", function()
-			local points = GetComboPoints("player")
-			return points, points == MAX_COMBO_POINTS
-		end,
-		"PLAYER_COMBO_POINTS", function()
-			return InlineAura:AuraChanged("player")
-		end
-	)
+
+	local comboPoints = InlineAura:NewStateModule("ComboPoints")
+
+	function comboPoints:OnEnable()
+		self:RegisterKeywords("COMBO_POINTS")
+		self:RegisterEvent('PLAYER_COMBO_POINTS')
+	end
+
+	function comboPoints:AcceptUnit(unit)
+		return unit == "player"
+	end
+
+	function comboPoints:Test(aura, unit)
+		local points = GetComboPoints("player")
+		return aura, points, nil, false, true, points == MAX_COMBO_POINTS
+	end
+
+	function comboPoints:PLAYER_COMBO_POINTS()
+		InlineAura:AuraChanged("player")
+	end
 end
 
 ------------------------------------------------------------------------------

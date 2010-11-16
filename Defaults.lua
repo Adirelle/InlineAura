@@ -172,7 +172,7 @@ function InlineAura_LoadDefaults(self)
 	local function ShowSpecial(special, ...) return Spells(...):WithStack():Glowing():ShowSpecial(special) end
 
 	-- Defines auras that appear on the player and modify another spell
-	local function SelfTalentProc(spellId, ...) return Spells(spellId):Aliases(...):OnlyMine():Glowing() end
+	local function SelfTalentProc(spellId, ...) return Spells(spellId):Aliases(...):OnSelf():OnlyMine():Glowing() end
 
 	-- Declare a category of group-wide buffs
 	local function GroupBuffs(...) return Spells(...):AreMutualAliases():OnSelf():ShowOthers() end
@@ -395,7 +395,7 @@ function InlineAura_LoadDefaults(self)
 		Aliases(13813, 13812) -- Explosive Trap => Explosive Trap Effect
 
 		-- Aimed Shot => Ready, Set, Aim...
-		SelfTalentProc(19434, 82925):ShowStack():NoHighlight()
+		SelfTalentProc(19434, 82925):WithStack():NoHighlight()
 
 		-- Steady Shot => Improved Steady Shot
 		SelfTalentProc(56641, 53224):NoStack():ColoredBorder()

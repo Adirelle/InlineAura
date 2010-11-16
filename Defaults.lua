@@ -443,20 +443,30 @@ elseif class == 'WARRIOR' then
 		12975, -- Last Stand
 		18499, -- Berserker Rage
 		20230, -- Retaliation
+		23881, -- Bloodthirst
 		23920, -- Spell Reflection
 		34428, -- Victory Rush
 		46924, -- Bladestorm
 		55694  -- Enraged Regeneration
 	)
 
-	-- Contribued by Moozhe
-	local exec = Aliases(5308, 90806)  -- Execute => Executioner stacks
+	-- Contributed by Moozhe
+	local exec = SelfTalentProc(5308, 90806)  -- Execute => Executioner stacks
 	exec.hideStack = false
 
-	Aliases(   78, 50685) -- Heroic Strike => Incite
-	Aliases(  845, 85738) -- Cleave => Meat Cleaver
-	Aliases( 1680, 85738) -- Whirlwind => Meat Cleaver
-	Aliases(34428, 32216) -- Victory Rush => Victorious
+	SelfTalentProc(   78, 50685) -- Heroic Strike => Incite
+	SelfTalentProc( 1464, 46916) -- Slam => Bloodsurge
+	SelfTalentProc( 7384, 60503) -- Overpower => Taste For Blood
+	SelfTalentProc(34428, 32216) -- Victory Rush => Victorious
+
+	local cleave = Aliases(  845, 85738) -- Cleave => Meat Cleaver
+	cleave.auraType = "self"
+	cleave.hideStack = false
+
+	local whirlwind = Aliases( 1680, 85738) -- Whirlwind => Meat Cleaver
+	whirlwind.hideStack = false
+	whirlwind.auraType = "self"
+
 	Aliases(85288, 12292, 18499, 12880) -- Raging Blow => Death Wish, Berserker Rage, Enrage
 
 ------------------------------------------------------------------------------

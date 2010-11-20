@@ -75,24 +75,8 @@ local LSM = LibStub('LibSharedMedia-3.0')
 
 local function dprint() end
 --@debug@
-if tekDebug then
-	local frame = tekDebug:GetFrame(addonName)
-	local function mytostringall(a, ...)
-		local str
-		if type(a) == "table" and type(a.GetName) == "function" then
-			str = format("|cffff8844[%s]|r", tostring(a:GetName()))
-		else
-			str = tostring(a)
-		end
-		if select('#', ...) > 0 then
-			return str, mytostringall(...)
-		else
-			return str
-		end
-	end
-	dprint = function(...)
-		return frame:AddMessage(gsub(strjoin(" ", mytostringall(...)), "= ", "="))
-	end
+if AdiDebug then
+	dprint = AdiDebug:GetSink('InlineAura')
 end
 --@end-debug@
 InlineAura.dprint = dprint
@@ -897,8 +881,8 @@ local function InitializeButton(self)
 	if buttons[self] then return end
 	buttons[self] = {}
 	--@debug@
-	if self == DominosActionButton2 then
-		self.Debug = dprint
+	if self == DominosActionButton2 and AdiDebug then
+		AdiDebug:Embed(self, 'InlineAura')
 	else
 	--@end-debug@
 		self.Debug = self.Debug or NOOP

@@ -897,7 +897,7 @@ local function InitializeButton(self)
 	if buttons[self] then return end
 	buttons[self] = {}
 	--@debug@
-	if self == ActionButton10 then
+	if self == DominosActionButton2 then
 		self.Debug = dprint
 	else
 	--@end-debug@
@@ -972,17 +972,16 @@ local function UpdateConfig()
 	end
 end
 
+local mouseoverUnit
 local function UpdateMouseover(elapsed)
 	-- Track mouseover changes, since most events aren't fired for mouseover
 	if unitGUIDs['mouseover'] ~= UnitGUID('mouseover') then
-		InlineAura:UPDATE_MOUSEOVER_UNIT("OnUpdate")
-	elseif InlineAura.mouseoverTimer < elapsed then
-		InlineAura.mouseoverTimer = 1
-		if not (UnitInParty('mouseover') or UnitInRaid('mouseover') or UnitIsUnit('mouseover', 'pet') or UnitIsUnit('mouseover', 'target') or UnitIsUnit('mouseover', 'focus')) then
-			InlineAura:UPDATE_MOUSEOVER_UNIT("OnUpdate")
+		InlineAura:UPDATE_MOUSEOVER_UNIT("OnUpdate-changed")
+	elseif not mouseoverUnit then
+		InlineAura.mouseoverTimer = InlineAura.mouseoverTimer + elapsed
+		if InlineAura.mouseoverTimer > 0.5 then
+			InlineAura:UPDATE_MOUSEOVER_UNIT("OnUpdate-timer")
 		end
-	else
-		InlineAura.mouseoverTimer = InlineAura.mouseoverTimer - elapsed
 	end
 end
 
@@ -996,7 +995,7 @@ end
 local function UpdateButtons()
 	-- Update all buttons
 	for button in pairs(activeButtons) do
-		UpdateButtonAura(button, configUpdated)
+		UpdateButtonAura(button, needUpdate or configUpdated)
 	end
 end
 
@@ -1050,33 +1049,34 @@ function InlineAura:AuraChanged(unit)
 	local oldGUID = unitGUIDs[unit]
 	local realUnit = ApplyVehicleModifier(unit)
 	local guid = realUnit and db.profile.enabledUnits[unit] and UnitGUID(realUnit)
-	if oldGUID then
+	if oldGUID and not guid then
 		auraChanged[oldGUID] = true
 	end
 	if guid then
 		auraChanged[guid] = true
 	end
 	unitGUIDs[unit] = guid
-	if UnitIsUnit(unit, 'mouseover') then
-		self.mouseoverTimer = 1
+	if guid and UnitIsUnit(unit, 'mouseover') then
+		dprint('AuraChanged:', unit,'is mouseover')
+		self.mouseoverTimer = 0
 	end
 end
 
 function InlineAura:UNIT_ENTERED_VEHICLE(event, unit)
 	if unit == 'player' then
-		self:AuraChanged("player")
+		return self:AuraChanged("player")
 	end
 end
 
 InlineAura.UNIT_EXITED_VEHICLE = InlineAura.UNIT_ENTERED_VEHICLE
 
 function InlineAura:UNIT_AURA(event, unit)
-	self:AuraChanged(unit)
+	return self:AuraChanged(unit)
 end
 
 function InlineAura:UNIT_PET(event, unit)
 	if unit == 'player' then
-		self:AuraChanged("pet")
+		return self:AuraChanged("pet")
 	end
 end
 
@@ -1089,29 +1089,66 @@ function InlineAura:PLAYER_ENTERING_WORLD(event)
 end
 
 function InlineAura:PLAYER_FOCUS_CHANGED(event)
-	self:AuraChanged("focus")
+	return self:AuraChanged("focus")
 end
 
 function InlineAura:PLAYER_TARGET_CHANGED(event)
-	self:AuraChanged("target")
+	return self:AuraChanged("target")
+end
+
+local function GetUnitForMouseover()
+	if UnitIsUnit("mouseover", "vehicle") then
+		return "vehicle"
+	elseif UnitIsUnit("mouseover", "player") then
+		return "player"
+	elseif UnitIsUnit("mouseover", "pet") then
+		return "pet"
+	elseif GetNumRaidMembers() > 0 then
+		for i = 1, GetNumRaidMembers() do
+			if UnitIsUnit("mouseover", "raid"..i) then
+				return "raid"..i
+			elseif UnitIsUnit("mouseover", "raidpet"..i) then
+				return "raidpet"..i
+			end
+		end
+	elseif GetNumPartyMembers() > 0 then
+		for i = 1, GetNumPartyMembers() do
+			if UnitIsUnit("mouseover", "party"..i) then
+				return "party"..i
+			elseif UnitIsUnit("mouseover", "partypet"..i) then
+				return "partypet"..i
+			end
+		end
+	elseif UnitIsUnit("mouseover", "target") then
+		return "target"
+	elseif UnitIsUnit("mouseover", "focus") then
+		return "focus"
+	end
 end
 
 function InlineAura:UPDATE_MOUSEOVER_UNIT(event)
-	self:AuraChanged("mouseover")
+	--@debug@
+	dprint('UPDATE_MOUSEOVER_UNIT', event)
+	--@end-debug@
+	mouseoverUnit = GetUnitForMouseover()
+	return self:AuraChanged("mouseover")
 end
 
 function InlineAura:MODIFIER_STATE_CHANGED(event)
-	self:RequireUpdate()
+	return self:RequireUpdate()
 end
 
 function InlineAura:CVAR_UPDATE(event, name)
-	if name == 'autoSelfCast' then
-		self:RequireUpdate(true)
+	if name == 'AUTO_SELF_CAST_TEXT' then
+		--@debug@
+		dprint('CVAR_UPDATE', event)
+		--@end-debug@
+		return self:RequireUpdate(true)
 	end
 end
 
 function InlineAura:UPDATE_BINDINGS(event, name)
-	self:RequireUpdate(true)
+	return self:RequireUpdate(true)
 end
 
 function InlineAura:VARIABLES_LOADED()
@@ -1240,7 +1277,7 @@ function InlineAura:VARIABLES_LOADED()
 	self:RequireUpdate(true)
 
 	-- Our bucket thingy
-	self.mouseoverTimer = 1
+	self.mouseoverTimer = 0
 	self:SetScript('OnUpdate', self.OnUpdate)
 
 	-- Scan unit in case of delayed loading

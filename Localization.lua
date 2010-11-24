@@ -60,6 +60,7 @@ L["Application count position"] = true
 L["Application text color"] = true
 L["Aura type"] = true
 L["Auras to look up"] = true
+L["Behave as if the interface option \"Auto self cast\" was enabled, e.g. look for friendly auras on yourself when you are not targeting a friendly unit.\nNote: this enables the old Inline Aura behavior with friendly spells."] = true
 L["Border highlight colors"] = true
 L["Bottom left"] = true
 L["Bottom right"] = true
@@ -83,6 +84,7 @@ L["Disable"] = true
 L["Do you really want to remove these aura specific settings ?"] = true
 L["Dynamic countdown"] = true
 L["Either OmniCC or CooldownCount is loaded so aura countdowns are displayed using small font at the bottom of action buttons."] = true
+L["Emulate auto self cast"] = true
 L["Enter additional aura names to check. This allows to check for alternative or equivalent auras. Some spells also apply auras that do not have the same name as the spell."] = true
 L["Enter one aura name per line. They are spell-checked ; errors will prevents you to validate."] = true
 L["Enter the name of the spell for which you want to add specific settings. Non-existent spell or item names are rejected."] = true
@@ -102,6 +104,7 @@ L["None"] = true
 L["Only my buffs"] = true
 L["Only my debuffs"] = true
 L["Only show mine"] = true
+L["Options related to the units to watch and the way to select them depending on the spells."] = true
 L["Others' buffs"] = true
 L["Others' debuffs"] = true
 L["Pet buff or debuff"] = true
@@ -115,7 +118,6 @@ L["Reset settings"] = true
 L["Restore default settings of the selected spell."] = true
 L["Restore defaults"] = true
 L["Right"] = true
-L["Select additional units to watch. Disabling those units may save some resource but also prevent proper display of macros using these units."] = true
 L["Select how to highlight the button."] = true
 L["Select the aura type of this spell. This helps to look up the aura."] = true
 L["Select the color to use for the buffs cast by other characters."] = true
@@ -138,6 +140,7 @@ L["Size of small text"] = true
 L["Special"] = true
 L["Spell specific settings"] = true
 L["Spell to edit"] = true
+L["Targeting settings"] = true
 L["Text Position"] = true
 L["Text appearance"] = true
 L["The large font is used to display countdowns."] = true
@@ -147,9 +150,10 @@ L["Top right"] = true
 L["Top"] = true
 L["Unknown spell: %s"] = true
 L["Value to display"] = true
-L["Watch additional units"] = true
-L["focus"] = true
-L["mouseover"] = true
+L["Watch aura changes on the unit under the mouse cursor. Required only to properly update macros that uses @mouseover targeting."] = true
+L["Watch aura changes on your focus. Required only to properly update macros that uses @focus targeting."] = true
+L["Watch focus"] = true
+L["Watch unit under mouse cursor"] = true
 
 -- Core.lua
 L["%dh"] = true
@@ -223,7 +227,6 @@ L["Restore default settings of the selected spell."] = "Restaure les réglages p
 L["Restore defaults"] = "Par défaut"
 L["Right"] = "A droite"
 L["SOUL_SHARDS"] = "Fragments d'âme"
-L["Select additional units to watch. Disabling those units may save some resource but also prevent proper display of macros using these units."] = "Sélectionnez des unités supplémentaires à surveiller. Désactiver ces unités peut améliorer les performances mais peut aussi empêcher l'affichage correcte des auras sur les macros les utilisant."
 L["Select how to highlight the button."] = "Sélectionnez comment mettre le bouton en surbrillance."
 L["Select the aura type of this spell. This helps to look up the aura."] = "Sélectionnez le type d'aura du sort. Cela aide à rechercher l'aura."
 L["Select the color to use for the buffs cast by other characters."] = "Sélectionnez la couleur à utiliser pour les buffs lancés par d'autres personnages."
@@ -255,9 +258,6 @@ L["Top left"] = "En haut à gauche"
 L["Top right"] = "En haut à droite"
 L["Unknown spell: %s"] = "Sort inconnu : %s"
 L["Value to display"] = "Valeur à afficher"
-L["Watch additional units"] = "Surveiller des unités supplémentaires"
-L["focus"] = "Focalisation (focus)"
-L["mouseover"] = "Unité sous le pointeur de la souris (mouseover)"
 
 ------------------------ deDE ------------------------
 elseif locale == 'deDE' then
@@ -280,6 +280,7 @@ L["Check to hide the aura countdown."] = "Markieren, um den Countdown der Auren 
 L["Check to hide the aura duration countdown."] = "Auswahl zum verstecken des Auracooldowns. "
 L["Check to ignore buffs cast by other characters."] = "Markieren, um von anderen Charakteren gewirkte Buffs zu ignorieren."
 L["Check to ignore debuffs cast by other characters."] = "Markieren, um von anderen Charakteren gewirkte Debuffs zu ignorieren."
+L["Check to invert highlight display. Countdown and application count display aren't affected by this setting."] = "Markieren, um die Darstellung der Hervorhebung umzukehren. Die Darstellung des Countdowns und der Zauber sind von dieser Einstellung nicht betroffen."
 L["Check to only show aura you applied. Uncheck to always show aura, even when applied by others. Leave grayed to use default settings."] = "Aktivieren zur Anzeige eigener Auras. Deaktivierung zur Anzeige der Aura unabhängig vom Caster. Für die Standarteinstellungen grau lassen."
 L["Check to totally disable this spell. No border highlight nor text is displayed for disabled spells."] = "Aktivieren zum völligen Ignorieren dieses Zaubers. Weder der Hintergrund noch der Text werden bei deaktivieren Zaubern angezeigt."
 L["Click to create specific settings for the spell."] = "Anklicken, um spezifische Einstellungen für Zauber zu erstellen."
@@ -298,6 +299,7 @@ L["Font name"] = "Schriftartname"
 L["Glowing animation"] = "Leuchtende Animation"
 L["Highlight effect"] = "Hervorhebungseffekt"
 L["Inline Aura"] = "Inline Aura"
+L["Invert highlight"] = "Hervorhebung umkehren"
 L["Left"] = "Links"
 L["Make the countdown color, and size if possible, depends on remaining time."] = "Falls möglich, sollen die Countdown-Farbe und -Größe abhängig von der verbleibenden Zeit dargestellt werden."
 L["My buffs"] = "Meine Buffs"
@@ -323,7 +325,6 @@ L["Restore default settings of the selected spell."] = "Wiederherstellung der St
 L["Restore defaults"] = "Standarteinstellungen wiederherstellen. "
 L["Right"] = "Rechts"
 L["SOUL_SHARDS"] = "Seelensplitter"
-L["Select additional units to watch. Disabling those units may save some resource but also prevent proper display of macros using these units."] = "Wähle die Einheiten, die zusätzlich überwacht werden sollen. Die Deaktivierung dieser Einheiten könnte Ressourcen einsparen, aber auch die ordentliche Anzeige von Makros verhindern, die diese Einheiten verwenden."
 L["Select how to highlight the button."] = "Wähle wie die Schaltfläche hervorzuheben ist."
 L["Select the aura type of this spell. This helps to look up the aura."] = "Auswahl des Auratyps des Zaubers. "
 L["Select the color to use for the buffs cast by other characters."] = "Auswahl der Farbe für die gecasteten Buffs anderer Charaktere"
@@ -355,9 +356,6 @@ L["Top left"] = "Oben links"
 L["Top right"] = "Oben rechts"
 L["Unknown spell: %s"] = "Unbekannter Zauber: %s"
 L["Value to display"] = "Anzuzeigender Wert"
-L["Watch additional units"] = "Überwache zusätzliche Einheiten"
-L["focus"] = "Fokus"
-L["mouseover"] = "Mouseover"
 
 ------------------------ esMX ------------------------
 -- no translation
@@ -465,7 +463,6 @@ L["Restore default settings of the selected spell."] = "Restaurar ajustes por de
 L["Restore defaults"] = "Restaurar por defecto"
 L["Right"] = "Derecha"
 L["SOUL_SHARDS"] = "Fragmentos de alma"
-L["Select additional units to watch. Disabling those units may save some resource but also prevent proper display of macros using these units."] = "Selecciona unidades adicionales a revisar. Desactivando esto puedes ganar algunos recursos pero también previene la correcta visualización de las macros de uso de estas unidades."
 L["Select how to highlight the button."] = "Selecciona como resaltar el boton"
 L["Select the aura type of this spell. This helps to look up the aura."] = "Selecciona el tipo de aura de este hechizo. Esto ayuda a buscar el aura"
 L["Select the color to use for the buffs cast by other characters."] = "Selecciona el color a usar para beneficios casteados por otros personajes."
@@ -497,9 +494,6 @@ L["Top left"] = "Arriba izquierda"
 L["Top right"] = "Arriba derecha"
 L["Unknown spell: %s"] = "Hechizo desconocido: %s"
 L["Value to display"] = "Valor a mostrar"
-L["Watch additional units"] = "Revisar unidades adicionales"
-L["focus"] = "Foco"
-L["mouseover"] = "Sobre el ratón"
 
 ------------------------ zhTW ------------------------
 elseif locale == 'zhTW' then
@@ -539,6 +533,7 @@ L["Font name"] = "字型名字"
 L["Glowing animation"] = "發光動畫"
 L["Highlight effect"] = "高亮效果"
 L["Inline Aura"] = "Inline Aura"
+L["Invert highlight"] = "顛倒高亮"
 L["Left"] = "左"
 L["My buffs"] = "我的增益法術"
 L["My debuffs"] = "我的減益法術"
@@ -584,9 +579,6 @@ L["Top left"] = "左上"
 L["Top right"] = "右下"
 L["Unknown spell: %s"] = "未知法術: %s"
 L["Value to display"] = "數值至顯示"
-L["Watch additional units"] = "看附加的單位"
-L["focus"] = "焦點"
-L["mouseover"] = "鼠標懸停"
 
 ------------------------ zhCN ------------------------
 elseif locale == 'zhCN' then
@@ -708,7 +700,6 @@ L["Restore default settings of the selected spell."] = "선택한 주문의 기�
 L["Restore defaults"] = "기본값 불러오기"
 L["Right"] = "오른쪽"
 L["SOUL_SHARDS"] = "영혼의 조각" -- Needs review
-L["Select additional units to watch. Disabling those units may save some resource but also prevent proper display of macros using these units."] = "추가적으로 표시할 유닛을 선택합니다. 유닛 추가를 사용하지 않으면 리소스를 감소시킬 수 있습니다. " -- Needs review
 L["Select how to highlight the button."] = "버튼을 강조하는 효과를 선택합니다."
 L["Select the aura type of this spell. This helps to look up the aura."] = "이 주문의 오라 형태를 선택합니다. 이는 오라 찾기를 돕습니다."
 L["Select the color to use for the buffs cast by other characters."] = "다른 캐릭터가 시전한 강화 효과에 사용할 색을 선택합니다."
@@ -740,9 +731,6 @@ L["Top left"] = "왼쪽 위"
 L["Top right"] = "오른쪽 위"
 L["Unknown spell: %s"] = "알 수 없는 주문: %s"
 L["Value to display"] = "값을 표시" -- Needs review
-L["Watch additional units"] = "유닛 추가로 표시"
-L["focus"] = "주시 대상"
-L["mouseover"] = "마우스오버"
 end
 
 -- @noloc]]

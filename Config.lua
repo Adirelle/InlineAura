@@ -102,7 +102,7 @@ end
 -----------------------------------------------------------------------------
 
 local options = {
-	name = format("%s %s", L['Inline-Aura'], GetAddOnMetadata("InlineAura", "Version")),
+	name = format("%s %s", L['Inline Aura'], GetAddOnMetadata("InlineAura", "Version")),
 	type = 'group',
 	handler = handler,
 	set = 'Set',

@@ -671,12 +671,12 @@ local function GuessMacroTarget(index)
 	end
 end
 
-local function GuessSpellTarget(spell, helpful)
+local function GuessSpellTarget(helpful)
 	if IsModifiedClick("SELFCAST") then
 		return "player"
 	elseif IsModifiedClick("FOCUSCAST") then
 		return "focus"
-	elseif spell and helpful and not UnitIsBuffable("target") and GetCVarBool("autoSelfCast") then
+	elseif helpful and not UnitIsBuffable("target") and (InlineAura.db.profile.emulateAutoSelfCast or GetCVarBool("autoSelfCast")) then
 		return "player"
 	else
 		return "target"
@@ -697,32 +697,31 @@ local function ApplyVehicleModifier(unit)
 end
 
 local function GetSpellTargetAndType(self, action, param)
-	local isMacro, isItem, key, spell
+	local isMacro, item, spell
 
 	-- Extract spell info from action and parameter
 	if action == "macro" then
 		isMacro = true
 		local macroSpell = GetMacroSpell(param)
 		if macroSpell then
-			spell = macroSpell, macroSpell
+			spell = macroSpell
 		else
 			local _, macroItem = GetMacroItem(param)
 			if macroItem then
-				isItem, key, spell = true, macroItem, GetItemSpell(macroItem)
-			else
-				return -- Can't handle
+				item, spell = macroItem, GetItemSpell(macroItem)
 			end
 		end
 	elseif action == "item" then
-		isItem, key, spell = true, GetItemInfo(param), GetItemSpell(param)
+		item, spell = GetItemInfo(param), GetItemSpell(param)
 	elseif action == "spell" then
 		spell = GetSpellInfo(param)
-	else
-		return -- Can't handle
+	end
+	if not spell then
+		return -- Nothing to handle
 	end
 
 	-- Check for specific settings
-	local specific = rawget(db.profile.spells, key or spell)
+	local specific = rawget(db.profile.spells, item or spell)
 	if type(specific) == "table" then
 		if specific.disabled then
 			return -- Don't want to handle
@@ -738,7 +737,7 @@ local function GetSpellTargetAndType(self, action, param)
 	end
 
 	-- Check for totems and items
-	if TOTEMS[spell] or isItem then
+	if TOTEMS[spell] or item then
 		return spell, "player", "self", specific
 	end
 
@@ -760,12 +759,12 @@ local function GetSpellTargetAndType(self, action, param)
 
 	-- Educated guess
 	local helpful
-	if isItem then
-		helpful = IsHelpfulItem(param)
+	if item then
+		helpful = IsHelpfulItem(item)
 	else
-		helpful = IsHelpfulSpell(param)
+		helpful = IsHelpfulSpell(spell)
 	end
-	return spell, GuessSpellTarget(spell, helpful), "regular", specific
+	return spell, GuessSpellTarget(helpful), "regular", specific
 end
 
 local function UpdateButtonAura(self, force)

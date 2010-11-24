@@ -38,8 +38,15 @@ local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 local handler = {}
 
 function handler:GetDatabase(info)
+	local db = InlineAura.db.profile
 	local key = info.arg or info[#info]
-	return InlineAura.db.profile, key
+	if type(key) == "table" then
+		for i = 1, #key-1 do
+			db = db[key[i]]
+		end
+		key = key[#key]
+	end
+	return db, key
 end
 
 function handler:Set(info, ...)
@@ -95,6 +102,7 @@ end
 -----------------------------------------------------------------------------
 
 local options = {
+	name = format("%s %s", L['Inline-Aura'], GetAddOnMetadata("InlineAura", "Version")),
 	type = 'group',
 	handler = handler,
 	set = 'Set',
@@ -141,14 +149,33 @@ local options = {
 			disabled = function(info) return InlineAura.db.profile.hideCountdown or not InlineAura.db.profile.preciseCountdown end,
 			order = 46,
 		},
-		enabledUnits = {
-			name = L['Watch additional units'],
-			desc = L['Select additional units to watch. Disabling those units may save some resource but also prevent proper display of macros using these units.'],
-			type = 'multiselect',
+		targeting = {
+			name = L['Targeting settings'],
+			desc = L['Options related to the units to watch and the way to select them depending on the spells.'],
+			type = 'group',
+			inline = true,
 			order = 49,
-			values = {
-				focus = L['focus'],
-				mouseover = L['mouseover'],
+			args = {
+				focus = {
+					name = L['Watch focus'],
+					desc = L['Watch aura changes on your focus. Required only to properly update macros that uses @focus targeting.'],
+					type = 'toggle',
+					order = 10,
+					arg = {'enabledUnits', 'focus'},
+				},
+				mouseover = {
+					name = L['Watch unit under mouse cursor'],
+					desc = L['Watch aura changes on the unit under the mouse cursor. Required only to properly update macros that uses @mouseover targeting.'],
+					type = 'toggle',
+					order = 20,
+					arg = {'enabledUnits', 'mouseover'},
+				},
+				emulateAutoSelfCast = {
+					name = L['Emulate auto self cast'],
+					desc = L['Behave as if the interface option "Auto self cast" was enabled, e.g. look for friendly auras on yourself when you are not targeting a friendly unit.\nNote: this enables the old Inline Aura behavior with friendly spells.'],
+					type = 'toggle',
+					order = 30,
+				},
 			},
 		},
 		colors = {

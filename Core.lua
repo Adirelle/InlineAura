@@ -709,22 +709,22 @@ local function GetSpellTargetAndType(self, action, param)
 		return -- Nothing to handle
 	end
 
-	local auraType = "regular"
+	local auraType = item and "self" or "regular"
 
 	-- Check spell hooks
-	local spellHook = stateSpellHooks[key or spell]
+	local spellHook = stateSpellHooks[item or spell]
 	if spellHook then
 		local overrideAuraType = spellHook.OverrideAuraType
 		if type(overrideAuraType) == "string" then
 			auraType = overrideAuraType
 		elseif type(overrideAuraType) == "function" then
-			auraType = overrideAuraType(spellHook, key or spell) or auraType
+			auraType = overrideAuraType(spellHook, item or spell) or auraType
 		end
 		local overrideTarget = spellHook.OverrideTarget
 		if type(overrideTarget) == "string" then
 			target = overrideTarget
 		elseif type(overrideTarget) == "function" then
-			target = overrideTarget(spellHook, key or spell) or nil
+			target = overrideTarget(spellHook, item or spell) or nil
 		end
 	end
 

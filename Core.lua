@@ -881,7 +881,7 @@ local function InitializeButton(self)
 	if buttons[self] then return end
 	buttons[self] = {}
 	--@debug@
-	if self == DominosActionButton2 and AdiDebug then
+	if AdiDebug then
 		AdiDebug:Embed(self, 'InlineAura')
 	else
 	--@end-debug@

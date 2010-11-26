@@ -624,7 +624,6 @@ function InlineAura_LoadDefaults(self)
 			"HOLY_POWER",
 			85673, -- Word of Glory
 			85256, -- Templar's Verdict
-			53385, -- Divine Storm
 			53600, -- Shield of the Righteous
 			84963  -- Inquisition
 		)

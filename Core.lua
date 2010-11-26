@@ -65,7 +65,6 @@ local SecureCmdOptionParse, GetMacroBody = SecureCmdOptionParse, GetMacroBody
 local GetCVarBool, SecureButton_GetModifiedUnit = GetCVarBool, SecureButton_GetModifiedUnit
 local GetMacroSpell, GetMacroItem, IsHelpfulItem = GetMacroSpell, GetMacroItem, IsHelpfulItem
 
-local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow -- Hook protection
 local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow -- Hook protection
 
 ------------------------------------------------------------------------------
@@ -510,7 +509,7 @@ local function UpdateButtonAura(self, force)
 
 		local name, count, expirationTime, isDebuff, isMine, highlight
 
-		if spell and target and auraType then
+		if spell and target then
 			name, count, expirationTime, isDebuff, isMine, highlight = GetAuraToDisplay(spell, target, specific)
 			--@debug@
 			if name then
@@ -519,17 +518,26 @@ local function UpdateButtonAura(self, force)
 			--@end-debug@
 		end
 
-		if state.name ~= name or state.count ~= count or state.expirationTime ~= expirationTime or state.isDebuff ~= isDebuff or state.isMine ~= isMine or state.highlight ~= highlight then
-			state.name, state.count, state.expirationTime, state.isDebuff, state.isMine = name, count, expirationTime, isDebuff, isMine
-			if state.highlight ~= highlight then
-				state.highlight = highlight
-				--@debug@
-				self:Debug("GetAuraToDisplay: updating highlight")
-				--@end-debug@
-				ActionButton_UpdateOverlayGlow(self)
-				self:__IA_UpdateState()
-			end
-			return ns.UpdateTimer(self)
+		-- Convert "border" into something more useful
+		if highlight == "border" then
+			highlight = strjoin('', "color", isDebuff and "Debuff" or "Buff", isMine and 'Mine' or 'Others')
+		end
+
+		if state.highlight ~= highlight or force then
+			--@debug@
+			self:Debug("GetAuraToDisplay: updating highlight")
+			--@end-debug@
+			state.highlight = highlight
+			ActionButton_UpdateOverlayGlow(self)
+			self:__IA_UpdateState()
+		end
+
+		if state.count ~= count or state.expirationTime ~= expirationTime or force then
+			--@debug@
+			self:Debug("GetAuraToDisplay: updating countdown and/or stack", expirationTime, count)
+			--@end-debug@
+			state.count, state.expirationTime = count, expirationTime
+			ns.ShowCountdownAndStack(self, expirationTime, count)
 		end
 	end
 end
@@ -652,7 +660,7 @@ local function UpdateConfig()
 	UpdateUnitListeners()
 
 	-- Update timer skins
-	ns.ReskinTimers()
+	ns.UpdateWidgets()
 end
 
 local mouseoverUnit
@@ -706,8 +714,6 @@ function InlineAura:OnUpdate(elapsed)
 		wipe(auraChanged)
 	end
 
-	-- Update timers
-	safecall(ProcessTimers)
 end
 
 function InlineAura:RequireUpdate(config)

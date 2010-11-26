@@ -40,7 +40,6 @@ local db
 
 local auraChanged = {}
 local unitGUIDs = {}
-local timerFrames = {}
 local needUpdate = false
 local configUpdated = false
 
@@ -48,6 +47,7 @@ local buttons = {}
 local newButtons = {}
 local activeButtons = {}
 InlineAura.buttons = buttons
+ns.buttons = buttons
 
 ------------------------------------------------------------------------------
 -- Make often-used globals local
@@ -88,7 +88,6 @@ InlineAura.dprint = dprint
 local FONTMEDIA = LSM.MediaType.FONT
 
 local FONT_NAME = LSM:GetDefault(FONTMEDIA)
-local FONT_FLAGS = "OUTLINE"
 local FONT_SIZE_SMALL = 13
 local FONT_SIZE_LARGE = 20
 
@@ -149,42 +148,6 @@ local UnitIsBuffable = function(unit) return MY_UNITS[unit] or UnitCanAssist('pl
 local UnitIsDebuffable = function(unit) return UnitCanAttack('player', unit) end
 
 ------------------------------------------------------------------------------
--- Countdown formatting
-------------------------------------------------------------------------------
-
-local function GetPreciseCountdownText(timeLeft, threshold)
-	if timeLeft >= 3600 then
-		return format(L["%dh"], floor(timeLeft/3600)), 1 + floor(timeLeft) % 3600
-	elseif timeLeft >= 600 then
-		return format(L["%dm"], floor(timeLeft/60)), 1 + floor(timeLeft) % 60
-	elseif timeLeft >= 60 then
-		return format("%d:%02d", floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
-	elseif timeLeft >= threshold then
-		return tostring(floor(timeLeft)), timeLeft % 1
-	elseif timeLeft >= 0 then
-		return format("%.1f", floor(timeLeft*10)/10), 0
-	else
-		return "0"
-	end
-end
-
-local function GetImpreciseCountdownText(timeLeft)
-	if timeLeft >= 3600 then
-		return format(L["%dh"], ceil(timeLeft/3600)), ceil(timeLeft) % 3600
-	elseif timeLeft >= 60 then
-		return format(L["%dm"], ceil(timeLeft/60)), ceil(timeLeft) % 60
-	elseif timeLeft > 0 then
-		return tostring(floor(timeLeft)), timeLeft % 1
-	else
-		return "0"
-	end
-end
-
-local function GetCountdownText(timeLeft, precise, threshold)
-	return (precise and GetPreciseCountdownText or GetImpreciseCountdownText)(timeLeft, threshold)
-end
-
-------------------------------------------------------------------------------
 -- Safecall
 ------------------------------------------------------------------------------
 
@@ -213,213 +176,7 @@ do
 	function safecall(...)
 		return safecall_inner(pcall(...))
 	end
-end
-
-------------------------------------------------------------------------------
--- Home-made bucketed timers
-------------------------------------------------------------------------------
--- This is mainly a simplified version of AceTimer-3.0, credits goes to Ace3 authors
-
-local ScheduleTimer, CancelTimer, TimerCallback
-do
-	local assert, type, next, floor, GetTime = assert, type, next, floor, GetTime
-	local BUCKETS = 131
-	local HZ = 20
-	local buckets = {}
-	local targets = {}
-	for i = 1, BUCKETS do buckets[i] = {} end
-
-	local lastIndex = floor(GetTime()*HZ)
-
-	function ScheduleTimer(target, delay)
-		assert(target and type(delay) == "number" and delay >= 0)
-		if targets[target] then
-			buckets[targets[target]][target] = nil
-		end
-		local when = GetTime() + delay
-		local index = floor(when*HZ) + 1
-		local bucketNum = 1 + (index % BUCKETS)
-		buckets[bucketNum][target] = when
-		targets[target] = bucketNum
-	end
-
-	function CancelTimer(target)
-		assert(target)
-		local bucketNum = targets[target]
-		if bucketNum then
-			buckets[bucketNum][target] = nil
-			targets[target] = nil
-		end
-	end
-
-	function ProcessTimers()
-		local now = GetTime()
-		local newIndex = floor(now*HZ)
-		for index = lastIndex + 1, newIndex do
-			local bucketNum = 1 + (index % BUCKETS)
-			local bucket = buckets[bucketNum]
-			for target, when in next, bucket do
-				if when <= now then
-					bucket[target] = nil
-					targets[target] = nil
-					safecall(TimerCallback, target)
-				end
-			end
-		end
-		lastIndex = newIndex
-	end
-end
-
-------------------------------------------------------------------------------
--- Timer frame handling
-------------------------------------------------------------------------------
-
-local TimerFrame_OnUpdate, TimerFrame_Skin, TimerFrame_Display, TimerFrame_UpdateCountdown
-
-local function SetTextPosition(text, position)
-	text:SetJustifyH(position:match('LEFT') or position:match('RIGHT') or 'MIDDLE')
-	text:SetJustifyV(position:match('TOP') or position:match('BOTTOM') or 'CENTER')
-end
-
-function TimerFrame_UpdateTextLayout(self)
-	local stackText, countdownText = self.stackText, self.countdownText
-	if countdownText:IsShown() and stackText:IsShown() then
-		SetTextPosition(countdownText, InlineAura.db.profile.twoTextFirstPosition)
-		SetTextPosition(stackText, InlineAura.db.profile.twoTextSecondPosition)
-	elseif countdownText:IsShown() then
-		SetTextPosition(countdownText, InlineAura.db.profile.singleTextPosition)
-	elseif stackText:IsShown() then
-		SetTextPosition(stackText, InlineAura.db.profile.singleTextPosition)
-	end
-end
-
-function TimerFrame_Skin(self)
-	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
-
-	local countdownText = self.countdownText
-	countdownText.fontName = font
-	countdownText.baseFontSize = db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
-	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
-	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
-
-	local stackText = self.stackText
-	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
-	stackText:SetTextColor(unpack(db.profile.colorStack))
-
-	TimerFrame_UpdateTextLayout(self)
-end
-
-function TimerFrame_OnUpdate(self)
-	TimerFrame_UpdateCountdown(self, GetTime())
-end
-
--- Compat
-TimerFrame_CancelTimer = CancelTimer
-TimerCallback = TimerFrame_OnUpdate
-
-local dynamicModifiers = {
-	-- { font scale, r, g, b }
-	{ 1.3, 1, 0, 0 }, -- soon
-	{ 1.0, 1, 1, 0 }, -- in less than a minute
-	{ 0.8, 1, 1, 1 }, -- in more than a minute
-}
-
-function TimerFrame_UpdateCountdown(self, now)
-	local timeLeft = self.expirationTime - now
-	local displayTime, delay = GetCountdownText(timeLeft, db.profile.preciseCountdown, db.profile.decimalCountdownThreshold)
-	local countdownText = self.countdownText
-	countdownText:SetText(displayTime)
-	if db.profile.dynamicCountdownColor then
-		local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
-		if phase ~= self.dynamicPhase then
-			self.dynamicPhase = phase
-			local scale, r, g, b = unpack(dynamicModifiers[phase])
-			if InlineAura.bigCountdown then
-				countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize * scale, FONT_FLAGS)
-			end
-			countdownText:SetTextColor(r, g, b)
-		end
-	end
-	if delay then
-		ScheduleTimer(self, math.min(delay, timeLeft))
-	end
-end
-
-function TimerFrame_Display(self, expirationTime, count, now)
-	local stackText, countdownText = self.stackText, self.countdownText
-
-	if count then
-		stackText:SetText(count)
-		stackText:Show()
-	else
-		stackText:Hide()
-	end
-
-	if expirationTime then
-		self.expirationTime = expirationTime
-		countdownText:Show()
-		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
-		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
-		if sizeRatio > 1 then
-			countdownText.actualFontSize = countdownText.baseFontSize / sizeRatio
-			countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize, FONT_FLAGS)
-		else
-			countdownText.actualFontSize = countdownText.baseFontSize
-		end
-		self.dynamicPhase = nil
-		TimerFrame_UpdateCountdown(self, now)
-	else
-		TimerFrame_CancelTimer(self)
-		countdownText:Hide()
-	end
-
-	if stackText:IsShown() or countdownText:IsShown() then
-		self:Show()
-		TimerFrame_UpdateTextLayout(self)
-	else
-		self:Hide()
-	end
-end
-
-local function CreateTimerFrame(button)
-	local timer = CreateFrame("Frame", nil, button)
-	local cooldown = _G[button:GetName()..'Cooldown']
-	timer:SetFrameLevel(cooldown:GetFrameLevel() + 5)
-	timer:SetAllPoints(cooldown)
-	timer:SetToplevel(true)
-	timer:Hide()
-	timer:SetScript('OnHide', TimerFrame_CancelTimer)
-	timerFrames[button] = timer
-
-	local countdownText = timer:CreateFontString(nil, "OVERLAY")
-	countdownText:SetAllPoints(timer)
-	countdownText:Show()
-	timer.countdownText = countdownText
-
-	local stackText = timer:CreateFontString(nil, "OVERLAY")
-	stackText:SetAllPoints(timer)
-	timer.stackText = stackText
-
-	TimerFrame_Skin(timer)
-
-	return timer
-end
-
-------------------------------------------------------------------------------
--- LibButtonFacade compatibility
-------------------------------------------------------------------------------
-
-local function SetVertexColor(texture, r, g, b, a)
-	texture:SetVertexColor(r, g, b, a)
-end
-
-local function LBF_SetVertexColor(texture, r, g, b, a)
-	local R, G, B, A = texture:GetVertexColor()
-	texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
-end
-
-local function LBF_Callback()
-	configUpdated = true
+	ns.safecall = safecall
 end
 
 ------------------------------------------------------------------------------
@@ -579,59 +336,6 @@ local function GetAuraToDisplay(spell, target, specific)
 
 	if name then
 		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, showHighlight and highlight or "none"
-	end
-end
-
-------------------------------------------------------------------------------
--- Visual feedback hooks
-------------------------------------------------------------------------------
-
-local function UpdateTimer(self)
-	local state = buttons[self]
-	if state.name and (state.expirationTime or state.count) then
-		local now = GetTime()
-		local expirationTime = state.expirationTime
-		if expirationTime and expirationTime <= now then
-			expirationTime = nil
-		end
-		local count = state.count
-		if count == 0 then
-			count = nil
-		end
-		if expirationTime or count then
-			local frame = timerFrames[self] or CreateTimerFrame(self)
-			return TimerFrame_Display(frame, expirationTime, count, now)
-		end
-	end
-	if timerFrames[self] then
-		timerFrames[self]:Hide()
-	end
-end
-
-local function ActionButton_HideOverlayGlow_Hook(self)
-	local state = buttons[self]
-	if not state then return end
-	if state.highlight == "glowing" then
-		--@debug@
-		self:Debug("Enforcing glowing for", state.name)
-		--@end-debug@
-		return ActionButton_ShowOverlayGlow(self)
-	end
-end
-
-local function UpdateButtonState_Hook(self)
-	local state = buttons[self]
-	if not state then return end
-	local texture = self:GetCheckedTexture()
-	if state.highlight == "border" then
-		--@debug@
-		self:Debug("Showing border for", state.name)
-		--@end-debug@
-		local color = db.profile['color'..(state.isDebuff and "Debuff" or "Buff")..(state.isMine and 'Mine' or 'Others')]
-		self:SetChecked(true)
-		SetVertexColor(texture, unpack(color))
-	else
-		texture:SetVertexColor(1, 1, 1)
 	end
 end
 
@@ -825,7 +529,7 @@ local function UpdateButtonAura(self, force)
 				ActionButton_UpdateOverlayGlow(self)
 				self:__IA_UpdateState()
 			end
-			return UpdateTimer(self)
+			return ns.UpdateTimer(self)
 		end
 	end
 end
@@ -948,9 +652,7 @@ local function UpdateConfig()
 	UpdateUnitListeners()
 
 	-- Update timer skins
-	for button, timerFrame in pairs(timerFrames) do
-		TimerFrame_Skin(timerFrame)
-	end
+	ns.ReskinTimers()
 end
 
 local mouseoverUnit
@@ -1146,6 +848,7 @@ function InlineAura:OnEnable()
 		db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
 		db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
 		self.db = db
+		ns.db = db
 
 		LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
 
@@ -1198,6 +901,9 @@ function InlineAura:OnEnable()
 	self:RegisterButtons("MultiBarBottomRightButton", 12)
 	self:RegisterButtons("MultiBarBottomLeftButton", 12)
 
+	local ActionButton_HideOverlayGlow_Hook = ns.ActionButton_HideOverlayGlow_Hook
+	local UpdateButtonState_Hook = ns.UpdateButtonState_Hook
+
 	-- Hooks
 	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
 	hooksecurefunc('ActionButton_UpdateState', function(...) return safecall(UpdateButtonState_Hook, ...) end)
@@ -1205,19 +911,13 @@ function InlineAura:OnEnable()
 	hooksecurefunc('ActionButton_HideOverlayGlow', function(...) return safecall(ActionButton_HideOverlayGlow_Hook, ...) end)
 
 	-- ButtonFacade support
-	local LBF = LibStub('LibButtonFacade', true)
-	local LBF_RegisterCallback = function() end
-	if LBF then
-		SetVertexColor = LBF_SetVertexColor
-		LBF:RegisterSkinCallback("Blizzard", LBF_Callback)
-	end
+	ns.EnableLibButtonFacadeSupport()
+
 	-- Miscellanous addon support
 	if Dominos then
 		self:RegisterButtons("DominosActionButton", 120)
 		hooksecurefunc(Dominos.ActionButton, "Skin", ActionButton_OnLoad_Hook)
-		if LBF then
-			LBF:RegisterSkinCallback("Dominos", LBF_Callback)
-		end
+		ns.RegisterLBFCallback("Dominos")
 	end
 	if OmniCC or CooldownCount then
 		InlineAura.bigCountdown = false
@@ -1241,9 +941,7 @@ function InlineAura:OnEnable()
 	end
 	if Bartender4 then
 		self:RegisterButtons("BT4Button", 120) -- should not be necessary
-		if LBF then
-			LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
-		end
+		ns.RegisterLBFCallback("Bartender4")
 	end
 
 	-- Refresh everything

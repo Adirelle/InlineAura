@@ -339,6 +339,8 @@ end
 -- Aura updating
 ------------------------------------------------------------------------------
 
+local function FilterEmpty(v) if v and strtrim(tostring(v)) ~= "" and v ~= 0 then return v end end
+
 local function FindMacroOptions(...)
 	for i = 1, select('#', ...) do
 		local line = select(i, ...)
@@ -354,9 +356,7 @@ local function GuessMacroTarget(index)
 	local options = FindMacroOptions(strsplit("\n", body))
 	if options then
 		local action, target = SecureCmdOptionParse(options)
-		if action and action ~= "" and target and target ~= "" then
-			return target
-		end
+		return FilterEmpty(action) and FilterEmpty(target)
 	end
 end
 
@@ -385,22 +385,9 @@ local function ApplyVehicleModifier(unit)
 	return unit
 end
 
-local function GetSpellTargetAndType(self, action, param)
-	local isMacro, item, spell
-
-	-- Extract spell info from action and parameter
-	if action == "macro" then
-		isMacro = true
-		local macroSpell = GetMacroSpell(param)
-		if macroSpell then
-			spell = macroSpell
-		else
-			local _, macroItem = GetMacroItem(param)
-			if macroItem then
-				item, spell = macroItem, GetItemSpell(macroItem)
-			end
-		end
-	elseif action == "item" then
+local function AnalyzeAction(action, param)
+	local item, spell
+	if action == "item" then
 		item, spell = GetItemInfo(param), GetItemSpell(param)
 	elseif action == "spell" then
 		spell = GetSpellInfo(param)
@@ -420,12 +407,6 @@ local function GetSpellTargetAndType(self, action, param)
 		elseif type(overrideAuraType) == "function" then
 			auraType = overrideAuraType(spellHook, item or spell) or auraType
 		end
-		local overrideTarget = spellHook.OverrideTarget
-		if type(overrideTarget) == "string" then
-			target = overrideTarget
-		elseif type(overrideTarget) == "function" then
-			target = overrideTarget(spellHook, item or spell) or nil
-		end
 	end
 
 	-- Check for specific settings
@@ -442,30 +423,10 @@ local function GetSpellTargetAndType(self, action, param)
 	end
 
 	-- Solve special aura types ASAP
-	if auraType == "self" then
-		return spell, "player", auraType, specific
-	elseif auraType == "special" then
-		return spell, target or "player", auraType, specific
+	if auraType == "self" or auraType == "special" then
+		return spell, "player", specific
 	elseif auraType == "pet" then
-		return spell, "pet", auraType, specific
-	end
-
-	-- Regular aura
-
-	-- GetModifiedUnit always has precedence
-	if not target then
-		target = SecureButton_GetModifiedUnit(self)
-		if target and target ~= "" then
-			return spell, target, "regular", specific
-		end
-	end
-
-	-- Check macro target modifiers
-	if isMacro then
-		target = GuessMacroTarget(param)
-		if target then
-			return spell, target, "regular", specific
-		end
+		return spell, "pet", specific
 	end
 
 	-- Educated guess
@@ -475,34 +436,62 @@ local function GetSpellTargetAndType(self, action, param)
 	else
 		helpful = IsHelpfulSpell(spell)
 	end
-	return spell, GuessSpellTarget(helpful), "regular", specific
+	return spell, helpful and "friend" or "foe", specific
+end
+
+local function GetMacroAction(index)
+	local macroSpell = GetMacroSpell(index)
+	if macroSpell then
+		return "spell", macroSpell
+	end
+	local macroItem = GetMacroItem(index)
+	if macroItem then
+		return "item", macroItem
+	end
 end
 
 local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
 
-	local guid, spell, target, auraType, specific
-	spell, target, auraType, specific = GetSpellTargetAndType(self, state.action, state.param)
-	if spell and target then
-		target = ApplyVehicleModifier(target)
-	end
-	guid = target and UnitGUID(target)
-	--@debug@
-	self:Debug('UpdateButtonAura', state.action, state.param, '=>', auraType, spell, target, guid)
-	--@end-debug@
-
-	if force or auraChanged[guid or state.guid or false] or auraType ~= state.auraType or spell ~= state.spell or guid ~= state.guid then
+	local spell, target, specific
+	if state.action == "macro" then
+		local macroAction, macroParam = GetMacroAction(state.param)
+		spell, target, specific = AnalyzeAction(macroAction, macroParam)
+		if state.spell ~= spell or state.targetHint ~= target or state.specific ~= specific then
+			state.spell, state.targetHint, state.specific = spell, target, specific
+			force = true
+		end
+		if target == "friend" or target == "foe" then
+			target = GuessMacroTarget(state.param) or target
+		end
 		--@debug@
-		self:Debug("UpdateButtonAura update because of:",
-			force and "forced" or "-",
-			auraChanged[guid or false] and "aura" or "-",
-			auraType ~= state.auraType and "auraType" or "-",
-			spell ~= state.spell and "spell" or "-",
-			guid ~= state.guid and "guid" or "-"
-		)
+		if force then
+			self:Debug('UpdateButtonAura: macro:', state.param, '=>', macroAction, macroParam, '=>', spell, target, specific)
+		end
 		--@end-debug@
-		state.spell, state.guid, state.auraType = spell, guid, auraType
+	else
+		spell, target, specific = state.spell, state.targetHint, state.specific
+	end
+
+	-- Find actual units for these
+	if target == "friend" or target == "foe" then
+		target = FilterEmpty(SecureButton_GetModifiedUnit(self)) or GuessSpellTarget(target == "friend")
+		--@debug@
+		if force then
+			self:Debug('UpdateButtonAura: smart target:', target)
+		end
+		--@end-debug@
+	end
+
+	-- Get the GUID
+	local guid = target and UnitGUID(target)
+
+	if force or guid ~= state.guid or auraChanged[guid or state.guid or false] then
+		--@debug@
+		self:Debug("UpdateButtonAura: updating because", (force and "forced") or (guid ~= state.guid and "guid changed") or "aura changed", "|", spell, target, specific, guid)
+		--@end-debug@
+		state.guid = guid
 
 		local name, count, expirationTime, isDebuff, isMine, highlight
 
@@ -543,39 +532,46 @@ end
 -- Action handling
 ------------------------------------------------------------------------------
 
-local function ParseAction(self)
-	local action, param = self:__IA_GetAction()
-	if action == 'action' then
-		local _, spellId
-		action, param, _, spellId = GetActionInfo(param)
-		if action == 'equipmentset' then
-			return
-		elseif action == 'companion' then
-			action, param = 'spell', spellId
-		end
-	end
-	if action and param and param ~= 0 and param ~= "" then
-		if action == "item" and not GetItemSpell(GetItemInfo(param) or param) then
-			return
-		end
-		return action, param
-	end
-end
-
 local function UpdateAction_Hook(self)
 	local state = buttons[self]
 	if not state then return end
 	local action, param
 	if self:IsVisible() then
-		action, param = ParseAction(self)
+		action, param = self:__IA_GetAction()
+		if action == 'action' then
+			local actionAction, actionParam, _, spellId = GetActionInfo(param)
+			if actionAction == 'companion' then
+				action, param = 'spell', spellId
+			elseif actionAction == "spell" or actionAction == "item" or actionAction == "macro" then
+				action, param = actionAction, actionParam
+			else
+				action, param = nil, nil
+			end
+		end
+		if action == "item" and param and not GetItemSpell(GetItemInfo(param) or param) then
+			action, param = nil, nil
+		end
 	end
 	if action ~= state.action or param ~= state.param then
-		--@debug@
-		self:Debug("action changed =>", action, param)
-		--@end-debug@
 		state.action, state.param = action, param
 		activeButtons[self] = (action and param) or nil
-		return UpdateButtonAura(self)
+		local forceUpdate
+		if action ~= "macro" then
+			local spell, targetHint, specific = AnalyzeAction(action, param)
+			if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
+				state.spell, state.targetHint, state.specific = spell, targetHint, specific
+				forceUpdate = true
+			end
+			--@debug@
+			self:Debug("UpdateAction_Hook: action changed =>", action, param, "static:", spell, targetHint, specific, forceUpdate and "| forcing update")
+			--@end-debug@
+		else
+			forceUpdate = true
+			--@debug@
+			self:Debug("UpdateAction_Hook: action changed =>", action, param)
+			--@end-debug@
+		end
+		return UpdateButtonAura(self, forceUpdate)
 	end
 end
 
@@ -616,7 +612,7 @@ local function InitializeButton(self)
 		self.__IA_GetAction = Blizzard_GetAction
 		self.__IA_UpdateState = ActionButton_UpdateState
 	end
-	UpdateAction_Hook(self)
+	return UpdateAction_Hook(self)
 end
 
 ------------------------------------------------------------------------------

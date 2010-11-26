@@ -389,6 +389,7 @@ local function ApplyVehicleModifier(unit)
 end
 
 local function AnalyzeAction(action, param)
+	if not action or not param then return end
 	local item, spell
 	if action == "item" then
 		item, spell = GetItemInfo(param), GetItemSpell(param)

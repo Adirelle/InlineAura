@@ -66,10 +66,6 @@ local function GetImpreciseCountdownText(timeLeft)
 	end
 end
 
-local function GetCountdownText(timeLeft, precise, threshold)
-	return (precise and GetPreciseCountdownText or GetImpreciseCountdownText)(timeLeft, threshold)
-end
-
 ------------------------------------------------------------------------------
 -- Home-made bucketed timers
 ------------------------------------------------------------------------------
@@ -83,6 +79,8 @@ do
 	local buckets = {}
 	local targets = {}
 	for i = 1, BUCKETS do buckets[i] = {} end
+	local frame = CreateFrame("Frame")
+	frame:Hide()
 
 	local lastIndex = floor(GetTime()*HZ)
 
@@ -96,6 +94,7 @@ do
 		local bucketNum = 1 + (index % BUCKETS)
 		buckets[bucketNum][target] = when
 		targets[target] = bucketNum
+		frame:Show()
 	end
 
 	function CancelTimer(target)
@@ -104,10 +103,13 @@ do
 		if bucketNum then
 			buckets[bucketNum][target] = nil
 			targets[target] = nil
+			if not next(targets) then
+				frame:Hide()
+			end
 		end
 	end
 
-	function ProcessTimers()
+	frame:SetScript('OnUpdate', function()
 		local now = GetTime()
 		local newIndex = floor(now*HZ)
 		for index = lastIndex + 1, newIndex do
@@ -117,57 +119,75 @@ do
 				if when <= now then
 					bucket[target] = nil
 					targets[target] = nil
-					safecall(target.OnUpdate, target)
+					safecall(target.OnUpdate, target, now)
 				end
 			end
 		end
 		lastIndex = newIndex
+		if not next(targets) then
+			frame:Hide()
+		end
+	end)
+end
+
+------------------------------------------------------------------------------
+-- Base fontstring widget
+------------------------------------------------------------------------------
+
+local baseProto = setmetatable({}, { __index = CreateFrame("Frame"):CreateFontString() })
+local baseMeta = { __index = baseProto }
+
+function baseProto:Initialize(button)
+	self.button = button
+	self:SetAllPoints(button)
+	return self:ApplySettings()
+end
+
+--@debug@
+function baseProto:Debug(...)
+	return self.button:Debug(...)
+end
+--@end-debug@
+
+function baseProto:SetPosition(position)
+	if position ~= self.position then
+		self.position = position
+		self:SetJustifyH(strmatch(position, 'LEFT') or strmatch(position, 'RIGHT') or 'MIDDLE')
+		self:SetJustifyV(strmatch(position, 'TOP') or strmatch(position, 'BOTTOM') or 'CENTER')
+	end
+end
+
+function baseProto:ApplySettings()
+	self.font = LSM:Fetch(FONTMEDIA, ns.db.profile.fontName)
+	self.fontSize = ns.db.profile[self.sizeKey]
+	self.fontColor = ns.db.profile[self.colorKey]
+	return self:UpdateFont()
+end
+
+function baseProto:UpdateFont()
+	self:SetFont(self.font, self.fontSize, FONT_FLAGS)
+	self:SetTextColor(unpack(self.fontColor))
+end
+
+function baseProto:SetValue(value)
+	if value ~= self.value then
+		self.value = value
+		--@debug@
+		self:Debug('SetValue', value)
+		--@end-debug@
+		return self:_SetValue(value)
 	end
 end
 
 ------------------------------------------------------------------------------
--- Timer frame handling
+-- Countdown text widget
 ------------------------------------------------------------------------------
 
-local timerProto = setmetatable({}, {__index = CreateFrame("Frame")})
-local timerMeta = { __index = timerProto }
+local countdownProto = setmetatable({}, baseMeta)
+local countdownMeta = { __index = countdownProto }
 
-local function SetTextPosition(text, position)
-	text:SetJustifyH(position:match('LEFT') or position:match('RIGHT') or 'MIDDLE')
-	text:SetJustifyV(position:match('TOP') or position:match('BOTTOM') or 'CENTER')
-end
-
-function timerProto:UpdateTextLayout()
-	local stackText, countdownText = self.stackText, self.countdownText
-	if countdownText:IsShown() and stackText:IsShown() then
-		SetTextPosition(countdownText, ns.db.profile.twoTextFirstPosition)
-		SetTextPosition(stackText, ns.db.profile.twoTextSecondPosition)
-	elseif countdownText:IsShown() then
-		SetTextPosition(countdownText, ns.db.profile.singleTextPosition)
-	elseif stackText:IsShown() then
-		SetTextPosition(stackText, ns.db.profile.singleTextPosition)
-	end
-end
-
-function timerProto:Skin()
-	local font = LSM:Fetch(FONTMEDIA, ns.db.profile.fontName)
-
-	local countdownText = self.countdownText
-	countdownText.fontName = font
-	countdownText.baseFontSize = ns.db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
-	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
-	countdownText:SetTextColor(unpack(ns.db.profile.colorCountdown))
-
-	local stackText = self.stackText
-	stackText:SetFont(font, ns.db.profile.smallFontSize, FONT_FLAGS)
-	stackText:SetTextColor(unpack(ns.db.profile.colorStack))
-
-	self:UpdateTextLayout()
-end
-
-function timerProto:OnUpdate()
-	self:UpdateCountdown(GetTime())
-end
+countdownProto.colorKey = "colorCountdown"
+countdownProto.sizeKey = "largeFontSize"
 
 local dynamicModifiers = {
 	-- { font scale, r, g, b }
@@ -176,153 +196,196 @@ local dynamicModifiers = {
 	{ 0.8, 1, 1, 1 }, -- in more than a minute
 }
 
-function timerProto:UpdateCountdown(now)
-	local timeLeft = self.expirationTime - now
-	local displayTime, delay = GetCountdownText(timeLeft, ns.db.profile.preciseCountdown, ns.db.profile.decimalCountdownThreshold)
-	local countdownText = self.countdownText
-	countdownText:SetText(displayTime)
-	if ns.db.profile.dynamicCountdownColor then
+function countdownProto:UpdateFont()
+	local fontSize = self.fontSize
+	local r, g, b = unpack(self.fontColor)
+
+	local timeLeft = self.timeLeft
+	if timeLeft and self.dynamic then
 		local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
-		if phase ~= self.dynamicPhase then
-			self.dynamicPhase = phase
-			local scale, r, g, b = unpack(dynamicModifiers[phase])
-			if InlineAura.bigCountdown then
-				countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize * scale, FONT_FLAGS)
-			end
-			countdownText:SetTextColor(r, g, b)
-		end
+		local scale
+		scale, r, g, b = unpack(dynamicModifiers[phase])
+		fontSize = fontSize * scale
 	end
-	if delay then
-		ScheduleTimer(self, math.min(delay, timeLeft))
+
+	self:SetTextColor(r, g, b)
+	self:SetFont(self.font, fontSize, FONT_FLAGS)
+
+	local overflowRatio = self:GetStringWidth() / (self:GetParent():GetWidth()-4)
+	if overflowRatio > 1 then
+		return self:SetFont(self.font, self.fontSize / overflowRatio, FONT_FLAGS)
 	end
 end
 
-function timerProto:Display(expirationTime, count, now)
-	local stackText, countdownText = self.stackText, self.countdownText
+function countdownProto:ApplySettings()
+	self.sizeKey = InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"
+	self.dynamic = ns.db.profile.dynamicCountdownColor
 
-	if count then
-		stackText:SetText(count)
-		stackText:Show()
+	if ns.db.profile.preciseCountdown then
+		self.getCountdownText = GetPreciseCountdownText
+		self.decimalCountdownThreshold = ns.db.profile.decimalCountdownThreshold
 	else
-		stackText:Hide()
+		self.getCountdownText = GetImpreciseCountdownText
 	end
 
-	if expirationTime then
-		self.expirationTime = expirationTime
-		countdownText:Show()
-		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
-		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
-		if sizeRatio > 1 then
-			countdownText.actualFontSize = countdownText.baseFontSize / sizeRatio
-			countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize, FONT_FLAGS)
-		else
-			countdownText.actualFontSize = countdownText.baseFontSize
-		end
-		self.dynamicPhase = nil
-		self:UpdateCountdown(now)
-	else
+	return baseProto.ApplySettings(self)
+end
+
+function countdownProto:_SetValue(value)
+	if not value then
 		CancelTimer(self)
-		countdownText:Hide()
-	end
-
-	if stackText:IsShown() or countdownText:IsShown() then
-		self:Show()
-		self:UpdateTextLayout(self)
+		self.timeLeft = nil
+		return self:Hide()
 	else
-		self:Hide()
+		self:OnUpdate(GetTime())
+		return self:Show()
 	end
 end
 
-local function CreateTimerFrame(button)
-	local timer = setmetatable(CreateFrame("Frame", nil, button), timerMeta)
+function countdownProto:OnUpdate(now)
+	local timeLeft = self.value - now
+	if timeLeft <= 0 then
+		return self:SetValue(nil)
+	end
+	self.timeLeft = timeLeft
+	local displayTime, delay = self.getCountdownText(timeLeft, self.decimalCountdownThreshold)
+	self:SetText(displayTime)
+	self:UpdateFont()
+	if delay then
+		return ScheduleTimer(self, min(delay, timeLeft))
+	end
+end
+
+------------------------------------------------------------------------------
+-- Stack text widget
+------------------------------------------------------------------------------
+
+local stackProto = setmetatable({}, baseMeta)
+local stackMeta = { __index = stackProto }
+
+stackProto.colorKey = "colorStack"
+stackProto.sizeKey = "smallFontSize"
+
+function stackProto:_SetValue(value)
+	if value then
+		self:SetFormattedText("%d", value)
+		return self:Show()
+	else
+		return self:Hide()
+	end
+end
+
+------------------------------------------------------------------------------
+-- Widget registries
+------------------------------------------------------------------------------
+
+local overlays = setmetatable({}, { __index = function(t, button)
+	--@debug@
+	button:Debug("Spawning overlay")
+	--@end-debug@
+	local overlay = CreateFrame("Frame", nil, button)
 	local cooldown = _G[button:GetName()..'Cooldown']
-	timer:SetFrameLevel(cooldown:GetFrameLevel() + 5)
-	timer:SetAllPoints(cooldown)
-	timer:SetToplevel(true)
-	timer:Hide()
-	timer:SetScript('OnHide', CancelTimer)
+	overlay:SetFrameLevel(cooldown:GetFrameLevel() + 5)
+	overlay:SetAllPoints(cooldown)
+	t[button] = overlay
+	return overlay
+end})
 
-	local countdownText = timer:CreateFontString(nil, "OVERLAY")
-	countdownText:SetAllPoints(timer)
-	countdownText:Show()
-	timer.countdownText = countdownText
+local countdowns = {}
+local stacks = {}
 
-	local stackText = timer:CreateFontString(nil, "OVERLAY")
-	stackText:SetAllPoints(timer)
-	timer.stackText = stackText
+local function GetWidget(button, spawn, registry, key, meta)
+	local widget = registry[button]
+	if not widget and spawn then
+		--@debug@
+		button:Debug("Spawning", key)
+		--@end-debug@
+		local overlay = overlays[button]
+		widget = setmetatable(overlay:CreateFontString(nil, "OVERLAY"), meta)
+		widget:Initialize(button)
+		overlay[key] = widget
+		registry[button] = widget
+	end
+	return widget
+end
 
-	timer:Skin()
+local function GetCountdown(button, spawn)
+	return GetWidget(button, spawn, countdowns, "countdown", countdownMeta)
+end
 
-	return timer
+local function GetStack(button, spawn)
+	return GetWidget(button, spawn, stacks, "stack", stackMeta)
 end
 
 ------------------------------------------------------------------------------
 -- Visual feedback hooks
 ------------------------------------------------------------------------------
 
-local timerFrames = {}
-
-function ns.UpdateTimer(self)
-	local state = buttons[self]
-	if not state then return end
-	if state.name and (state.expirationTime or state.count) then
-		local now = GetTime()
-		local expirationTime = state.expirationTime
-		if expirationTime and expirationTime <= now then
-			expirationTime = nil
-		end
-		local count = state.count
-		if count == 0 then
-			count = nil
-		end
-		if expirationTime or count then
-			local frame = timerFrames[self]
-			if not frame then
-				frame = CreateTimerFrame(self)
-				timerFrames[self] = frame
-			end
-			return frame:Display(expirationTime, count, now)
-		end
+function UpdateTextLayout(countdown, stack)
+	if countdown and not countdown:IsShown() then
+		countdown = nil
 	end
-	if timerFrames[self] then
-		timerFrames[self]:Hide()
+	if stack and not stack:IsShown() then
+		stack = nil
+	end
+	if countdown and stack then
+		countdown:SetPosition(ns.db.profile.twoTextFirstPosition)
+		stack:SetPosition(ns.db.profile.twoTextSecondPosition)
+	elseif countdown or stack then
+		(countdown or stack):SetPosition(ns.db.profile.singleTextPosition)
 	end
 end
 
-function ns.ReskinTimers()
-	for button, frame in pairs(timerFrames) do
-		frame:Skin()
+function ns.ShowCountdownAndStack(button, expirationTime, count)
+	local countdown = GetCountdown(button, expirationTime)
+	if countdown then
+		countdown:SetValue(expirationTime)
+	end
+	local stack = GetStack(button, count)
+	if stack then
+		stack:SetValue(count)
+	end
+	button:Debug("ShowCountdownAndStack", expirationTime, count, "=>", countdown, stack)
+	if stack or countdown then
+		return UpdateTextLayout(countdown, stack)
 	end
 end
+
+function ns.UpdateWidgets()
+	for button, widget in pairs(countdowns) do
+		widget:ApplySettings()
+	end
+	for button, widget in pairs(stacks) do
+		widget:ApplySettings()
+	end
+	for button, overlay in pairs(overlays) do
+		UpdateTextLayout(overlay.countdown, overlay.stack)
+	end
+end
+
+local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow -- Hook protection
 
 function ns.ActionButton_HideOverlayGlow_Hook(self)
 	local state = buttons[self]
-	if not state then return end
-	if state.highlight == "glowing" then
-		--@debug@
-		self:Debug("Enforcing glowing for", state.name)
-		--@end-debug@
+	if state and state.highlight == "glowing" then
 		return ActionButton_ShowOverlayGlow(self)
 	end
 end
 
 local function SetVertexColor(texture, r, g, b, a)
-	texture:SetVertexColor(r, g, b, a)
+	return texture:SetVertexColor(r, g, b, a)
 end
 
 function ns.UpdateButtonState_Hook(self)
 	local state = buttons[self]
 	if not state then return end
 	local texture = self:GetCheckedTexture()
-	if state.highlight == "border" then
-		--@debug@
-		self:Debug("Showing border for", state.name)
-		--@end-debug@
-		local color = ns.db.profile['color'..(state.isDebuff and "Debuff" or "Buff")..(state.isMine and 'Mine' or 'Others')]
+	local color = ns.db.profile[state.highlight]
+	if color then
 		self:SetChecked(true)
-		SetVertexColor(texture, unpack(color))
+		return SetVertexColor(texture, unpack(color))
 	else
-		texture:SetVertexColor(1, 1, 1)
+		return texture:SetVertexColor(1, 1, 1)
 	end
 end
 
@@ -334,23 +397,24 @@ local LBF
 
 local function LBF_SetVertexColor(texture, r, g, b, a)
 	local R, G, B, A = texture:GetVertexColor()
-	texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
+	return texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
 end
 
 local function LBF_Callback()
-	InlineAura:RequireUpdate(true)
+	return InlineAura:RequireUpdate(true)
 end
 
 function ns.EnableLibButtonFacadeSupport()
-	local LBF = LibStub('LibButtonFacade', true)
-	if not LBF then return end
-	SetVertexColor = LBF_SetVertexColor
-	ns.RegisterLBFCallback("Blizzard")
+	if not LBF then
+		LBF = LibStub('LibButtonFacade', true)
+		if LBF then
+			SetVertexColor = LBF_SetVertexColor
+			return ns.RegisterLBFCallback("Blizzard")
+		end
+	end
 end
 
 function ns.RegisterLBFCallback(skin)
-	if LBF then
-		LBF:RegisterSkinCallback(skin, LBF_Callback)
-	end
+	return LBF and LBF:RegisterSkinCallback(skin, LBF_Callback)
 end
 

@@ -260,12 +260,17 @@ local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 	end
 end
 
+local overlayedSpells = {}
+
 local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
 	local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
 	local hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight
 	local hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight
 	local spell = ...
+	if overlayedSpells[spell] then
+		hasHighlight, highlight = true, "glowing"
+	end
 	for i = 1, select('#', ...) do
 		local aura = select(i, ...)
 		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]
@@ -322,10 +327,10 @@ local function GetAuraToDisplay(spell, target, specific)
 		elseif UnitIsDebuffable(target) then
 			newHighlight = GetBorderHighlight(true, onlyMyDebuffs)
 		else
-			newHighlight = GetBorderHighlight(false, onlyMyBuffs)		
+			newHighlight = GetBorderHighlight(false, onlyMyBuffs)
 		end
 	end
-	
+
 	if highlight ~= "none" then
 		if newHighlight then
 			if newHighlight == "glowing" then
@@ -833,6 +838,22 @@ function InlineAura:UPDATE_BINDINGS(event, name)
 	return self:RequireUpdate(true)
 end
 
+function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
+	local name = GetSpellInfo(id)
+	if name and not overlayedSpells[name] then
+		overlayedSpells[name] = true
+		return self:AuraChanged("player")
+	end
+end
+
+function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(event, id)
+	local name = GetSpellInfo(id)
+	if name and overlayedSpells[name] then
+		overlayedSpells[name] = nil
+		return self:AuraChanged("player")
+	end
+end
+
 local updateFrame
 function InlineAura:OnEnable()
 
@@ -893,6 +914,9 @@ function InlineAura:OnEnable()
 	self:RegisterEvent('MODIFIER_STATE_CHANGED')
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
+
+	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
+	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE')
 
 	-- standard buttons
 	self:RegisterButtons("ActionButton", 12)
@@ -974,4 +998,5 @@ end
 
 -- InterfaceOptionsFrame spy
 CreateFrame("Frame", nil, InterfaceOptionsFrameAddOns):SetScript('OnShow', LoadConfigGUI)
+
 

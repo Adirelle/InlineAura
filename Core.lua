@@ -233,19 +233,6 @@ function InlineAura:NewStateModule(name, ...)
 	return special
 end
 
-function InlineAura:RegisterSpecial(name, testFunc, event, handler)
-	--[[
-	assert(not specialModules[name])
-	local special = self:NewModule(name, compatSpecialPrototype, 'AceEvent-3.0')
-	specialModules[name] = special
-	special.auraType = "self"
-	special.DoTest = testFunc
-	special.event = event
-	special.OnEvent = handler
-	return special
-	--]]
-end
-
 ------------------------------------------------------------------------------
 -- Aura lookup
 ------------------------------------------------------------------------------

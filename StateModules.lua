@@ -47,7 +47,7 @@ if playerClass == "WARLOCK" or playerClass == "PALADIN" then
 
 	function powerState:Test(aura)
 		local power = UnitPower("player", SPELL_POWER)
-		return aura, power, nil, false, true, power == MAX_POWER
+		return true, power, false, nil, power == MAX_POWER, "glowing"
 	end
 
 	function powerState:UNIT_POWER(event, unit, type)
@@ -79,7 +79,7 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 
 	function comboPoints:Test(aura, unit)
 		local points = GetComboPoints("player")
-		return aura, points, nil, false, true, points == MAX_COMBO_POINTS
+		return true, points, false, nil, points == MAX_COMBO_POINTS, "glowing"
 	end
 
 	function comboPoints:PLAYER_COMBO_POINTS()
@@ -144,10 +144,12 @@ if playerClass == "DRUID" then
 	end
 
 	function eclipseState:Test(aura)
-		if aura == "LUNAR_ENERGY" then
-			return aura, isMoonkin and direction == "moon" and -power, nil, false, true
-		elseif aura == "SOLAR_ENERGY" then
-			return aura, isMoonkin and direction == "sun" and power, nil, false, true
+		if power then
+			if aura == "LUNAR_ENERGY" then
+				return isMoonkin and direction ~= "sun", -power
+			elseif aura == "SOLAR_ENERGY" then
+				return isMoonkin and direction ~= "moon", power
+			end
 		end
 	end
 
@@ -208,7 +210,7 @@ if playerClass == "SHAMAN" then
 		for index = 1, 4 do
 			local haveTotem, name, startTime, duration = GetTotemInfo(index)
 			if haveTotem and name and strlower(name) == spell then
-				return name, nil, startTime and duration and (startTime + duration) or nil, false, true, true
+				return false, nil, startTime and duration, startTime + duration, true, "BuffMine"
 			end
 		end
 	end

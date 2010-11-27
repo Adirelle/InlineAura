@@ -380,7 +380,7 @@ function ns.UpdateButtonState_Hook(self)
 	local state = buttons[self]
 	if not state then return end
 	local texture = self:GetCheckedTexture()
-	local color = ns.db.profile[state.highlight]
+	local color = ns.db.profile['color'..(state.highlight or "none")]
 	if color then
 		self:SetChecked(true)
 		return SetVertexColor(texture, unpack(color))

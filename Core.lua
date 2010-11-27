@@ -243,6 +243,10 @@ end
 -- Aura lookup
 ------------------------------------------------------------------------------
 
+local function GetBorderHighlight(isDebuff, isMine)
+	return strjoin('', isDebuff and "Debuff" or "Buff", isMine and "Mine" or "Others")
+end
+
 local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 	local isDebuff = false
 	local name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, harmfulFilter)
@@ -252,33 +256,35 @@ local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 		name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, helpfulFilter)
 	end
 	if name then
-		return name, count ~= 0 and count or nil, duration and duration ~= 0 and expirationTime or nil, isDebuff, caster and MY_UNITS[caster], true
+		return true, count ~= 0 and count or nil, true, duration ~= 0 and expirationTime or nil, true, GetBorderHighlight(isDebuff, MY_UNITS[caster])
 	end
 end
 
 local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
 	local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
-	local name, count, expirationTime, isDebuff, isMine, highlight
-	local newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
+	local hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight
+	local hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight
 	local spell = ...
 	for i = 1, select('#', ...) do
 		local aura = select(i, ...)
 		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]
 		if stateModule and stateModule:CanTestUnit(unit) then
-			newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
+			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
 		else
-			newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)
+			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 		end
-		if newName then
-			if not newExpirationTime then -- no expiration time == forever
-				return newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
-			elseif not name or newExpirationTime > expirationTime then
-				name, count, expirationTime, isDebuff, isMine, highlight = newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
-			end
+		if hasNewCount then
+			hasCount, count = true, newCount
+		end
+		if hasNewCountdown and (not hasCountdown or not newExpiratiomTime or (expirationTime and newExpiratiomTime > expirationTime)) then
+			hasCountdown, expirationTime = true, newExpiratiomTime
+		end
+		if hasNewHighlight then
+			hasHighlight, highlight = true, newHighlight
 		end
 	end
-	return name, count, expirationTime, isDebuff, isMine, highlight
+	return hasCount and count or nil, hasCountdown and expirationTime or nil, hasHighlight and highlight or nil
 end
 
 local EMPTY_TABLE = {}
@@ -308,24 +314,31 @@ local function GetAuraToDisplay(spell, target, specific)
 	end
 
 	-- Look for the aura or its aliases
-	local name, count, expirationTime, isDebuff, isMine, showHighlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
+	local count, expirationTime, newHighlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
 
 	if specific and specific.invertHighlight then
-		showHighlight = not showHighlight
-		if not name then
-			name = spell
-			isDebuff = UnitIsDebuffable(target)
-			if isDebuff then
-				isMine = onlyMyDebuffs
-			else
-				isMine = onlyMyBuffs
+		if newHighlight and newHighlight ~= "none" then
+			newHighlight = nil
+		elseif UnitIsDebuffable(target) then
+			newHighlight = GetBorderHighlight(true, onlyMyDebuffs)
+		else
+			newHighlight = GetBorderHighlight(false, onlyMyBuffs)		
+		end
+	end
+	
+	if highlight ~= "none" then
+		if newHighlight then
+			if newHighlight == "glowing" then
+				highlight = "glowing"
+			elseif highlight == "border" then
+				highlight = newHighlight
 			end
+		else
+			highlight = "none"
 		end
 	end
 
-	if name then
-		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, showHighlight and highlight or "none"
-	end
+	return (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, highlight
 end
 
 ------------------------------------------------------------------------------
@@ -487,20 +500,13 @@ local function UpdateButtonAura(self, force)
 		--@end-debug@
 		state.guid = guid
 
-		local name, count, expirationTime, isDebuff, isMine, highlight
+		local count, expirationTime, highlight
 
 		if spell and target then
-			name, count, expirationTime, isDebuff, isMine, highlight = GetAuraToDisplay(spell, target, specific)
+			count, expirationTime, highlight = GetAuraToDisplay(spell, target, specific)
 			--@debug@
-			if name then
-				self:Debug("GetAuraToDisplay", spell, target, specific, "=>", "name=", name, "count=", count, "expirationTime=", expirationTime, "isDebuff=", isDebuff, "isMine=", isMine, "highlight=", highlight)
-			end
+			self:Debug("GetAuraToDisplay", spell, target, specific, "=>", "count=", count, "expirationTime=", expirationTime, "highlight=", highlight)
 			--@end-debug@
-		end
-
-		-- Convert "border" into something more useful
-		if highlight == "border" then
-			highlight = strjoin('', "color", isDebuff and "Debuff" or "Buff", isMine and 'Mine' or 'Others')
 		end
 
 		if state.highlight ~= highlight or force then
@@ -968,3 +974,4 @@ end
 
 -- InterfaceOptionsFrame spy
 CreateFrame("Frame", nil, InterfaceOptionsFrameAddOns):SetScript('OnShow', LoadConfigGUI)
+

@@ -183,6 +183,9 @@ local stateModules = {}
 local stateKeywords = {}
 local stateSpellHooks = {}
 local statePrototype = {}
+--@debug@
+if AdiDebug then AdiDebug:Embed(statePrototype, "InlineAura") end
+--@end-debug@
 
 InlineAura.stateModules = stateModules
 InlineAura.stateKeywords = stateKeywords
@@ -727,7 +730,9 @@ function InlineAura:AuraChanged(unit)
 	end
 	unitGUIDs[unit] = guid
 	if guid and UnitIsUnit(unit, 'mouseover') then
-		dprint('AuraChanged:', unit,'is mouseover')
+		--@debug@
+		dprint('AuraChanged:', unit, 'is mouseover')
+		--@end-debug@
 		self.mouseoverTimer = 0
 	end
 end

@@ -389,6 +389,9 @@ function InlineAura_LoadDefaults(self)
 		-- Steady Shot => Improved Steady Shot
 		SelfTalentProc(56641, 53224):NoStack():ColoredBorder()
 
+		-- Kill Shot
+		Spells(53351):Aliases('BELOW20'):Glowing()
+
 		SelfBuffs(
 			 5118, -- Aspect of the Cheetah
 			13165, -- Aspect of the Hawk
@@ -434,6 +437,9 @@ function InlineAura_LoadDefaults(self)
 			55694  -- Enraged Regeneration
 		)
 
+		-- Execute
+		Spells(5308):Aliases('BELOW20'):Glowing()
+
 		-- Contributed by Moozhe
 		SelfTalentProc(5308, 90806):WithStack()  -- Execute => Executioner stacks
 		SelfTalentProc(   78, 50685) -- Heroic Strike => Incite
@@ -466,6 +472,9 @@ function InlineAura_LoadDefaults(self)
 
 		-- Soul link
 		Aliases(19028, 25228)
+
+		Spells(1120):Aliases('BELOW25'):Glowing() -- Drain Soul
+		Spells(17877):Aliases('BELOW20'):Glowing() -- Shadowburn
 
 		-- Display soul shard count on Soulburn
 		ShowSpecial("SOUL_SHARDS", 74434) -- Soulburn
@@ -544,6 +553,9 @@ function InlineAura_LoadDefaults(self)
 			47585  -- Dispersion
 		)
 
+		-- Shadow word: Death
+		Spells(32379):Aliases('BELOW25'):Glowing()
+
 		-- This will display either the buff or the debuff
 		Aliases(17, 6788) -- Power Word: Shield / Weakened Soul
 
@@ -593,6 +605,9 @@ function InlineAura_LoadDefaults(self)
 	------------------------------------------------------------------------------
 	elseif class == 'PALADIN' then
 	------------------------------------------------------------------------------
+
+		-- Hammer of Wrath
+		Spells(24275):Aliases('BELOW20'):Glowing()
 
 		SelfBuffs(
 				498, -- Divine Protection

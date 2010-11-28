@@ -216,3 +216,78 @@ if playerClass == "SHAMAN" then
 	end
 
 end
+
+------------------------------------------------------------------------------
+-- Health threshold
+------------------------------------------------------------------------------
+
+local healthThresholds
+if playerClass == "WARRIOR" or playerClass == "HUNTER" then
+	healthThresholds = { 20 }
+elseif playerClass == "PALADIN" then
+	healthThresholds = { 20, 35 }
+elseif playerClass == "WARLOCK" then
+	healthThresholds = { 20, 25 }
+elseif playerClass == "PRIEST" then
+	healthThresholds = { 25 }
+elseif playerClass == "ROGUE" then
+	healthThresholds = { 35 }
+elseif playerClass == "DRUID" then
+	healthThresholds = { 25, 80 }
+end
+
+if healthThresholds then
+	local healthState = InlineAura:NewStateModule("Health")
+	local states = {}
+
+	function healthState:OnEnable()
+		for i, threshold in ipairs(healthThresholds) do
+			self:RegisterKeywords("BELOW"..threshold, "ABOVE"..threshold)
+		end
+		self:RegisterEvent('UNIT_HEALTH')
+		self:RegisterEvent('UNIT_HEALTH_MAX', 'UNIT_HEALTH')
+		wipe(states)
+	end
+
+	local function GetState(unit)
+		if unit and UnitExists(unit) and not UnitIsDeadOrGhost(unit) and InlineAura.db.profile.enabledUnits[unit] then
+			local current, max = UnitHealth(unit), UnitHealthMax(unit)
+			if max > 0 then
+				local pct = 100 * current / max
+				for i, threshold in ipairs(healthThresholds) do
+					if pct <= threshold then
+						healthState:Debug('GetState(', unit, '):', pct)
+						return threshold
+					end
+				end
+				healthState:Debug('GetState(', unit, '):', 100)
+				return 100
+			end
+		end
+		healthState:Debug('GetState(', unit, '):', nil)
+	end
+
+	function healthState:UNIT_HEALTH(event, unit)
+		local newState = GetState(unit)
+		if newState ~= states[unit] then
+			states[unit] = newState
+			InlineAura:AuraChanged(unit)
+		end
+	end
+
+	function healthState:CanTestUnit(unit)
+		return UnitCanAttack("player", unit)
+	end
+
+	function healthState:Test(spell, unit)
+		local below = tonumber(strmatch(spell, '^BELOW(%d+)$'))
+		local above = tonumber(strmatch(spell, '^ABOVE(%d+)$'))
+		local state = GetState(unit)
+		if state then
+			self:Debug('Test(', spell, unit, '): below:', below, below and state <= below, "above:", above, above and state >= above)
+			return false, nil, false, nil, (below and state <= below) or (above and state >= above), "glowing"
+		end
+	end
+
+end
+

@@ -237,10 +237,6 @@ local function GetImpreciseCountdownText(timeLeft)
 	end
 end
 
-local function GetCountdownText(timeLeft, precise, threshold)
-	return (precise and GetPreciseCountdownText or GetImpreciseCountdownText)(timeLeft, threshold)
-end
-
 ------------------------------------------------------------------------------
 -- Safecall
 ------------------------------------------------------------------------------
@@ -319,7 +315,7 @@ do
 				if when <= now then
 					bucket[target] = nil
 					targets[target] = nil
-					safecall(TimerCallback, target)
+					safecall(TimerCallback, target, now)
 				end
 			end
 		end
@@ -331,14 +327,12 @@ end
 -- Timer frame handling
 ------------------------------------------------------------------------------
 
-local TimerFrame_OnUpdate, TimerFrame_Skin, TimerFrame_Display, TimerFrame_UpdateCountdown
-
 local function SetTextPosition(text, position)
 	text:SetJustifyH(position:match('LEFT') or position:match('RIGHT') or 'MIDDLE')
 	text:SetJustifyV(position:match('TOP') or position:match('BOTTOM') or 'CENTER')
 end
 
-function TimerFrame_UpdateTextLayout(self)
+local function TimerFrame_UpdateTextLayout(self)
 	local stackText, countdownText = self.stackText, self.countdownText
 	if countdownText:IsShown() and stackText:IsShown() then
 		SetTextPosition(countdownText, InlineAura.db.profile.twoTextFirstPosition)
@@ -350,59 +344,46 @@ function TimerFrame_UpdateTextLayout(self)
 	end
 end
 
-function TimerFrame_Skin(self)
-	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
-
-	local countdownText = self.countdownText
-	countdownText.fontName = font
-	countdownText.baseFontSize = db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
-	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
-	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
-
-	local stackText = self.stackText
-	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
-	stackText:SetTextColor(unpack(db.profile.colorStack))
-
-	TimerFrame_UpdateTextLayout(self)
-end
-
-function TimerFrame_OnUpdate(self)
-	TimerFrame_UpdateCountdown(self, GetTime())
-end
-
--- Compat
-TimerFrame_CancelTimer = CancelTimer
-TimerCallback = TimerFrame_OnUpdate
-
 local dynamicModifiers = {
 	-- { font scale, r, g, b }
-	{ 1.3, 1, 0, 0 }, -- soon
+	{ 1.2, 1, 0, 0 }, -- soon
 	{ 1.0, 1, 1, 0 }, -- in less than a minute
 	{ 0.8, 1, 1, 1 }, -- in more than a minute
 }
 
-function TimerFrame_UpdateCountdown(self, now)
+local function TimerFrame_GetDynamicCountdownFontSize(self, timeLeft)
+	local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
+	local scale, r, g, b = unpack(dynamicModifiers[phase])
+	if phase ~= self.dynamicPhase then
+		self.dynamicPhase = phase
+		self.countdownText:SetTextColor(r, g, b)
+	end
+	return self.countdownText.fontSize * scale
+end
+
+local function TimerFrame_GetStaticCountdownFontSize(self)
+	return self.countdownText.fontSize
+end
+
+local function TimerFrame_UpdateCountdown(self, now)
 	local timeLeft = self.expirationTime - now
-	local displayTime, delay = GetCountdownText(timeLeft, db.profile.preciseCountdown, db.profile.decimalCountdownThreshold)
+	local displayTime, delay = self.GetCountdownText(timeLeft, self.decimalThreshold)
 	local countdownText = self.countdownText
+	local fontSize = self:GetCountdownFontSize(timeLeft)
+	countdownText:SetFont(countdownText.fontName, fontSize, FONT_FLAGS)
 	countdownText:SetText(displayTime)
-	if db.profile.dynamicCountdownColor then
-		local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
-		if phase ~= self.dynamicPhase then
-			self.dynamicPhase = phase
-			local scale, r, g, b = unpack(dynamicModifiers[phase])
-			if InlineAura.bigCountdown then
-				countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize * scale, FONT_FLAGS)
-			end
-			countdownText:SetTextColor(r, g, b)
-		end
+	local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth() - 4)
+	if sizeRatio > 1 then
+		countdownText:SetFont(countdownText.fontName, fontSize / sizeRatio, FONT_FLAGS)
 	end
 	if delay then
 		ScheduleTimer(self, math.min(delay, timeLeft))
 	end
 end
 
-function TimerFrame_Display(self, expirationTime, count, now)
+TimerCallback = TimerFrame_UpdateCountdown
+
+local function TimerFrame_Display(self, expirationTime, count, now)
 	local stackText, countdownText = self.stackText, self.countdownText
 
 	if count then
@@ -415,18 +396,10 @@ function TimerFrame_Display(self, expirationTime, count, now)
 	if expirationTime then
 		self.expirationTime = expirationTime
 		countdownText:Show()
-		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
-		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
-		if sizeRatio > 1 then
-			countdownText.actualFontSize = countdownText.baseFontSize / sizeRatio
-			countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize, FONT_FLAGS)
-		else
-			countdownText.actualFontSize = countdownText.baseFontSize
-		end
 		self.dynamicPhase = nil
 		TimerFrame_UpdateCountdown(self, now)
 	else
-		TimerFrame_CancelTimer(self)
+		CancelTimer(self)
 		countdownText:Hide()
 	end
 
@@ -438,6 +411,30 @@ function TimerFrame_Display(self, expirationTime, count, now)
 	end
 end
 
+local function TimerFrame_Skin(self)
+	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
+
+	self.GetCountdownText = db.profile.preciseCountdown and GetPreciseCountdownText or GetImpreciseCountdownText
+	self.decimalThreshold = db.profile.decimalCountdownThreshold
+
+	self.GetCountdownFontSize = db.profile.dynamicCountdownColor and TimerFrame_GetDynamicCountdownFontSize or TimerFrame_GetStaticCountdownFontSize
+	self.dynamicPhase = nil
+
+	local countdownText = self.countdownText
+	countdownText.fontName = font
+	countdownText.fontSize = db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
+	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
+	if countdownText:IsVisible() and self.expirationTime then
+		TimerFrame_UpdateCountdown(self, GetTime())
+	end
+
+	local stackText = self.stackText
+	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
+	stackText:SetTextColor(unpack(db.profile.colorStack))
+
+	TimerFrame_UpdateTextLayout(self)
+end
+
 local function CreateTimerFrame(button)
 	local timer = CreateFrame("Frame", nil, button)
 	local cooldown = _G[button:GetName()..'Cooldown']
@@ -445,7 +442,7 @@ local function CreateTimerFrame(button)
 	timer:SetAllPoints(cooldown)
 	timer:SetToplevel(true)
 	timer:Hide()
-	timer:SetScript('OnHide', TimerFrame_CancelTimer)
+	timer:SetScript('OnHide', CancelTimer)
 	timerFrames[button] = timer
 
 	local countdownText = timer:CreateFontString(nil, "OVERLAY")

@@ -86,11 +86,6 @@ InlineAura.dprint = dprint
 ------------------------------------------------------------------------------
 local FONTMEDIA = LSM.MediaType.FONT
 
-local FONT_NAME = LSM:GetDefault(FONTMEDIA)
-local FONT_FLAGS = "OUTLINE"
-local FONT_SIZE_SMALL = 13
-local FONT_SIZE_LARGE = 20
-
 local DEFAULT_OPTIONS = {
 	profile = {
 		onlyMyBuffs = true,
@@ -103,9 +98,10 @@ local DEFAULT_OPTIONS = {
 		singleTextPosition = 'BOTTOM',
 		twoTextFirstPosition = 'BOTTOMLEFT',
 		twoTextSecondPosition = 'BOTTOMRIGHT',
-		fontName = FONT_NAME,
-		smallFontSize     = FONT_SIZE_SMALL,
-		largeFontSize     = FONT_SIZE_LARGE,
+		fontName      = LSM:GetDefault(FONTMEDIA),
+		smallFontSize = 13,
+		largeFontSize = 20,
+		fontFlag      = "OUTLINE",
 		colorBuffMine     = { 0.0, 1.0, 0.0, 1.0 },
 		colorBuffOthers   = { 0.0, 1.0, 1.0, 1.0 },
 		colorDebuffMine   = { 1.0, 0.0, 0.0, 1.0 },
@@ -369,12 +365,12 @@ local function TimerFrame_UpdateCountdown(self, now)
 	local timeLeft = self.expirationTime - now
 	local displayTime, delay = self.GetCountdownText(timeLeft, self.decimalThreshold)
 	local countdownText = self.countdownText
-	local fontSize = self:GetCountdownFontSize(timeLeft)
-	countdownText:SetFont(countdownText.fontName, fontSize, FONT_FLAGS)
+	local fontName, fontSize, fontFlag = countdownText.fontName, self:GetCountdownFontSize(timeLeft), countdownText.fontFlag
+	countdownText:SetFont(fontName, fontSize, fontFlag)
 	countdownText:SetText(displayTime)
 	local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth() - 4)
 	if sizeRatio > 1 then
-		countdownText:SetFont(countdownText.fontName, fontSize / sizeRatio, FONT_FLAGS)
+		countdownText:SetFont(fontName, fontSize / sizeRatio, fontFlag)
 	end
 	if delay then
 		ScheduleTimer(self, math.min(delay, timeLeft))
@@ -414,22 +410,34 @@ end
 local function TimerFrame_Skin(self)
 	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
 
-	self.GetCountdownText = db.profile.preciseCountdown and GetPreciseCountdownText or GetImpreciseCountdownText
-	self.decimalThreshold = db.profile.decimalCountdownThreshold
-
-	self.GetCountdownFontSize = db.profile.dynamicCountdownColor and TimerFrame_GetDynamicCountdownFontSize or TimerFrame_GetStaticCountdownFontSize
-	self.dynamicPhase = nil
-
 	local countdownText = self.countdownText
 	countdownText.fontName = font
+	countdownText.fontFlag = db.profile.fontFlag
 	countdownText.fontSize = db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
-	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
+
+	if db.profile.dynamicCountdownColor then
+		self.GetCountdownFontSize = TimerFrame_GetDynamicCountdownFontSize
+		self.dynamicPhase = nil
+	else
+		self.GetCountdownFontSize = TimerFrame_GetStaticCountdownFontSize
+		countdownText:SetTextColor(unpack(db.profile.colorCountdown))
+	end
+
+	if db.profile.preciseCountdown then
+		self.GetCountdownText = GetPreciseCountdownText
+		self.decimalThreshold = db.profile.decimalCountdownThreshold
+	else
+		self.GetCountdownText = GetImpreciseCountdownText
+	end
+
 	if countdownText:IsVisible() and self.expirationTime then
 		TimerFrame_UpdateCountdown(self, GetTime())
+	else
+		countdownText:SetFont(font, countdownText.fontSize, countdownText.fontFlag)
 	end
 
 	local stackText = self.stackText
-	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
+	stackText:SetFont(font, db.profile.smallFontSize, db.profile.fontFlag)
 	stackText:SetTextColor(unpack(db.profile.colorStack))
 
 	TimerFrame_UpdateTextLayout(self)

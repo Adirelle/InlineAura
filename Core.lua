@@ -40,7 +40,6 @@ local db
 
 local auraChanged = {}
 local unitGUIDs = {}
-local timerFrames = {}
 local needUpdate = false
 local configUpdated = false
 
@@ -48,6 +47,7 @@ local buttons = {}
 local newButtons = {}
 local activeButtons = {}
 InlineAura.buttons = buttons
+ns.buttons = buttons
 
 ------------------------------------------------------------------------------
 -- Make often-used globals local
@@ -65,7 +65,6 @@ local SecureCmdOptionParse, GetMacroBody = SecureCmdOptionParse, GetMacroBody
 local GetCVarBool, SecureButton_GetModifiedUnit = GetCVarBool, SecureButton_GetModifiedUnit
 local GetMacroSpell, GetMacroItem, IsHelpfulItem = GetMacroSpell, GetMacroItem, IsHelpfulItem
 
-local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow -- Hook protection
 local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow -- Hook protection
 
 ------------------------------------------------------------------------------
@@ -88,7 +87,6 @@ InlineAura.dprint = dprint
 local FONTMEDIA = LSM.MediaType.FONT
 
 local FONT_NAME = LSM:GetDefault(FONTMEDIA)
-local FONT_FLAGS = "OUTLINE"
 local FONT_SIZE_SMALL = 13
 local FONT_SIZE_LARGE = 20
 
@@ -149,42 +147,6 @@ local UnitIsBuffable = function(unit) return MY_UNITS[unit] or UnitCanAssist('pl
 local UnitIsDebuffable = function(unit) return UnitCanAttack('player', unit) end
 
 ------------------------------------------------------------------------------
--- Countdown formatting
-------------------------------------------------------------------------------
-
-local function GetPreciseCountdownText(timeLeft, threshold)
-	if timeLeft >= 3600 then
-		return format(L["%dh"], floor(timeLeft/3600)), 1 + floor(timeLeft) % 3600
-	elseif timeLeft >= 600 then
-		return format(L["%dm"], floor(timeLeft/60)), 1 + floor(timeLeft) % 60
-	elseif timeLeft >= 60 then
-		return format("%d:%02d", floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
-	elseif timeLeft >= threshold then
-		return tostring(floor(timeLeft)), timeLeft % 1
-	elseif timeLeft >= 0 then
-		return format("%.1f", floor(timeLeft*10)/10), 0
-	else
-		return "0"
-	end
-end
-
-local function GetImpreciseCountdownText(timeLeft)
-	if timeLeft >= 3600 then
-		return format(L["%dh"], ceil(timeLeft/3600)), ceil(timeLeft) % 3600
-	elseif timeLeft >= 60 then
-		return format(L["%dm"], ceil(timeLeft/60)), ceil(timeLeft) % 60
-	elseif timeLeft > 0 then
-		return tostring(floor(timeLeft)), timeLeft % 1
-	else
-		return "0"
-	end
-end
-
-local function GetCountdownText(timeLeft, precise, threshold)
-	return (precise and GetPreciseCountdownText or GetImpreciseCountdownText)(timeLeft, threshold)
-end
-
-------------------------------------------------------------------------------
 -- Safecall
 ------------------------------------------------------------------------------
 
@@ -213,213 +175,7 @@ do
 	function safecall(...)
 		return safecall_inner(pcall(...))
 	end
-end
-
-------------------------------------------------------------------------------
--- Home-made bucketed timers
-------------------------------------------------------------------------------
--- This is mainly a simplified version of AceTimer-3.0, credits goes to Ace3 authors
-
-local ScheduleTimer, CancelTimer, TimerCallback
-do
-	local assert, type, next, floor, GetTime = assert, type, next, floor, GetTime
-	local BUCKETS = 131
-	local HZ = 20
-	local buckets = {}
-	local targets = {}
-	for i = 1, BUCKETS do buckets[i] = {} end
-
-	local lastIndex = floor(GetTime()*HZ)
-
-	function ScheduleTimer(target, delay)
-		assert(target and type(delay) == "number" and delay >= 0)
-		if targets[target] then
-			buckets[targets[target]][target] = nil
-		end
-		local when = GetTime() + delay
-		local index = floor(when*HZ) + 1
-		local bucketNum = 1 + (index % BUCKETS)
-		buckets[bucketNum][target] = when
-		targets[target] = bucketNum
-	end
-
-	function CancelTimer(target)
-		assert(target)
-		local bucketNum = targets[target]
-		if bucketNum then
-			buckets[bucketNum][target] = nil
-			targets[target] = nil
-		end
-	end
-
-	function ProcessTimers()
-		local now = GetTime()
-		local newIndex = floor(now*HZ)
-		for index = lastIndex + 1, newIndex do
-			local bucketNum = 1 + (index % BUCKETS)
-			local bucket = buckets[bucketNum]
-			for target, when in next, bucket do
-				if when <= now then
-					bucket[target] = nil
-					targets[target] = nil
-					safecall(TimerCallback, target)
-				end
-			end
-		end
-		lastIndex = newIndex
-	end
-end
-
-------------------------------------------------------------------------------
--- Timer frame handling
-------------------------------------------------------------------------------
-
-local TimerFrame_OnUpdate, TimerFrame_Skin, TimerFrame_Display, TimerFrame_UpdateCountdown
-
-local function SetTextPosition(text, position)
-	text:SetJustifyH(position:match('LEFT') or position:match('RIGHT') or 'MIDDLE')
-	text:SetJustifyV(position:match('TOP') or position:match('BOTTOM') or 'CENTER')
-end
-
-function TimerFrame_UpdateTextLayout(self)
-	local stackText, countdownText = self.stackText, self.countdownText
-	if countdownText:IsShown() and stackText:IsShown() then
-		SetTextPosition(countdownText, InlineAura.db.profile.twoTextFirstPosition)
-		SetTextPosition(stackText, InlineAura.db.profile.twoTextSecondPosition)
-	elseif countdownText:IsShown() then
-		SetTextPosition(countdownText, InlineAura.db.profile.singleTextPosition)
-	elseif stackText:IsShown() then
-		SetTextPosition(stackText, InlineAura.db.profile.singleTextPosition)
-	end
-end
-
-function TimerFrame_Skin(self)
-	local font = LSM:Fetch(FONTMEDIA, db.profile.fontName)
-
-	local countdownText = self.countdownText
-	countdownText.fontName = font
-	countdownText.baseFontSize = db.profile[InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"]
-	countdownText:SetFont(font, countdownText.baseFontSize, FONT_FLAGS)
-	countdownText:SetTextColor(unpack(db.profile.colorCountdown))
-
-	local stackText = self.stackText
-	stackText:SetFont(font, db.profile.smallFontSize, FONT_FLAGS)
-	stackText:SetTextColor(unpack(db.profile.colorStack))
-
-	TimerFrame_UpdateTextLayout(self)
-end
-
-function TimerFrame_OnUpdate(self)
-	TimerFrame_UpdateCountdown(self, GetTime())
-end
-
--- Compat
-TimerFrame_CancelTimer = CancelTimer
-TimerCallback = TimerFrame_OnUpdate
-
-local dynamicModifiers = {
-	-- { font scale, r, g, b }
-	{ 1.3, 1, 0, 0 }, -- soon
-	{ 1.0, 1, 1, 0 }, -- in less than a minute
-	{ 0.8, 1, 1, 1 }, -- in more than a minute
-}
-
-function TimerFrame_UpdateCountdown(self, now)
-	local timeLeft = self.expirationTime - now
-	local displayTime, delay = GetCountdownText(timeLeft, db.profile.preciseCountdown, db.profile.decimalCountdownThreshold)
-	local countdownText = self.countdownText
-	countdownText:SetText(displayTime)
-	if db.profile.dynamicCountdownColor then
-		local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
-		if phase ~= self.dynamicPhase then
-			self.dynamicPhase = phase
-			local scale, r, g, b = unpack(dynamicModifiers[phase])
-			if InlineAura.bigCountdown then
-				countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize * scale, FONT_FLAGS)
-			end
-			countdownText:SetTextColor(r, g, b)
-		end
-	end
-	if delay then
-		ScheduleTimer(self, math.min(delay, timeLeft))
-	end
-end
-
-function TimerFrame_Display(self, expirationTime, count, now)
-	local stackText, countdownText = self.stackText, self.countdownText
-
-	if count then
-		stackText:SetText(count)
-		stackText:Show()
-	else
-		stackText:Hide()
-	end
-
-	if expirationTime then
-		self.expirationTime = expirationTime
-		countdownText:Show()
-		countdownText:SetFont(countdownText.fontName, countdownText.baseFontSize, FONT_FLAGS)
-		local sizeRatio = countdownText:GetStringWidth() / (self:GetWidth()-4)
-		if sizeRatio > 1 then
-			countdownText.actualFontSize = countdownText.baseFontSize / sizeRatio
-			countdownText:SetFont(countdownText.fontName, countdownText.actualFontSize, FONT_FLAGS)
-		else
-			countdownText.actualFontSize = countdownText.baseFontSize
-		end
-		self.dynamicPhase = nil
-		TimerFrame_UpdateCountdown(self, now)
-	else
-		TimerFrame_CancelTimer(self)
-		countdownText:Hide()
-	end
-
-	if stackText:IsShown() or countdownText:IsShown() then
-		self:Show()
-		TimerFrame_UpdateTextLayout(self)
-	else
-		self:Hide()
-	end
-end
-
-local function CreateTimerFrame(button)
-	local timer = CreateFrame("Frame", nil, button)
-	local cooldown = _G[button:GetName()..'Cooldown']
-	timer:SetFrameLevel(cooldown:GetFrameLevel() + 5)
-	timer:SetAllPoints(cooldown)
-	timer:SetToplevel(true)
-	timer:Hide()
-	timer:SetScript('OnHide', TimerFrame_CancelTimer)
-	timerFrames[button] = timer
-
-	local countdownText = timer:CreateFontString(nil, "OVERLAY")
-	countdownText:SetAllPoints(timer)
-	countdownText:Show()
-	timer.countdownText = countdownText
-
-	local stackText = timer:CreateFontString(nil, "OVERLAY")
-	stackText:SetAllPoints(timer)
-	timer.stackText = stackText
-
-	TimerFrame_Skin(timer)
-
-	return timer
-end
-
-------------------------------------------------------------------------------
--- LibButtonFacade compatibility
-------------------------------------------------------------------------------
-
-local function SetVertexColor(texture, r, g, b, a)
-	texture:SetVertexColor(r, g, b, a)
-end
-
-local function LBF_SetVertexColor(texture, r, g, b, a)
-	local R, G, B, A = texture:GetVertexColor()
-	texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
-end
-
-local function LBF_Callback()
-	configUpdated = true
+	ns.safecall = safecall
 end
 
 ------------------------------------------------------------------------------
@@ -430,6 +186,9 @@ local stateModules = {}
 local stateKeywords = {}
 local stateSpellHooks = {}
 local statePrototype = {}
+--@debug@
+if AdiDebug then AdiDebug:Embed(statePrototype, "InlineAura") end
+--@end-debug@
 
 InlineAura.stateModules = stateModules
 InlineAura.stateKeywords = stateKeywords
@@ -480,22 +239,13 @@ function InlineAura:NewStateModule(name, ...)
 	return special
 end
 
-function InlineAura:RegisterSpecial(name, testFunc, event, handler)
-	--[[
-	assert(not specialModules[name])
-	local special = self:NewModule(name, compatSpecialPrototype, 'AceEvent-3.0')
-	specialModules[name] = special
-	special.auraType = "self"
-	special.DoTest = testFunc
-	special.event = event
-	special.OnEvent = handler
-	return special
-	--]]
-end
-
 ------------------------------------------------------------------------------
 -- Aura lookup
 ------------------------------------------------------------------------------
+
+local function GetBorderHighlight(isDebuff, isMine)
+	return strjoin('', isDebuff and "Debuff" or "Buff", isMine and "Mine" or "Others")
+end
 
 local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 	local isDebuff = false
@@ -506,33 +256,40 @@ local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 		name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, helpfulFilter)
 	end
 	if name then
-		return name, count ~= 0 and count or nil, duration and duration ~= 0 and expirationTime or nil, isDebuff, caster and MY_UNITS[caster], true
+		return true, count ~= 0 and count or nil, true, duration ~= 0 and expirationTime or nil, true, GetBorderHighlight(isDebuff, MY_UNITS[caster])
 	end
 end
+
+local overlayedSpells = {}
 
 local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
 	local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
-	local name, count, expirationTime, isDebuff, isMine, highlight
-	local newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
+	local hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight
+	local hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight
 	local spell = ...
+	if overlayedSpells[spell] then
+		hasHighlight, highlight = true, "glowing"
+	end
 	for i = 1, select('#', ...) do
 		local aura = select(i, ...)
 		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]
 		if stateModule and stateModule:CanTestUnit(unit) then
-			newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
+			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
 		else
-			newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)
+			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 		end
-		if newName then
-			if not newExpirationTime then -- no expiration time == forever
-				return newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
-			elseif not name or newExpirationTime > expirationTime then
-				name, count, expirationTime, isDebuff, isMine, highlight = newName, newCount, newExpirationTime, newIsDebuff, newIsMine, newHighlight
-			end
+		if hasNewCount then
+			hasCount, count = true, newCount
+		end
+		if hasNewCountdown and (not hasCountdown or not newExpiratiomTime or (expirationTime and newExpiratiomTime > expirationTime)) then
+			hasCountdown, expirationTime = true, newExpiratiomTime
+		end
+		if hasNewHighlight then
+			hasHighlight, highlight = true, newHighlight
 		end
 	end
-	return name, count, expirationTime, isDebuff, isMine, highlight
+	return hasCount and count or nil, hasCountdown and expirationTime or nil, hasHighlight and highlight or nil
 end
 
 local EMPTY_TABLE = {}
@@ -562,82 +319,38 @@ local function GetAuraToDisplay(spell, target, specific)
 	end
 
 	-- Look for the aura or its aliases
-	local name, count, expirationTime, isDebuff, isMine, showHighlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
+	local count, expirationTime, newHighlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
 
 	if specific and specific.invertHighlight then
-		showHighlight = not showHighlight
-		if not name then
-			name = spell
-			isDebuff = UnitIsDebuffable(target)
-			if isDebuff then
-				isMine = onlyMyDebuffs
-			else
-				isMine = onlyMyBuffs
+		if newHighlight and newHighlight ~= "none" then
+			newHighlight = nil
+		elseif UnitIsDebuffable(target) then
+			newHighlight = GetBorderHighlight(true, onlyMyDebuffs)
+		else
+			newHighlight = GetBorderHighlight(false, onlyMyBuffs)
+		end
+	end
+
+	if highlight ~= "none" then
+		if newHighlight then
+			if newHighlight == "glowing" then
+				highlight = "glowing"
+			elseif highlight == "border" then
+				highlight = newHighlight
 			end
+		else
+			highlight = "none"
 		end
 	end
 
-	if name then
-		return name, (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, isDebuff, isMine, showHighlight and highlight or "none"
-	end
-end
-
-------------------------------------------------------------------------------
--- Visual feedback hooks
-------------------------------------------------------------------------------
-
-local function UpdateTimer(self)
-	local state = buttons[self]
-	if state.name and (state.expirationTime or state.count) then
-		local now = GetTime()
-		local expirationTime = state.expirationTime
-		if expirationTime and expirationTime <= now then
-			expirationTime = nil
-		end
-		local count = state.count
-		if count == 0 then
-			count = nil
-		end
-		if expirationTime or count then
-			local frame = timerFrames[self] or CreateTimerFrame(self)
-			return TimerFrame_Display(frame, expirationTime, count, now)
-		end
-	end
-	if timerFrames[self] then
-		timerFrames[self]:Hide()
-	end
-end
-
-local function ActionButton_HideOverlayGlow_Hook(self)
-	local state = buttons[self]
-	if not state then return end
-	if state.highlight == "glowing" then
-		--@debug@
-		self:Debug("Enforcing glowing for", state.name)
-		--@end-debug@
-		return ActionButton_ShowOverlayGlow(self)
-	end
-end
-
-local function UpdateButtonState_Hook(self)
-	local state = buttons[self]
-	if not state then return end
-	local texture = self:GetCheckedTexture()
-	if state.highlight == "border" then
-		--@debug@
-		self:Debug("Showing border for", state.name)
-		--@end-debug@
-		local color = db.profile['color'..(state.isDebuff and "Debuff" or "Buff")..(state.isMine and 'Mine' or 'Others')]
-		self:SetChecked(true)
-		SetVertexColor(texture, unpack(color))
-	else
-		texture:SetVertexColor(1, 1, 1)
-	end
+	return (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, highlight
 end
 
 ------------------------------------------------------------------------------
 -- Aura updating
 ------------------------------------------------------------------------------
+
+local function FilterEmpty(v) if v and strtrim(tostring(v)) ~= "" and v ~= 0 then return v end end
 
 local function FindMacroOptions(...)
 	for i = 1, select('#', ...) do
@@ -654,9 +367,7 @@ local function GuessMacroTarget(index)
 	local options = FindMacroOptions(strsplit("\n", body))
 	if options then
 		local action, target = SecureCmdOptionParse(options)
-		if action and action ~= "" and target and target ~= "" then
-			return target
-		end
+		return FilterEmpty(action) and FilterEmpty(target)
 	end
 end
 
@@ -685,22 +396,10 @@ local function ApplyVehicleModifier(unit)
 	return unit
 end
 
-local function GetSpellTargetAndType(self, action, param)
-	local isMacro, item, spell
-
-	-- Extract spell info from action and parameter
-	if action == "macro" then
-		isMacro = true
-		local macroSpell = GetMacroSpell(param)
-		if macroSpell then
-			spell = macroSpell
-		else
-			local _, macroItem = GetMacroItem(param)
-			if macroItem then
-				item, spell = macroItem, GetItemSpell(macroItem)
-			end
-		end
-	elseif action == "item" then
+local function AnalyzeAction(action, param)
+	if not action or not param then return end
+	local item, spell
+	if action == "item" then
 		item, spell = GetItemInfo(param), GetItemSpell(param)
 	elseif action == "spell" then
 		spell = GetSpellInfo(param)
@@ -720,12 +419,6 @@ local function GetSpellTargetAndType(self, action, param)
 		elseif type(overrideAuraType) == "function" then
 			auraType = overrideAuraType(spellHook, item or spell) or auraType
 		end
-		local overrideTarget = spellHook.OverrideTarget
-		if type(overrideTarget) == "string" then
-			target = overrideTarget
-		elseif type(overrideTarget) == "function" then
-			target = overrideTarget(spellHook, item or spell) or nil
-		end
 	end
 
 	-- Check for specific settings
@@ -742,30 +435,10 @@ local function GetSpellTargetAndType(self, action, param)
 	end
 
 	-- Solve special aura types ASAP
-	if auraType == "self" then
-		return spell, "player", auraType, specific
-	elseif auraType == "special" then
-		return spell, target or "player", auraType, specific
+	if auraType == "self" or auraType == "special" then
+		return spell, "player", specific
 	elseif auraType == "pet" then
-		return spell, "pet", auraType, specific
-	end
-
-	-- Regular aura
-
-	-- GetModifiedUnit always has precedence
-	if not target then
-		target = SecureButton_GetModifiedUnit(self)
-		if target and target ~= "" then
-			return spell, target, "regular", specific
-		end
-	end
-
-	-- Check macro target modifiers
-	if isMacro then
-		target = GuessMacroTarget(param)
-		if target then
-			return spell, target, "regular", specific
-		end
+		return spell, "pet", specific
 	end
 
 	-- Educated guess
@@ -775,57 +448,87 @@ local function GetSpellTargetAndType(self, action, param)
 	else
 		helpful = IsHelpfulSpell(spell)
 	end
-	return spell, GuessSpellTarget(helpful), "regular", specific
+	return spell, helpful and "friend" or "foe", specific
+end
+
+local function GetMacroAction(index)
+	local macroSpell = GetMacroSpell(index)
+	if macroSpell then
+		return "spell", macroSpell
+	end
+	local macroItem = GetMacroItem(index)
+	if macroItem then
+		return "item", macroItem
+	end
 end
 
 local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
 
-	local guid, spell, target, auraType, specific
-	spell, target, auraType, specific = GetSpellTargetAndType(self, state.action, state.param)
-	if spell and target then
-		target = ApplyVehicleModifier(target)
-	end
-	guid = target and UnitGUID(target)
-	--@debug@
-	self:Debug('UpdateButtonAura', state.action, state.param, '=>', auraType, spell, target, guid)
-	--@end-debug@
-
-	if force or auraChanged[guid or state.guid or false] or auraType ~= state.auraType or spell ~= state.spell or guid ~= state.guid then
+	local spell, target, specific
+	if state.action == "macro" then
+		local macroAction, macroParam = GetMacroAction(state.param)
+		spell, target, specific = AnalyzeAction(macroAction, macroParam)
+		if state.spell ~= spell or state.targetHint ~= target or state.specific ~= specific then
+			state.spell, state.targetHint, state.specific = spell, target, specific
+			force = true
+		end
+		if target == "friend" or target == "foe" then
+			target = GuessMacroTarget(state.param) or target
+		end
 		--@debug@
-		self:Debug("UpdateButtonAura update because of:",
-			force and "forced" or "-",
-			auraChanged[guid or false] and "aura" or "-",
-			auraType ~= state.auraType and "auraType" or "-",
-			spell ~= state.spell and "spell" or "-",
-			guid ~= state.guid and "guid" or "-"
-		)
+		if force then
+			self:Debug('UpdateButtonAura: macro:', state.param, '=>', macroAction, macroParam, '=>', spell, target, specific)
+		end
 		--@end-debug@
-		state.spell, state.guid, state.auraType = spell, guid, auraType
+	else
+		spell, target, specific = state.spell, state.targetHint, state.specific
+	end
 
-		local name, count, expirationTime, isDebuff, isMine, highlight
+	-- Find actual units for these
+	if target == "friend" or target == "foe" then
+		target = FilterEmpty(SecureButton_GetModifiedUnit(self)) or GuessSpellTarget(target == "friend")
+		--@debug@
+		if force then
+			self:Debug('UpdateButtonAura: smart target:', target)
+		end
+		--@end-debug@
+	end
 
-		if spell and target and auraType then
-			name, count, expirationTime, isDebuff, isMine, highlight = GetAuraToDisplay(spell, target, specific)
+	-- Get the GUID
+	local guid = target and UnitGUID(target)
+
+	if force or guid ~= state.guid or auraChanged[guid or state.guid or false] then
+		--@debug@
+		self:Debug("UpdateButtonAura: updating because", (force and "forced") or (guid ~= state.guid and "guid changed") or "aura changed", "|", spell, target, specific, guid)
+		--@end-debug@
+		state.guid = guid
+
+		local count, expirationTime, highlight
+
+		if spell and target then
+			count, expirationTime, highlight = GetAuraToDisplay(spell, target, specific)
 			--@debug@
-			if name then
-				self:Debug("GetAuraToDisplay", spell, target, specific, "=>", "name=", name, "count=", count, "expirationTime=", expirationTime, "isDebuff=", isDebuff, "isMine=", isMine, "highlight=", highlight)
-			end
+			self:Debug("GetAuraToDisplay", spell, target, specific, "=>", "count=", count, "expirationTime=", expirationTime, "highlight=", highlight)
 			--@end-debug@
 		end
 
-		if state.name ~= name or state.count ~= count or state.expirationTime ~= expirationTime or state.isDebuff ~= isDebuff or state.isMine ~= isMine or state.highlight ~= highlight then
-			state.name, state.count, state.expirationTime, state.isDebuff, state.isMine = name, count, expirationTime, isDebuff, isMine
-			if state.highlight ~= highlight then
-				state.highlight = highlight
-				--@debug@
-				self:Debug("GetAuraToDisplay: updating highlight")
-				--@end-debug@
-				ActionButton_UpdateOverlayGlow(self)
-				self:__IA_UpdateState()
-			end
-			return UpdateTimer(self)
+		if state.highlight ~= highlight or force then
+			--@debug@
+			self:Debug("GetAuraToDisplay: updating highlight")
+			--@end-debug@
+			state.highlight = highlight
+			ActionButton_UpdateOverlayGlow(self)
+			self:__IA_UpdateState()
+		end
+
+		if state.count ~= count or state.expirationTime ~= expirationTime or force then
+			--@debug@
+			self:Debug("GetAuraToDisplay: updating countdown and/or stack", expirationTime, count)
+			--@end-debug@
+			state.count, state.expirationTime = count, expirationTime
+			ns.ShowCountdownAndStack(self, expirationTime, count)
 		end
 	end
 end
@@ -834,39 +537,46 @@ end
 -- Action handling
 ------------------------------------------------------------------------------
 
-local function ParseAction(self)
-	local action, param = self:__IA_GetAction()
-	if action == 'action' then
-		local _, spellId
-		action, param, _, spellId = GetActionInfo(param)
-		if action == 'equipmentset' then
-			return
-		elseif action == 'companion' then
-			action, param = 'spell', spellId
-		end
-	end
-	if action and param and param ~= 0 and param ~= "" then
-		if action == "item" and not GetItemSpell(GetItemInfo(param) or param) then
-			return
-		end
-		return action, param
-	end
-end
-
 local function UpdateAction_Hook(self)
 	local state = buttons[self]
 	if not state then return end
 	local action, param
 	if self:IsVisible() then
-		action, param = ParseAction(self)
+		action, param = self:__IA_GetAction()
+		if action == 'action' then
+			local actionAction, actionParam, _, spellId = GetActionInfo(param)
+			if actionAction == 'companion' then
+				action, param = 'spell', spellId
+			elseif actionAction == "spell" or actionAction == "item" or actionAction == "macro" then
+				action, param = actionAction, actionParam
+			else
+				action, param = nil, nil
+			end
+		end
+		if action == "item" and param and not GetItemSpell(GetItemInfo(param) or param) then
+			action, param = nil, nil
+		end
 	end
 	if action ~= state.action or param ~= state.param then
-		--@debug@
-		self:Debug("action changed =>", action, param)
-		--@end-debug@
 		state.action, state.param = action, param
 		activeButtons[self] = (action and param) or nil
-		return UpdateButtonAura(self)
+		local forceUpdate
+		if action ~= "macro" then
+			local spell, targetHint, specific = AnalyzeAction(action, param)
+			if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
+				state.spell, state.targetHint, state.specific = spell, targetHint, specific
+				forceUpdate = true
+			end
+			--@debug@
+			self:Debug("UpdateAction_Hook: action changed =>", action, param, "static:", spell, targetHint, specific, forceUpdate and "| forcing update")
+			--@end-debug@
+		else
+			forceUpdate = true
+			--@debug@
+			self:Debug("UpdateAction_Hook: action changed =>", action, param)
+			--@end-debug@
+		end
+		return UpdateButtonAura(self, forceUpdate)
 	end
 end
 
@@ -907,7 +617,7 @@ local function InitializeButton(self)
 		self.__IA_GetAction = Blizzard_GetAction
 		self.__IA_UpdateState = ActionButton_UpdateState
 	end
-	UpdateAction_Hook(self)
+	return UpdateAction_Hook(self)
 end
 
 ------------------------------------------------------------------------------
@@ -948,9 +658,7 @@ local function UpdateConfig()
 	UpdateUnitListeners()
 
 	-- Update timer skins
-	for button, timerFrame in pairs(timerFrames) do
-		TimerFrame_Skin(timerFrame)
-	end
+	ns.UpdateWidgets()
 end
 
 local mouseoverUnit
@@ -1004,8 +712,6 @@ function InlineAura:OnUpdate(elapsed)
 		wipe(auraChanged)
 	end
 
-	-- Update timers
-	safecall(ProcessTimers)
 end
 
 function InlineAura:RequireUpdate(config)
@@ -1038,7 +744,9 @@ function InlineAura:AuraChanged(unit)
 	end
 	unitGUIDs[unit] = guid
 	if guid and UnitIsUnit(unit, 'mouseover') then
-		dprint('AuraChanged:', unit,'is mouseover')
+		--@debug@
+		dprint('AuraChanged:', unit, 'is mouseover')
+		--@end-debug@
 		self.mouseoverTimer = 0
 	end
 end
@@ -1130,6 +838,22 @@ function InlineAura:UPDATE_BINDINGS(event, name)
 	return self:RequireUpdate(true)
 end
 
+function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
+	local name = GetSpellInfo(id)
+	if name and not overlayedSpells[name] then
+		overlayedSpells[name] = true
+		return self:AuraChanged("player")
+	end
+end
+
+function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(event, id)
+	local name = GetSpellInfo(id)
+	if name and overlayedSpells[name] then
+		overlayedSpells[name] = nil
+		return self:AuraChanged("player")
+	end
+end
+
 local updateFrame
 function InlineAura:OnEnable()
 
@@ -1146,6 +870,7 @@ function InlineAura:OnEnable()
 		db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
 		db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
 		self.db = db
+		ns.db = db
 
 		LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
 
@@ -1190,6 +915,9 @@ function InlineAura:OnEnable()
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
 
+	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
+	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE')
+
 	-- standard buttons
 	self:RegisterButtons("ActionButton", 12)
 	self:RegisterButtons("BonusActionButton", 12)
@@ -1198,6 +926,9 @@ function InlineAura:OnEnable()
 	self:RegisterButtons("MultiBarBottomRightButton", 12)
 	self:RegisterButtons("MultiBarBottomLeftButton", 12)
 
+	local ActionButton_HideOverlayGlow_Hook = ns.ActionButton_HideOverlayGlow_Hook
+	local UpdateButtonState_Hook = ns.UpdateButtonState_Hook
+
 	-- Hooks
 	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
 	hooksecurefunc('ActionButton_UpdateState', function(...) return safecall(UpdateButtonState_Hook, ...) end)
@@ -1205,19 +936,13 @@ function InlineAura:OnEnable()
 	hooksecurefunc('ActionButton_HideOverlayGlow', function(...) return safecall(ActionButton_HideOverlayGlow_Hook, ...) end)
 
 	-- ButtonFacade support
-	local LBF = LibStub('LibButtonFacade', true)
-	local LBF_RegisterCallback = function() end
-	if LBF then
-		SetVertexColor = LBF_SetVertexColor
-		LBF:RegisterSkinCallback("Blizzard", LBF_Callback)
-	end
+	ns.EnableLibButtonFacadeSupport()
+
 	-- Miscellanous addon support
 	if Dominos then
 		self:RegisterButtons("DominosActionButton", 120)
 		hooksecurefunc(Dominos.ActionButton, "Skin", ActionButton_OnLoad_Hook)
-		if LBF then
-			LBF:RegisterSkinCallback("Dominos", LBF_Callback)
-		end
+		ns.RegisterLBFCallback("Dominos")
 	end
 	if OmniCC or CooldownCount then
 		InlineAura.bigCountdown = false
@@ -1241,9 +966,7 @@ function InlineAura:OnEnable()
 	end
 	if Bartender4 then
 		self:RegisterButtons("BT4Button", 120) -- should not be necessary
-		if LBF then
-			LBF:RegisterSkinCallback("Bartender4", LBF_Callback)
-		end
+		ns.RegisterLBFCallback("Bartender4")
 	end
 
 	-- Refresh everything
@@ -1275,3 +998,5 @@ end
 
 -- InterfaceOptionsFrame spy
 CreateFrame("Frame", nil, InterfaceOptionsFrameAddOns):SetScript('OnShow', LoadConfigGUI)
+
+

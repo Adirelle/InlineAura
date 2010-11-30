@@ -86,10 +86,6 @@ InlineAura.dprint = dprint
 ------------------------------------------------------------------------------
 local FONTMEDIA = LSM.MediaType.FONT
 
-local FONT_NAME = LSM:GetDefault(FONTMEDIA)
-local FONT_SIZE_SMALL = 13
-local FONT_SIZE_LARGE = 20
-
 local DEFAULT_OPTIONS = {
 	profile = {
 		onlyMyBuffs = true,
@@ -102,9 +98,10 @@ local DEFAULT_OPTIONS = {
 		singleTextPosition = 'BOTTOM',
 		twoTextFirstPosition = 'BOTTOMLEFT',
 		twoTextSecondPosition = 'BOTTOMRIGHT',
-		fontName = FONT_NAME,
-		smallFontSize     = FONT_SIZE_SMALL,
-		largeFontSize     = FONT_SIZE_LARGE,
+		fontName      = LSM:GetDefault(FONTMEDIA),
+		smallFontSize = 13,
+		largeFontSize = 20,
+		fontFlag      = "OUTLINE",
 		colorBuffMine     = { 0.0, 1.0, 0.0, 1.0 },
 		colorBuffOthers   = { 0.0, 1.0, 1.0, 1.0 },
 		colorDebuffMine   = { 1.0, 0.0, 0.0, 1.0 },

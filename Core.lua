@@ -241,7 +241,7 @@ end
 ------------------------------------------------------------------------------
 
 local function GetBorderHighlight(isDebuff, isMine)
-	return strjoin('', isDebuff and "Debuff" or "Buff", isMine and "Mine" or "Others")
+	return strjoin('', 'border', isDebuff and "Debuff" or "Buff", isMine and "Mine" or "Others")
 end
 
 local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
@@ -292,7 +292,6 @@ end
 local EMPTY_TABLE = {}
 local function GetAuraToDisplay(spell, target, specific)
 	local aliases
-	local highlight = "border"
 	local hideStack = db.profile.hideStack
 	local hideCountdown = db.profile.hideCountdown
 	local onlyMyBuffs = db.profile.onlyMyBuffs
@@ -300,7 +299,6 @@ local function GetAuraToDisplay(spell, target, specific)
 
 	-- Specific spell overrides global settings
 	if specific then
-		highlight = specific.highlight
 		aliases = specific.aliases
 		if specific.hideStack ~= nil then
 			hideStack = specific.hideStack
@@ -316,28 +314,36 @@ local function GetAuraToDisplay(spell, target, specific)
 	end
 
 	-- Look for the aura or its aliases
-	local count, expirationTime, newHighlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or EMPTY_TABLE))
+	local count, expirationTime, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or  EMPTY_TABLE))
 
-	if specific and specific.invertHighlight then
-		if newHighlight and newHighlight ~= "none" then
-			newHighlight = nil
-		elseif UnitIsDebuffable(target) then
-			newHighlight = GetBorderHighlight(true, onlyMyDebuffs)
+	if specific then
+		local prevHighlight = highlight
+		if specific.highlight == "none" then
+			highlight = nil
 		else
-			newHighlight = GetBorderHighlight(false, onlyMyBuffs)
-		end
-	end
-
-	if highlight ~= "none" then
-		if newHighlight then
-			if newHighlight == "glowing" then
-				highlight = "glowing"
-			elseif highlight == "border" then
-				highlight = newHighlight
+			local show, hide = specific.highlight, nil
+			if highlight == "glowing" then
+				show = highlight
+			elseif show == "border" and highlight and strmatch(highlight, '^border') then
+				show = highlight
 			end
-		else
-			highlight = "none"
+			if specific.invertHighlight then
+				show, hide = hide, show
+			end
+			if highlight then
+				highlight = show
+			else
+				highlight = hide
+			end
+			if highlight == "border" then
+				if UnitIsDebuffable(target) then
+					highlight = GetBorderHighlight(true, onlyMyDebuffs)
+				else
+					highlight = GetBorderHighlight(false, onlyMyBuffs)
+				end
+			end
 		end
+		dprint('GetAuraToDisplay', specific.highlight, specific.invertHighlight, '|', prevHighlight, '=>', highlight)
 	end
 
 	return (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, highlight

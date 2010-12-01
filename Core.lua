@@ -84,7 +84,6 @@ InlineAura.dprint = dprint
 ------------------------------------------------------------------------------
 -- Constants
 ------------------------------------------------------------------------------
-local FONTMEDIA = LSM.MediaType.FONT
 
 local DEFAULT_OPTIONS = {
 	profile = {
@@ -98,7 +97,7 @@ local DEFAULT_OPTIONS = {
 		singleTextPosition = 'BOTTOM',
 		twoTextFirstPosition = 'BOTTOMLEFT',
 		twoTextSecondPosition = 'BOTTOMRIGHT',
-		fontName      = LSM:GetDefault(FONTMEDIA),
+		fontName      = LSM:GetDefault(LSM.MediaType.FONT),
 		smallFontSize = 13,
 		largeFontSize = 20,
 		fontFlag      = "OUTLINE",

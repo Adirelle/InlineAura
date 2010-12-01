@@ -322,24 +322,28 @@ local function GetAuraToDisplay(spell, target, specific)
 		else
 			local show, hide = specific.highlight, nil
 			if highlight == "glowing" then
+				-- Glowing has precedence
 				show = highlight
 			elseif show == "border" and highlight and strmatch(highlight, '^border') then
+			  -- Reuse provided border color
 				show = highlight
-			end
-			if specific.invertHighlight then
+			elseif show == "dim" then
+				-- These one has inverted logic
 				show, hide = hide, show
 			end
+			if specific.invertHighlight then
+				-- Invert if the user asked for it
+				show, hide = hide, show
+			end
+			-- Select the state that actually match the result from AuraLookup
 			if highlight then
 				highlight = show
 			else
 				highlight = hide
 			end
 			if highlight == "border" then
-				if UnitIsDebuffable(target) then
-					highlight = GetBorderHighlight(true, onlyMyDebuffs)
-				else
-					highlight = GetBorderHighlight(false, onlyMyBuffs)
-				end
+				-- Still "border", a specific color must be chosen
+				highlight = GetBorderHighlight(UnitIsDebuffable(target), true)
 			end
 		end
 		dprint('GetAuraToDisplay', specific.highlight, specific.invertHighlight, '|', prevHighlight, '=>', highlight)
@@ -520,9 +524,8 @@ local function UpdateButtonAura(self, force)
 			--@debug@
 			self:Debug("GetAuraToDisplay: updating highlight")
 			--@end-debug@
-			state.highlight = highlight
-			ActionButton_UpdateOverlayGlow(self)
-			self:__IA_UpdateState()
+			state.highlight = highlight			
+			self:__IA_Update()
 		end
 
 		if state.count ~= count or state.expirationTime ~= expirationTime or force then
@@ -590,18 +593,26 @@ local function Blizzard_GetAction(self)
 	return 'action', self.action
 end
 
+local function Blizzard_Update(self)
+	ActionButton_UpdateOverlayGlow(self)
+	ActionButton_UpdateState(self)
+	ActionButton_UpdateUsable(self)
+end
+
 local function LAB_GetAction(self)
 	return self:GetAction()
 end
 
-local function LAB_UpdateState(self)
+local function LAB_Update(self)
+	ActionButton_UpdateOverlayGlow(self)
 	return self:UpdateAction(true)
 end
 
 local function NOOP() end
 local function InitializeButton(self)
 	if buttons[self] then return end
-	buttons[self] = {}
+	local state = { button = self }
+	buttons[self] = { button = self }
 	--@debug@
 	if AdiDebug then
 		AdiDebug:Embed(self, 'InlineAura')
@@ -613,11 +624,11 @@ local function InitializeButton(self)
 	--@end-debug@
 	if self.__LAB_Version then
 		self.__IA_GetAction = LAB_GetAction
-		self.__IA_UpdateState = LAB_UpdateState
+		self.__IA_Update = LAB_Update
 		self:HookScript('OnShow', UpdateAction_Hook)
 	else
 		self.__IA_GetAction = Blizzard_GetAction
-		self.__IA_UpdateState = ActionButton_UpdateState
+		self.__IA_Update = Blizzard_Update
 	end
 	return UpdateAction_Hook(self)
 end
@@ -935,10 +946,12 @@ function InlineAura:OnEnable()
 
 	local ActionButton_HideOverlayGlow_Hook = ns.ActionButton_HideOverlayGlow_Hook
 	local UpdateButtonState_Hook = ns.UpdateButtonState_Hook
+	local UpdateButtonUsable_Hook = ns.UpdateButtonUsable_Hook
 
 	-- Hooks
 	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
 	hooksecurefunc('ActionButton_UpdateState', function(...) return safecall(UpdateButtonState_Hook, ...) end)
+	hooksecurefunc('ActionButton_UpdateUsable', function(...) return safecall(UpdateButtonUsable_Hook, ...) end)
 	hooksecurefunc('ActionButton_Update', function(...) return safecall(ActionButton_Update_Hook, ...) end)
 	hooksecurefunc('ActionButton_HideOverlayGlow', function(...) return safecall(ActionButton_HideOverlayGlow_Hook, ...) end)
 
@@ -962,6 +975,7 @@ function InlineAura:OnEnable()
 			--@end-debug@
 			LAB.RegisterCallback(self, "OnButtonCreated", function(_, button) return InitializeButton(button) end)
 			LAB.RegisterCallback(self, "OnButtonUpdate", function(_, button) return UpdateAction_Hook(button) end)
+			LAB.RegisterCallback(self, "OnButtonUsable", function(_, button) return UpdateButtonUsable_Hook(button) end)
 			LAB.RegisterCallback(self, "OnButtonState", function(_, button) return UpdateButtonState_Hook(button) end)
 			for button in pairs(LAB:GetAllButtons()) do
 				newButtons[button] = true

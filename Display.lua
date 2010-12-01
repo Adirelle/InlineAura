@@ -388,6 +388,16 @@ function ns.UpdateButtonState_Hook(self)
 	end
 end
 
+function ns.UpdateButtonUsable_Hook(self)
+	local state = buttons[self]
+	if not state then return end
+	if state.highlight == "dim" and IsUsableAction(self.action) then
+		local name = self:GetName()
+		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
+		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0);
+	end
+end
+
 ------------------------------------------------------------------------------
 -- LibButtonFacade compatibility
 ------------------------------------------------------------------------------

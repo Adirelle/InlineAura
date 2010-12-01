@@ -532,8 +532,7 @@ local spellOptions = {
 					order = 50,
 					values = {
 						none = L['None'],
-						dim = L['Dim (when not highlighted)'],
-						alpha = L['Transparency (when not highlighted)'],
+						dim = L['Dim (inverted)'],
 						border = L['Colored border'],
 						glowing = L['Glowing animation'],
 					}

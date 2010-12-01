@@ -227,8 +227,11 @@ function InlineAura_LoadDefaults(self)
 	-- Burst Haste (30%)
 	SharedAuras(
 		"SHAMAN", (UnitFactionGroup("player") == "Horde" and 2825 or 32182), -- Bloodlust/Heroism
+		"SHAMAN", 57724, -- Sated (Bloodlst/Heroism debuff),
 		"MAGE",   80353, -- Time Warp
-		"HUNTER", 90355  -- Ancient Hysteria (exotic pet ability)
+		"MAGE",   80354, -- Temporal Displacement (Time Warp debuff)
+		"HUNTER", 90355, -- Ancient Hysteria (exotic pet ability)
+		"HUNTER", 95809  -- Insanity (Ancient Hysteria debuff)
 	):OnSelf()
 
 	-- Agility & Strength bonuses
@@ -351,9 +354,9 @@ function InlineAura_LoadDefaults(self)
 		"WARLOCK",  5782, -- Fear
 		"HUNTER",   3355, -- Freezing Trap
 		"SHAMAN",  51514, -- Hex
-		"DRUID",    2637 ,-- Hibernate
-		"MAGE",      118 ,-- Polymorph
-		"MAGE",    61305 ,-- Polymorph (Black Cat)
+		"DRUID",    2637, -- Hibernate
+		"MAGE",      118, -- Polymorph
+		"MAGE",    61305, -- Polymorph (Black Cat)
 		"MAGE",    28272, -- Polymorph (Pig)
 		"MAGE",    61721, -- Polymorph (Rabbit)
 		"MAGE",    61780, -- Polymorph (Turkey)

@@ -182,7 +182,7 @@ end
 local stateModules = {}
 local stateKeywords = {}
 local stateSpellHooks = {}
-local statePrototype = {}
+local statePrototype = { Debug = function() end }
 --@debug@
 if AdiDebug then AdiDebug:Embed(statePrototype, "InlineAura") end
 --@end-debug@

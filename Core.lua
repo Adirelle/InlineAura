@@ -835,6 +835,10 @@ function InlineAura:UPDATE_BINDINGS(event, name)
 	return self:RequireUpdate(true)
 end
 
+function InlineAura:UPDATE_MACROS(event, name)
+	return self:RequireUpdate(true)
+end
+
 function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
 	local name = GetSpellInfo(id)
 	if name and not overlayedSpells[name] then
@@ -911,6 +915,7 @@ function InlineAura:OnEnable()
 	self:RegisterEvent('MODIFIER_STATE_CHANGED')
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
+	self:RegisterEvent('UPDATE_MACROS')
 
 	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
 	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE')

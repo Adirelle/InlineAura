@@ -451,6 +451,7 @@ function InlineAura_LoadDefaults(self)
 		SelfTalentProc( 1464, 46916) -- Slam => Bloodsurge
 		SelfTalentProc( 7384, 60503) -- Overpower => Taste For Blood
 		SelfTalentProc(34428, 32216) -- Victory Rush => Victorious
+		SelfTalentProc(23922, 50227) -- Shield Slam => Sword and Board
 
 		-- Cleave & Whirlwind => Meat Cleaver
 		Spells(845, 1680):Aliases(85738):OnSelf():WithStack():Glowing()

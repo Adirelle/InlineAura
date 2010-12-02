@@ -279,15 +279,15 @@ if healthThresholds then
 		return UnitCanAttack("player", unit)
 	end
 
-	function healthState:Test(spell, unit)
-		local below = tonumber(strmatch(spell, '^BELOW(%d+)$'))
-		local above = tonumber(strmatch(spell, '^ABOVE(%d+)$'))
+	function healthState:Test(condition, unit, onlyMyBuffs, onlyMyDebuffs, spell)		
+		if not IsUsableSpell(spell) or (GetSpellCooldown(spell) or 0) ~= 0 then return end
+		local below = tonumber(strmatch(condition, '^BELOW(%d+)$'))
+		local above = tonumber(strmatch(condition, '^ABOVE(%d+)$'))
 		local state = GetState(unit)
 		if state then
-			self:Debug('Test(', spell, unit, '): below:', below, below and state <= below, "above:", above, above and state >= above)
+			self:Debug('Test(', condition, unit, '): below:', below, below and state <= below, "above:", above, above and state >= above)
 			return false, nil, false, nil, (below and state <= below) or (above and state >= above), "glowing"
 		end
 	end
 
 end
-

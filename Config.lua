@@ -110,38 +110,38 @@ local options = {
 	args = {
 		onlyMyBuffs = {
 			name = L['Only my buffs'],
-			desc = L['Check to ignore buffs cast by other characters.'],
+			desc = L['Ignore buffs cast by other characters.'],
 			type = 'toggle',
 			order = 10,
 		},
 		onlyMyDebuffs = {
 			name = L['Only my debuffs'],
-			desc = L['Check to ignore debuffs cast by other characters.'],
+			desc = L['Ignore debuffs cast by other characters.'],
 			type = 'toggle',
 			order = 20,
 		},
 		hideCountdown = {
 			name = L['No countdown'],
-			desc = L['Check to hide the aura countdown.'],
+			desc = L['Do not display the remaining time countdown in the action buttons.'],
 			type = 'toggle',
 			order = 30,
 		},
 		hideStack = {
 			name = L['No application count'],
-			desc = L['Check to hide the aura application count (charges or stacks).'],
+			desc = L['Do not display (de)buff application count in the action buttons.'],
 			type = 'toggle',
 			order = 40,
 		},
 		preciseCountdown = {
 			name = L['Precise countdown'],
-			desc = L['Check to have a more accurate countdown display instead of default Blizzard rounding.'],
+			desc = L['Use a more accurate rounding, down to tenths of second, instead of the default Blizzard rounding.'],
 			type = 'toggle',
 			disabled = function(info) return InlineAura.db.profile.hideCountdown end,
 			order = 45,
 		},
 		decimalCountdownThreshold = {
 			name = L['Decimal countdown threshold'],
-			desc = L['Select the remaining time threshold under which tenths of second are displayed.'],
+			desc = L['This is the threshold under which tenths of second are displayed.'],
 			type = 'range',
 			min = 1,
 			max = 10,
@@ -158,21 +158,21 @@ local options = {
 			args = {
 				focus = {
 					name = L['Watch focus'],
-					desc = L['Watch aura changes on your focus. Required only to properly update macros that uses @focus targeting.'],
+					desc = L['Watch (de)buff changes on your focus. Required only to properly update macros that uses @focus targeting.'],
 					type = 'toggle',
 					order = 10,
 					arg = {'enabledUnits', 'focus'},
 				},
 				mouseover = {
 					name = L['Watch unit under mouse cursor'],
-					desc = L['Watch aura changes on the unit under the mouse cursor. Required only to properly update macros that uses @mouseover targeting.'],
+					desc = L['Watch (de)buff changes on the unit under the mouse cursor. Required only to properly update macros that uses @mouseover targeting.'],
 					type = 'toggle',
 					order = 20,
 					arg = {'enabledUnits', 'mouseover'},
 				},
 				emulateAutoSelfCast = {
 					name = L['Emulate auto self cast'],
-					desc = L['Behave as if the interface option "Auto self cast" was enabled, e.g. look for friendly auras on yourself when you are not targeting a friendly unit.\nNote: this enables the old Inline Aura behavior with friendly spells.'],
+					desc = L['Behave as if the interface option "Auto self cast" was enabled, e.g. test helpful spells on yourself when you are not targeting a friendly unit.\nNote: this enables the old Inline Aura behavior with friendly spells.'],
 					type = 'toggle',
 					order = 30,
 				},
@@ -358,6 +358,12 @@ end
 
 local ValidateName, spellPanel
 
+local function BuildSelectDesc(text, ...)
+	for i = 1, select('#', ...), 2 do
+		text = format("%s\n\n|cff44ff44%s|r: %s", text, select(i, ...))
+	end
+	return text
+end
 
 ---- Main panel options
 
@@ -373,7 +379,7 @@ local spellOptions = {
 	args = {
 		addInput = {
 			name = L['New spell name'],
-			desc = L['Enter the name of the spell for which you want to add specific settings. Non-existent spell or item names are rejected.'],
+			desc = L['Enter the name of the spell or item for which you want to add specific settings. Only active spells of your spellbook and items with "On Use:" effect are allowed.'],
 			type = 'input',
 			get = function(info) return spellToAdd end,
 			set = function(info, value)
@@ -449,22 +455,28 @@ local spellOptions = {
 			order = 50,
 			args = {
 				disable = {
-					name = L['Disable'],
-					desc = L['Check to totally disable this spell. No border highlight nor text is displayed for disabled spells.'],
+					name = L['Ignore'],
+					desc = L['Have Inline Aura totally ignores this spell. No highlight, countdown nor stack display.'],
 					type = 'toggle',
 					arg = 'disabled',
 					order = 10,
 				},
 				auraType = {
-					name = L['Aura type'],
-					desc = L['Select the aura type of this spell. This helps to look up the aura.'],
+					name = L['(De)buff type'],
+					desc = BuildSelectDesc(
+						L["Select the type of (de)buff of this spell. This is used to select the unit to watch for this spell."],
+						L["Regular"], L["watch hostile units for harmful spells and friendly units for helpful spells."],
+						L["Self"], L["watch your (de)buffs in any case."],
+						L["Pet"], L["watch pet (de)buffs in any case."],
+						L["Special"], L["display special values that are not (de)buffs."]
+					),
 					type = 'select',
 					arg = 'auraType',
 					disabled = 'IsSpellDisabled',
 					values = {
-						regular = L['Regular buff or debuff'],
-						self = L['Self buff or debuff'],
-						pet = isPetClass and L['Pet buff or debuff'] or nil,
+						regular = L['Regular'],
+						self = L['Self'],
+						pet = isPetClass and L['Pet'] or nil,
 						special = L['Special'] or nil,
 					},
 					order = 20,
@@ -490,7 +502,7 @@ local spellOptions = {
 				} or nil,
 				onlyMine = {
 					name = L['Only show mine'],
-					desc = L['Check to only show aura you applied. Uncheck to always show aura, even when applied by others. Leave grayed to use default settings.'],
+					desc = L["Only display the (de)buff if it has been applied by yourself, your pet or your vehicle."].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
 					type = 'toggle',
 					arg = 'onlyMine',
 					tristate = true,
@@ -500,7 +512,7 @@ local spellOptions = {
 				},
 				hideCountdown = {
 					name = L['No countdown'],
-					desc = L['Check to hide the aura duration countdown.'],
+					desc = L['Hide the countdown text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
 					type = 'toggle',
 					arg = 'hideCountdown',
 					tristate = true,
@@ -510,7 +522,7 @@ local spellOptions = {
 				},
 				hideStack = {
 					name = L['No application count'],
-					desc = L['Check to hide the aura application count (charges or stacks).'],
+					desc = L['Hide the application count text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
 					type = 'toggle',
 					arg = 'hideStack',
 					tristate = true,
@@ -520,30 +532,36 @@ local spellOptions = {
 				},
 				highlight = {
 					name = L['Highlight effect'],
-					desc = L['Select how to highlight the button.'],
+					desc = BuildSelectDesc(
+						L['Inline Aura can highlight the action button when the (de)buff is found.'],
+						L['None'], L['Do not highlight the button.'],
+						L['Dim'], L['Dim the button when the (de)buff is NOT found (reversed logic).'],
+						L['Colored border'], L['Display a colored border. Its color depends on the kind and owner of the (de)buff.'],
+						L['Glowing animation'], L['Display the Blizzard shiny, animated border.']
+					),
 					type = 'select',
 					arg = 'highlight',
 					disabled = 'IsSpellDisabled',
 					order = 50,
 					values = {
 						none = L['None'],
-						dim = L['Dim (inverted)'],
+						dim = L['Dim'],
 						border = L['Colored border'],
 						glowing = L['Glowing animation'],
 					}
 				},
 				invertHighlight = {
 					name = L['Invert highlight'],
-					desc = L["Check to invert highlight display. Countdown and application count display aren't affected by this setting."],
+					desc = L["Invert the highlight condition, highlightning when the (de)buff is not found."],
 					type = 'toggle',
 					arg = 'invertHighlight',
 					disabled = function(info) return info.handler:IsSpellDisabled(info) or info.handler.db.highlight == "none" end,
 					order = 55,
 				},
 				aliases = {
-					name = L['Auras to look up'],
-					desc = L['Enter additional aura names to check. This allows to check for alternative or equivalent auras. Some spells also apply auras that do not have the same name as the spell.'],
-					usage = L['Enter one aura name per line. They are spell-checked ; errors will prevents you to validate.'],
+					name = L['Additional (de)buffs'],
+					desc = L['Enter additional names to test. This allows to detect alternative or equivalent (de)buffs. Some spells also apply (de)buffs that do not have the same name.\nNote: both buffs and debuffs are tested whether the base spell is harmlful or helpful.'],
+					usage = L['Enter one name per line. They are spell-checked ; errors will prevents you to validate.'],
 					type = 'input',
 					arg = 'aliases',
 					disabled = 'IsSpellDisabled',

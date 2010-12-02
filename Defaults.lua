@@ -430,33 +430,50 @@ function InlineAura_LoadDefaults(self)
 	elseif class == 'WARRIOR' then
 	------------------------------------------------------------------------------
 
+		-- Most settings contributed by Moozhe
+
 		SelfBuffs(
-				871, -- Shield Wall
-			 1719, -- Recklessness
+			  871, -- Shield Wall
 			 2565, -- Shield Block
 			12292, -- Death Wish
+			12328, -- Sweeping Strikes
 			12975, -- Last Stand
 			18499, -- Berserker Rage
-			20230, -- Retaliation
-			23881, -- Bloodthirst
 			23920, -- Spell Reflection
-			34428, -- Victory Rush
 			46924, -- Bladestorm
-			55694  -- Enraged Regeneration
+			55694, -- Enraged Regeneration
+			85730  -- Deadly Calm
 		)
 
-		-- Contributed by Moozhe
-		SelfTalentProc(5308, 90806):WithStack()  -- Execute => Executioner stacks
-		SelfTalentProc(   78, 50685) -- Heroic Strike => Incite
-		SelfTalentProc( 1464, 46916) -- Slam => Bloodsurge
-		SelfTalentProc( 7384, 60503) -- Overpower => Taste For Blood
-		SelfTalentProc(34428, 32216) -- Victory Rush => Victorious
-		SelfTalentProc(23922, 50227) -- Shield Slam => Sword and Board
+		SelfTalentProc(   78, 50685):Glowing() -- Heroic Strike => Incite
+		SelfTalentProc( 1464, 46916):Glowing() -- Slam => Bloodsurge
+		SelfTalentProc( 5308, 90806):WithStack() -- Execute => Executioner stacks
+		SelfTalentProc( 7384, 60503):Glowing() -- Overpower => Taste For Blood
+		SelfTalentProc(34428, 32216):Glowing() -- Victory Rush => Victorious
+
+		-- Self Buffs with Stacks: Recklessness, Retaliation
+		Spells(1719, 20230):OnSelf():WithStack()
 
 		-- Cleave & Whirlwind => Meat Cleaver
-		Spells(845, 1680):Aliases(85738):OnSelf():WithStack():Glowing()
+		Spells(845, 1680):Aliases(85738):OnSelf():WithStack()
 
-		Spells(85288):Aliases(12292, 18499, 12880):OnSelf() -- Raging Blow => Death Wish, Berserker Rage, Enrage
+		-- Raging Blow => Death Wish, Berserker Rage, Enrage
+		Spells(85288):Aliases(12292, 18499, 12880):OnSelf()
+
+		-- Pummel & Shield Bash => Rude Interruption
+		Spells(6552, 72):Aliases(86662, 86663):OnSelf()
+
+		-- Shattering Throw => Divine Shield, Hand of Protection
+		Spells(64382):Aliases(642, 1022):Glowing()
+
+		-- Bloodthirst
+		Spells(23881):OnSelf():NoCountdown()
+
+		-- Heroic Fury => Roots on Self
+		Spells(60970):Aliases(19306, 64695, 339, 63685, 33395, 122, 23694, 90327, 94358, 50245, 54706, 4167):OnSelf():ShowOthers():Glowing()
+
+		-- Colossus Smash
+		Spells(86346):OnlyMine()
 
 	------------------------------------------------------------------------------
 	elseif class == 'SHAMAN' then

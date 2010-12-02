@@ -31,40 +31,6 @@ local buttons = ns.buttons
 -- LibSharedMedia
 ------------------------------------------------------------------------------
 local LSM = LibStub('LibSharedMedia-3.0')
-local FONTMEDIA = LSM.MediaType.FONT
-local FONT_FLAGS = "OUTLINE"
-
-------------------------------------------------------------------------------
--- Countdown formatting
-------------------------------------------------------------------------------
-
-local function GetPreciseCountdownText(timeLeft, threshold)
-	if timeLeft >= 3600 then
-		return format(L["%dh"], floor(timeLeft/3600)), 1 + floor(timeLeft) % 3600
-	elseif timeLeft >= 600 then
-		return format(L["%dm"], floor(timeLeft/60)), 1 + floor(timeLeft) % 60
-	elseif timeLeft >= 60 then
-		return format("%d:%02d", floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
-	elseif timeLeft >= threshold then
-		return tostring(floor(timeLeft)), timeLeft % 1
-	elseif timeLeft >= 0 then
-		return format("%.1f", floor(timeLeft*10)/10), 0
-	else
-		return "0"
-	end
-end
-
-local function GetImpreciseCountdownText(timeLeft)
-	if timeLeft >= 3600 then
-		return format(L["%dh"], ceil(timeLeft/3600)), ceil(timeLeft) % 3600
-	elseif timeLeft >= 60 then
-		return format(L["%dm"], ceil(timeLeft/60)), ceil(timeLeft) % 60
-	elseif timeLeft > 0 then
-		return tostring(floor(timeLeft)), timeLeft % 1
-	else
-		return "0"
-	end
-end
 
 ------------------------------------------------------------------------------
 -- Home-made bucketed timers
@@ -158,14 +124,15 @@ function baseProto:SetPosition(position)
 end
 
 function baseProto:ApplySettings()
-	self.font = LSM:Fetch(FONTMEDIA, ns.db.profile.fontName)
+	self.font = LSM:Fetch(LSM.MediaType.FONT, ns.db.profile.fontName)
+	self.fontFlag =  ns.db.profile.fontFlag
 	self.fontSize = ns.db.profile[self.sizeKey]
 	self.fontColor = ns.db.profile[self.colorKey]
 	return self:UpdateFont()
 end
 
 function baseProto:UpdateFont()
-	self:SetFont(self.font, self.fontSize, FONT_FLAGS)
+	self:SetFont(self.font, self.fontSize, self.fontFlag)
 	self:SetTextColor(unpack(self.fontColor))
 end
 
@@ -189,45 +156,21 @@ local countdownMeta = { __index = countdownProto }
 countdownProto.colorKey = "colorCountdown"
 countdownProto.sizeKey = "largeFontSize"
 
-local dynamicModifiers = {
-	-- { font scale, r, g, b }
-	{ 1.3, 1, 0, 0 }, -- soon
-	{ 1.0, 1, 1, 0 }, -- in less than a minute
-	{ 0.8, 1, 1, 1 }, -- in more than a minute
-}
-
 function countdownProto:UpdateFont()
-	local fontSize = self.fontSize
-	local r, g, b = unpack(self.fontColor)
-
-	local timeLeft = self.timeLeft
-	if timeLeft and self.dynamic then
-		local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
-		local scale
-		scale, r, g, b = unpack(dynamicModifiers[phase])
-		fontSize = fontSize * scale
-	end
-
+	local fontSize, r, g, b = self:getFontSize()
 	self:SetTextColor(r, g, b)
-	self:SetFont(self.font, fontSize, FONT_FLAGS)
-
+	self:SetFont(self.font, fontSize, self.fontFlag)
 	local overflowRatio = self:GetStringWidth() / (self:GetParent():GetWidth()-4)
 	if overflowRatio > 1 then
-		return self:SetFont(self.font, self.fontSize / overflowRatio, FONT_FLAGS)
+		return self:SetFont(self.font, fontSize / overflowRatio, self.fontFlag)
 	end
 end
 
 function countdownProto:ApplySettings()
 	self.sizeKey = InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"
-	self.dynamic = ns.db.profile.dynamicCountdownColor
-
-	if ns.db.profile.preciseCountdown then
-		self.getCountdownText = GetPreciseCountdownText
-		self.decimalCountdownThreshold = ns.db.profile.decimalCountdownThreshold
-	else
-		self.getCountdownText = GetImpreciseCountdownText
-	end
-
+	self.getCountdownText = ns.db.profile.preciseCountdown and self.GetPreciseCountdownText or self.GetImpreciseCountdownText
+	self.decimalThreshold = ns.db.profile.decimalCountdownThreshold
+	self.getFontSize = ns.db.profile.dynamicCountdownColor and self.GetDynamicFontSize or self.GetStaticFontSize
 	return baseProto.ApplySettings(self)
 end
 
@@ -248,12 +191,67 @@ function countdownProto:OnUpdate(now)
 		return self:SetValue(nil)
 	end
 	self.timeLeft = timeLeft
-	local displayTime, delay = self.getCountdownText(timeLeft, self.decimalCountdownThreshold)
+	local displayTime, delay = self:getCountdownText()
 	self:SetText(displayTime)
 	self:UpdateFont()
 	if delay then
 		return ScheduleTimer(self, min(delay, timeLeft))
 	end
+end
+
+-- Countdown formatting
+
+function countdownProto:GetPreciseCountdownText()
+	local timeLeft = self.timeLeft
+	if timeLeft >= 3600 then
+		return format(L["%dh"], floor(timeLeft/3600)), 1 + floor(timeLeft) % 3600
+	elseif timeLeft >= 600 then
+		return format(L["%dm"], floor(timeLeft/60)), 1 + floor(timeLeft) % 60
+	elseif timeLeft >= 60 then
+		return format("%d:%02d", floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
+	elseif timeLeft >= self.decimalThreshold then
+		return tostring(floor(timeLeft)), timeLeft % 1
+	elseif timeLeft >= 0 then
+		return format("%.1f", floor(timeLeft*10)/10), 0
+	else
+		return "0"
+	end
+end
+
+function countdownProto:GetImpreciseCountdownText()
+	local timeLeft = self.timeLeft
+	if timeLeft >= 3600 then
+		return format(L["%dh"], ceil(timeLeft/3600)), ceil(timeLeft) % 3600
+	elseif timeLeft >= 60 then
+		return format(L["%dm"], ceil(timeLeft/60)), ceil(timeLeft) % 60
+	elseif timeLeft > 0 then
+		return tostring(floor(timeLeft)), timeLeft % 1
+	else
+		return "0"
+	end
+end
+
+-- Size and color modifiers
+
+local dynamicModifiers = {
+	-- { font scale, r, g, b }
+	{ 1.3, 1, 0, 0 }, -- soon
+	{ 1.0, 1, 1, 0 }, -- in less than a minute
+	{ 0.8, 1, 1, 1 }, -- in more than a minute
+}
+
+function countdownProto:GetDynamicFontSize()
+	local timeLeft = self.timeLeft
+	if timeLeft then
+		local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
+		local scale, r, g, b = unpack(dynamicModifiers[phase])
+		return self.fontSize * scale, r, g, b
+	end
+	return self:GetStaticFontSize()
+end
+
+function countdownProto:GetStaticFontSize()
+	return self.fontSize, unpack(self.fontColor)
 end
 
 ------------------------------------------------------------------------------
@@ -387,6 +385,16 @@ function ns.UpdateButtonState_Hook(self)
 		return SetVertexColor(texture, unpack(color))
 	else
 		return texture:SetVertexColor(1, 1, 1)
+	end
+end
+
+function ns.UpdateButtonUsable_Hook(self)
+	local state = buttons[self]
+	if not state then return end
+	if state.highlight == "dim" and IsUsableAction(self.action) then
+		local name = self:GetName()
+		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
+		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0);
 	end
 end
 

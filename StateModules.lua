@@ -18,7 +18,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 if not InlineAura then return end
 
+local _, ns = ...
 local _, playerClass = UnitClass("player")
+
+local UnitIsBuffable, UnitIsDebuffable, UnitIsMine = ns.UnitIsBuffable, ns.UnitIsDebuffable, ns.UnitIsMine
 
 ------------------------------------------------------------------------------
 -- Warlocks' Soul Shards and Paladins' Holy Power
@@ -276,14 +279,14 @@ if healthThresholds then
 	end
 
 	function healthState:CanTestUnit(unit, _, spell)
-		if IsHelpful(spell) then
-			return UnitCanAssist("player", unit)
+		if IsHelpfulSpell(spell) then
+			return UnitIsBuffable(unit)
 		else
-			return UnitCanAttack("player", unit)
+			return UnitIsDebuffable(unit)
 		end
 	end
 
-	function healthState:Test(condition, unit, onlyMyBuffs, onlyMyDebuffs, spell)		
+	function healthState:Test(condition, unit, onlyMyBuffs, onlyMyDebuffs, spell)
 		if not IsUsableSpell(spell) or (GetSpellCooldown(spell) or 0) ~= 0 then return end
 		local below = tonumber(strmatch(condition, '^BELOW(%d+)$'))
 		local above = tonumber(strmatch(condition, '^ABOVE(%d+)$'))
@@ -295,3 +298,41 @@ if healthThresholds then
 	end
 
 end
+
+------------------------------------------------------------------------------
+-- Dispell
+------------------------------------------------------------------------------
+
+local dispellState = InlineAura:NewStateModule("Dispell")
+
+function dispellState:OnEnable()
+	self:RegisterKeywords("DISPELLABLE")
+end
+
+local GetBorderHighlight = ns.GetBorderHighlight
+
+function dispellState:Test(_, unit)
+	local selectFilter, magicOnly
+	if UnitIsDebuffable(unit) then
+		selectFilter, magicOnly = "HELPFUL", true
+	elseif UnitIsBuffable(unit) then
+		selectFilter, magicOnly = "HARMFUL|RAID", nil
+	else
+		return
+	end
+	local i = 1
+	local maxExpirationTime
+	repeat
+		local name, _, _, _, debuffType, duration, expirationTime = UnitAura(unit, i, selectFilter)
+		if name and expirationTime and (not magicOnly or debuffType == "Magic") then
+			if not maxExpirationTime or expirationTime > maxExpirationTime then
+				maxExpirationTime = expirationTime
+			end
+		end
+		i = i + 1
+	until not name
+	if maxExpirationTime then
+		return false, nil, true, maxExpirationTime, true, GetBorderHighlight(magicOnly, false)
+	end
+end
+

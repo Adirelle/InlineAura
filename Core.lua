@@ -139,8 +139,18 @@ local UNIT_EVENTS = {
 local MY_UNITS = { player = true, pet = true, vehicle = true }
 
 -- These two functions return nil when unit does not exist
-local UnitIsBuffable = function(unit) return MY_UNITS[unit] or UnitCanAssist('player', unit) end
-local UnitIsDebuffable = function(unit) return UnitCanAttack('player', unit) end
+local function UnitIsBuffable(unit) return MY_UNITS[unit] or UnitCanAssist('player', unit) end
+local function UnitIsDebuffable(unit) return UnitCanAttack('player', unit) end
+
+local function UnitIsMine(unit) return unit and MY_UNITS[unit] end
+
+ns.UnitIsBuffable, ns.UnitIsDebuffable, ns.UnitIsMine = UnitIsBuffable, UnitIsDebuffable, UnitIsMine
+
+local function GetBorderHighlight(isDebuff, isMine)
+	return strjoin('', 'border', isDebuff and "Debuff" or "Buff", isMine and "Mine" or "Others")
+end
+
+ns.GetBorderHighlight = GetBorderHighlight
 
 ------------------------------------------------------------------------------
 -- Safecall
@@ -244,10 +254,6 @@ end
 ------------------------------------------------------------------------------
 -- Aura lookup
 ------------------------------------------------------------------------------
-
-local function GetBorderHighlight(isDebuff, isMine)
-	return strjoin('', 'border', isDebuff and "Debuff" or "Buff", isMine and "Mine" or "Others")
-end
 
 local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 	local isDebuff = false

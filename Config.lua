@@ -356,7 +356,8 @@ end
 -- Spell specific options
 -----------------------------------------------------------------------------
 
-local ValidateName
+local ValidateName, spellPanel
+
 
 ---- Main panel options
 
@@ -382,13 +383,7 @@ local spellOptions = {
 					spellToAdd = nil
 				end
 			end,
-			validate = function(info, value)
-				if not value or value:trim() == "" then
-					return true
-				else
-					return ValidateName(value) and true or L["Unknown spell: %s"]:format(tostring(value))
-				end
-			end,
+			validate = 'ValidateNewSpellName',
 			order = 10,
 		},
 		addButton = {
@@ -625,6 +620,46 @@ local function createSpellwithDefaults(name)
 	InlineAura.db.profile.spells[name] = spell
 end
 
+function spellPanelHandler:ValidateNewSpellName(info, value)
+	if not value or value:trim() == "" then
+		return true
+	end
+	local name, nameType = ValidateName(value)
+	local message
+	if not name then
+		message = format(L["Unknown spell or item: %s."], tostring(value))
+	elseif nameType == 'keyword' then
+		message = L['Keywords are not allowed.']
+	elseif nameType == 'spell' then
+		local unknown, passive = not GetSpellInfo(name), IsPassiveSpell(name)
+		if unknown or passive then
+			message = format(L["You cannot define settings for %s, as you could not put them in any action bar anyway."], unknown and L['an spell not in your spellbook'] or L['a passive spell'])
+		end
+	elseif nameType == 'item' then
+		if not GetItemSpell(name) then
+			message = L["You cannot define settings for an item that has no on-use effect."]
+		end
+	end
+	if message then
+		local dialog = self.errorDialog
+		if not dialog then
+			dialog = CreateFrame("Frame", nil, spellPanel, "DialogBoxFrame")
+			dialog:SetFrameStrata("FULLSCREEN_DIALOG")
+			dialog:SetSize(384, 128)
+			dialog.text = dialog:CreateFontString(nil, "ARTWORK", "GameFontRedLarge")
+			dialog.text:SetWidth(360)
+			dialog.text:SetPoint("TOP", 0, -16)
+			self.errorDialog = dialog
+			spellPanel:HookScript('OnHide', function() dialog:Hide() end)
+		end
+		dialog.text:SetText(message)
+		dialog:Show()
+	elseif self.errorDialog and self.errorDialog:IsShown() then
+		self.errorDialog:Hide()
+	end
+	return not message
+end
+			
 function spellPanelHandler:AddSpell(name)
 	createSpellwithDefaults(name)
 	spellSpecificHandler:SelectSpell(name)
@@ -763,46 +798,56 @@ end
 -----------------------------------------------------------------------------
 
 do
-	local GetSpellInfo, GetItemInfo = GetSpellInfo, GetItemInfo
+	local GetSpellInfo, GetItemInfo = GetSpellInfo, GetItemInfo, strlower, rawget
+	local keywords = InlineAura.stateKeywords	
+	local id = 0
+	local function doValidateName(value)
+		if keywords[value] then
+			return value, 'keyword'
+		end
+		local spellId = tonumber(strmatch('spell:(%d+)', value))
+		if spellId then
+			return GetSpellInfo(spellId), 'spell'
+		end
+		local itemId = tonumber(strmatch('item:(%d+)', value))
+		if itemId then
+			return GetItemInfo(itemId), 'item'
+		end
+		local itemName = GetItemInfo(value)
+		if itemName then
+			return itemName, 'item'
+		end
+		local knownSpell = GetSpellInfo(value)
+		if knownSpell then
+			return knownSpell, 'spell'
+		end
+		value = strlower(value)
+		while id < 100000 do -- Arbitrary high spell id
+			local name = GetSpellInfo(id)
+			id = id + 1
+			if name and strlower(name) == value then
+				return name, 'spell'
+			end
+		end
+	end
+	
 	local validNames = setmetatable({}, {
 		__mode = 'kv',
 		__index = function(self, key)
-			local result = false
-			if InlineAura.stateKeywords[key] then
-				result = key
-			else
-				local rawId = tonumber(string.match(tostring(key), '^#(%d+)$'))
-				if rawId then
-					if GetSpellInfo(rawId) then
-						result = '#'..rawId
-					end
-				else
-					result = GetSpellInfo(key) or GetItemInfo(key)
-					if not result then
-						local id = rawget(self, '__id') or 0
-						while id < 100000 do -- Arbitrary high spell id
-							local name = GetSpellInfo(id)
-							id = id + 1
-							if name then
-								if name:lower() == key:lower() then
-									result = name
-									break
-								else
-									self[name] = name
-								end
-							end
-						end
-						self.__id = id
-					end
-				end
-			end
+			local name, type = doValidateName(key)
+			local result = name and strjoin('|', name, type) or false
 			self[key] = result
 			return result
 		end
 	})
 
 	function ValidateName(name)
-		return type(name) == "string" and validNames[name]
+		if type(name) == "string" then
+			local info = validNames[name]
+			if info then
+				return strsplit('|', info)
+			end
+		end
 	end
 end
 
@@ -827,7 +872,7 @@ AceConfig:RegisterOptionsTable('InlineAura-profiles', dbOptions)
 -- Create Blizzard AddOn option frames
 local mainTitle = L['Inline Aura']
 local mainPanel = AceConfigDialog:AddToBlizOptions('InlineAura-main', mainTitle)
-AceConfigDialog:AddToBlizOptions('InlineAura-spells', L['Spell specific settings'], mainTitle)
+spellPanel = AceConfigDialog:AddToBlizOptions('InlineAura-spells', L['Spell specific settings'], mainTitle)
 AceConfigDialog:AddToBlizOptions('InlineAura-profiles', L['Profiles'], mainTitle)
 
 -- Update selected spell on database change

@@ -224,7 +224,7 @@ function statePrototype:RegisterSpellHooks(...)
 	end
 end
 
-function statePrototype:CanTestUnit(unit)
+function statePrototype:CanTestUnit(unit, aura, spell)
 	return true
 end
 
@@ -276,7 +276,7 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	for i = 1, select('#', ...) do
 		local aura = select(i, ...)
 		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]
-		if stateModule and stateModule:CanTestUnit(unit) then
+		if stateModule and stateModule:CanTestUnit(unit, aura, spell) then
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
 		else
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)

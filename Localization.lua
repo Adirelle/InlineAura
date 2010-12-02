@@ -32,6 +32,14 @@ ns.L = L
 -- Hard-coded locales
 L["COMBO_POINTS"] = "Combo points"
 L["SOUL_SHARDS"] = "Soul shards"
+L["BELOW20"] = "Below 20% health"
+L["BELOW25"] = "Below 25% health"
+L["BELOW35"] = "Below 35% health"
+L["BELOW80"] = "Below 80% health"
+L["ABOVE20"] = "Above 20% health"
+L["ABOVE25"] = "Above 25% health"
+L["ABOVE35"] = "Above 35% health"
+L["ABOVE80"] = "Above 80% health"
 
 --@noloc[[
 -- Locales from GlobalStrings.lua

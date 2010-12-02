@@ -275,8 +275,12 @@ if healthThresholds then
 		end
 	end
 
-	function healthState:CanTestUnit(unit)
-		return UnitCanAttack("player", unit)
+	function healthState:CanTestUnit(unit, _, spell)
+		if IsHelpful(spell) then
+			return UnitCanAssist("player", unit)
+		else
+			return UnitCanAttack("player", unit)
+		end
 	end
 
 	function healthState:Test(condition, unit, onlyMyBuffs, onlyMyDebuffs, spell)		

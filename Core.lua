@@ -349,7 +349,7 @@ local function GetAuraToDisplay(spell, target, specific)
 		dprint('GetAuraToDisplay', specific.highlight, specific.invertHighlight, '|', prevHighlight, '=>', highlight)
 	end
 
-	return (not hideStack) and count or nil, (not hideCountdown) and expirationTime or nil, highlight
+	return (not hideStack) and count ~= 0 and count or nil, (not hideCountdown) and expirationTime or nil, highlight
 end
 
 ------------------------------------------------------------------------------

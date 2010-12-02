@@ -359,6 +359,7 @@ function InlineAura_LoadDefaults(self)
 		"HUNTER",      54404, -- Dust Cloud (Tallstrider)
 		"DEATHKNIGHT", 55095, -- Frost Fever
 		"DRUID",       58180, -- Infected Wounds
+		"DRUID",       42231, -- Hurricane
 		"HUNTER",      90315  -- Tailspin (Fox)
 	)
 

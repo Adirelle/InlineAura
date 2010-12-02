@@ -505,6 +505,8 @@ function InlineAura_LoadDefaults(self)
 			45438  -- Ice Block
 		)
 
+		Spells(30451):Aliases(36032):OnSelf() -- Arcane Blast => Arcane Blast debuff
+
 	------------------------------------------------------------------------------
 	elseif class == 'DEATHKNIGHT' then
 	------------------------------------------------------------------------------

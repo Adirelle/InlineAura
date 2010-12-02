@@ -292,7 +292,7 @@ function InlineAura_LoadDefaults(self)
 	-- Spell Damage Taken (8%)
 	SharedAuras(
 		"WARLOCK",      1490, -- Curse of the Elements
-		"WARLOCK",     85479, -- Jinx
+		"WARLOCK",     85547, -- Jinx
 		"ROGUE",       58410, -- Master Poisoner (passive)
 		"DEATHKNIGHT", 51160, -- Ebon Plaguebringer (passive)
 		"DRUID",       48506, -- Earth and Moon (passive)
@@ -602,16 +602,17 @@ function InlineAura_LoadDefaults(self)
 
 		SelfBuffs(
 			687,   -- Demon Armor
-			6229,  -- Shadow Ward
 			7812,  -- Sacrifice (voidwalker buff)
 			19028, -- Soul Link
 			28176  -- Fel Armor
 		)
 
-		-- Incinerate => Molten Core, Backlash or Backdraft
-		SelfTalentProc(29722, 47383, 34936, 54274):WithStack()
+		SelfTalentProc(29722, 47383, 34936, 54274):WithStack() -- Incinerate => Molten Core, Backlash or Backdraft
 		SelfTalentProc( 6353, 63165, 85385) -- Soul Fire => Decimation or Improved Soul Fire
 		SelfTalentProc(  686, 17941, 34936) -- Shadow Bolt => Shadow Trance Backlash
+
+		-- Show nether ward on shadow ward
+		Spells(6229):Aliases(91711):OnSelf()
 
 	------------------------------------------------------------------------------
 	elseif class == 'MAGE' then

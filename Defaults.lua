@@ -592,7 +592,7 @@ function InlineAura_LoadDefaults(self)
 	------------------------------------------------------------------------------
 
 		-- Soul link
-		Aliases(19028, 25228)
+		Spells(19028, 25228):OnPet()
 
 		Spells(1120):Aliases('BELOW25'):Glowing() -- Drain Soul
 		Spells(17877):Aliases('BELOW20'):Glowing() -- Shadowburn

@@ -302,6 +302,11 @@ local function GetAuraToDisplay(spell, target, specific)
 	local onlyMyBuffs = db.profile.onlyMyBuffs
 	local onlyMyDebuffs = db.profile.onlyMyDebuffs
 
+	-- No pet aura when no real pet is available
+	if target == "pet" and (not UnitExists("pet") or UnitIsUnit("pet", "vehicle")) then
+		return
+	end
+
 	-- Specific spell overrides global settings
 	if specific then
 		aliases = specific.aliases

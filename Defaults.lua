@@ -534,6 +534,8 @@ function InlineAura_LoadDefaults(self)
 
 		GroupDebuffs(1130, 53243) -- Hunter's Mark, Marked For Death
 
+		Spells(19801):Aliases("DISPELLABLE") -- Tranquilizing Shot => foes' magic buffs
+
 		PetBuffs(
 				136, -- Mend Pet
 			19574  -- Bestial Wrath
@@ -560,6 +562,7 @@ function InlineAura_LoadDefaults(self)
 
 		-- Execute
 		Spells(5308):Aliases('BELOW20'):Glowing()
+
 		SelfTalentProc(   78, 50685):Glowing() -- Heroic Strike => Incite
 		SelfTalentProc( 1464, 46916):Glowing() -- Slam => Bloodsurge
 		SelfTalentProc( 5308, 90806):WithStack() -- Execute => Executioner stacks
@@ -604,6 +607,8 @@ function InlineAura_LoadDefaults(self)
 			55198  -- Tidal Force
 		)
 
+		Spells(370, 51886):Aliases("DISPELLABLE") -- Purge and Cleanse Spirit
+
 	------------------------------------------------------------------------------
 	elseif class == 'WARLOCK' then
 	------------------------------------------------------------------------------
@@ -631,6 +636,9 @@ function InlineAura_LoadDefaults(self)
 		-- Show nether ward on shadow ward
 		Spells(6229):Aliases(91711):OnSelf()
 
+		Spells(89808):Aliases("DISPELLABLE") -- Singe Magic (Imp)
+		Spells(19505):Aliases("DISPELLABLE") -- Devour Magic (Felhunter)
+
 	------------------------------------------------------------------------------
 	elseif class == 'MAGE' then
 	------------------------------------------------------------------------------
@@ -643,6 +651,8 @@ function InlineAura_LoadDefaults(self)
 		)
 
 		Spells(30451):Aliases(36032):OnSelf() -- Arcane Blast => Arcane Blast debuff
+
+		Spells(475):Aliases("DISPELLABLE") -- Remove Curse
 
 	------------------------------------------------------------------------------
 	elseif class == 'DEATHKNIGHT' then
@@ -700,6 +710,8 @@ function InlineAura_LoadDefaults(self)
 		-- This will display either the buff or the debuff
 		Aliases(17, 6788) -- Power Word: Shield / Weakened Soul
 
+		Spells(527):Aliases("DISPELLABLE") -- Dispel Magic
+
 	------------------------------------------------------------------------------
 	elseif class == 'DRUID' then
 	------------------------------------------------------------------------------
@@ -743,6 +755,8 @@ function InlineAura_LoadDefaults(self)
 		Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
 		Aliases(93402,  8921) -- ... and conversely
 
+		Spells(2782):Aliases("DISPELLABLE") -- Remove Corruption
+
 	------------------------------------------------------------------------------
 	elseif class == 'PALADIN' then
 	------------------------------------------------------------------------------
@@ -780,6 +794,8 @@ function InlineAura_LoadDefaults(self)
 		Aliases(1022, 25771) -- Hand of Protection / Forbearance
 
 		Aliases(53563, 53651):OnlyMine() -- Beacon of Light => Light's Beacon
+
+		Spells(4987):Aliases("DISPELLABLE") -- Cleanse
 
 	------------------------------------------------------------------------------
 	elseif class == 'ROGUE' then

@@ -449,6 +449,7 @@ function InlineAura_LoadDefaults(self)
 		SelfTalentProc( 1464, 46916) -- Slam => Bloodsurge
 		SelfTalentProc( 7384, 60503) -- Overpower => Taste For Blood
 		SelfTalentProc(34428, 32216) -- Victory Rush => Victorious
+		SelfTalentProc(23922, 50227) -- Shield Slam => Sword and Board
 
 		-- Cleave & Whirlwind => Meat Cleaver
 		Spells(845, 1680):Aliases(85738):OnSelf():WithStack():Glowing()
@@ -505,6 +506,8 @@ function InlineAura_LoadDefaults(self)
 			30482, -- Molten Armor
 			45438  -- Ice Block
 		)
+
+		Spells(30451):Aliases(36032):OnSelf() -- Arcane Blast => Arcane Blast debuff
 
 	------------------------------------------------------------------------------
 	elseif class == 'DEATHKNIGHT' then

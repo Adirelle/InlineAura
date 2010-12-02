@@ -789,7 +789,8 @@ function spellSpecificHandler:SetAliases(info, value)
 	for name in tostring(value):gmatch("[^\n]+") do
 		name = name:trim()
 		if name ~= "" then
-			table.insert(aliases, ValidateName(name))
+			local name = ValidateName(name)
+			table.insert(aliases, name)
 		end
 	end
 	if #aliases > 0 then

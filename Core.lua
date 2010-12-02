@@ -183,7 +183,13 @@ local stateKeywords = {}
 local stateSpellHooks = {}
 local statePrototype = {}
 --@debug@
-if AdiDebug then AdiDebug:Embed(statePrototype, "InlineAura") end
+if AdiDebug then
+	AdiDebug:Embed(statePrototype, "InlineAura")
+else
+--@end-debug@
+	function statePrototype.Debug() end
+--@debug@
+end
 --@end-debug@
 
 InlineAura.stateModules = stateModules
@@ -524,7 +530,7 @@ local function UpdateButtonAura(self, force)
 			--@debug@
 			self:Debug("GetAuraToDisplay: updating highlight")
 			--@end-debug@
-			state.highlight = highlight			
+			state.highlight = highlight
 			self:__IA_Update()
 		end
 

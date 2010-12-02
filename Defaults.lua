@@ -91,7 +91,7 @@ function InlineAura_LoadDefaults(self)
 			wipe(obj.ids)
 			for i = 1, select('#', ...), 2 do
 				local spellClass, id = select(i, ...)
-				if spellClass == class and not IsPassiveSpell(id) then
+				if (spellClass == class or IsSpellKnown(id)) and not IsPassiveSpell(id) then
 					obj.spells[id] = GetSpell(id)
 				end
 				tinsert(obj.ids, id)
@@ -195,7 +195,6 @@ function InlineAura_LoadDefaults(self)
 	- Increased Spell Power (10%)
 	- Physical Damage Taken (4%)
 	- Spell Crit Taken (5%)
-	- Reduced Attack Speed (20%)
 	]]
 
 	--- Buffs ---
@@ -353,7 +352,17 @@ function InlineAura_LoadDefaults(self)
 		"PALADIN",     26017  -- Vindication
 	)
 
-	-- Trying a big crowd control category (using Phanx's list)
+	-- Reduced Attack Speed (20%)
+	SharedAuras(
+		"WARRIOR",      6343, -- Thunder Clap
+		"SHAMAN",       8042, -- Earth Shock
+		"HUNTER",      54404, -- Dust Cloud (Tallstrider)
+		"DEATHKNIGHT", 55095, -- Frost Fever
+		"DRUID",       58180, -- Infected Wounds
+		"HUNTER",      90315  -- Tailspin (Fox)
+	)
+
+	-- Crowd control (using Phanx's list)
 	SharedAuras(
 		"WARLOCK",   710, -- Banish
 		"SHAMAN",  76780, -- Bind Elemental
@@ -375,6 +384,98 @@ function InlineAura_LoadDefaults(self)
 		"PRIEST",   9484, -- Shackle Undead
 		"PALADIN", 10326, -- Turn Evil
 		"HUNTER",  19386  -- Wyvern Sting
+	)
+
+	-- Disarm (contributed by Moozhe)
+	SharedAuras(
+		"WARRIOR",   676, -- Disarm
+		"HUNTER",  50541, -- Clench (Scorpid)
+		"ROGUE",   51722, -- Dismantle
+		"PRIEST",  64058, -- Psychic Horror
+		"HUNTER",  91644  -- Snatch (Bird of Prey)
+	)
+
+	-- Snares and anti-snares (contributed by Moozhe)
+	-- Note that some of these are talent procs or passive effects.
+	-- This is intended as they will show up on active spells anyway.
+	SharedAuras(
+		"*",            1604, -- Dazed,
+		"DEATHKNIGHT", 45524, -- Chains of Ice
+		"DEATHKNIGHT", 50434, -- Chilblains
+		"DEATHKNIGHT", 58617, -- Glyph of Heart Strike
+		"DEATHKNIGHT", 68766, -- Desecration
+		"DRUID",       50259, -- Dazed (feral charge effect)
+		"DRUID",       58180, -- Infected Wounds
+		"DRUID",       61391, -- Typhoon
+		"MAGE",        31589, -- Slow
+		"MAGE",        44614, -- Frostfire Bolt
+		"HUNTER",       2974, -- Wing Clip
+		"HUNTER",       5116, -- Concussive Shot
+		"HUNTER",      13810, -- Ice Trap
+		"HUNTER",      35101, -- Concussive Barrage
+		"HUNTER",      35346, -- Time Warp (Warp Stalker)
+		"HUNTER",      50433, -- Ankle Crack (Crocolisk)
+		"HUNTER",      54644, -- Frost Breath (Chimaera)
+		"HUNTER",      61394, -- Frozen Wake (glyph)
+		"MAGE",          116, -- Frostbolt
+		"MAGE",          120, -- Cone of Cold
+		"MAGE",         6136, -- Chilled
+		"MAGE",         7321, -- Chilled (bis)
+		"MAGE",        11113, -- Blast Wave
+		"PALADIN",      1044, -- Hand of Freedom
+		"ROGUE",        3409, -- Crippling Poison
+		"ROGUE",       26679, -- Deadly Throw
+		"ROGUE",       31126, -- Blade Twisting
+		"ROGUE",       51693, -- Waylay
+		"ROGUE",       51585, -- Blade Twisting
+		"SHAMAN",       3600, -- Earthbind
+		"SHAMAN",       8034, -- Frostbrand Attack
+		"SHAMAN",       8056, -- Frost Shock
+		"WARLOCK",     18118, -- Aftermath
+		"WARLOCK",     18223, -- Curse of Exhaustion
+		"WARIROR",      1715, -- Piercing Howl
+		"WARRIOR",     12323  -- Hamstring
+	)
+
+	-- Stuns (contributed by Moozhe)
+	SharedAuras(
+		"*",           20549, -- War Stomp (Tauren racial)
+		"DEATHKNIGHT", 91800, -- Gnaw (Ghoul)
+		"DRUID",        5211, -- Bash
+		"DRUID",        9005, -- Pounce
+		"DRUID",       22570, -- Maim
+		"HUNTER",      19577, -- Intimidation
+		"HUNTER",      50519, -- Sonic Blast (Bat)
+		"HUNTER",      56626, -- Sting (famous singer)
+		"MAGE",        12355, -- Impact
+		"MAGE",        44572, -- Deep Freeze
+		"MAGE",        82691, -- Ring of Frost
+		"PALADIN",       853, -- Hammer of Justice
+		"PALADIN",      2812, -- Holy Wrath
+		"PRIEST",      88625, -- Holy Word: Chastise
+		"ROGUE",         408, -- Kidney Shot
+		"ROGUE",        1833, -- Cheap Shot
+		"WARLOCK",     30283, -- Shadowfury
+		"WARLOCK",     89766, -- Axe Toss (Felguard)
+		"WARRIOR",     12809, -- Concussion Blow
+		"WARRIOR",     20253, -- Intercept
+		"WARRIOR",     46968, -- Shockwave
+		"WARRIOR",     85388  -- Throwdown
+	)
+
+	-- Roots
+	SharedAuras(
+		"DRUID",     339, -- Entangling Roots
+		"HUNTER",   4167, -- Web (Spider)
+		"HUNTER",  19306, -- Counterattack
+		"HUNTER",  50245, -- Pin (Crab)
+		"HUNTER",  54706, -- Venom Web Spray (Silithid)
+		"HUNTER",  90327, -- Lock Jaw (Dog)
+		"MAGE",      122, -- Frost Nova
+		"MAGE",    33395, -- Freeze (elementals)
+		"MAGE",    63685, -- Freeze
+		"SHAMAN",  64695, -- Earthgrab
+		"WARRIOR", 23694  -- Improved Hamstring
 	)
 
 	------------------------------------------------------------------------------
@@ -486,7 +587,7 @@ function InlineAura_LoadDefaults(self)
 			16188, -- Nature's Swiftness
 			30823, -- Shamanistic Rage
 			52127, -- Water Shield
-			55198 -- Tidal Force
+			55198  -- Tidal Force
 		)
 
 	------------------------------------------------------------------------------

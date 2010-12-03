@@ -73,21 +73,30 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 
 	function comboPoints:OnEnable()
 		self:RegisterKeywords("COMBO_POINTS")
-		self:RegisterEvent('PLAYER_COMBO_POINTS')
+		self:RegisterEvent('UNIT_COMBO_POINTS')
+		self:RegisterEvent('PLAYER_TARGET_CHANGED', "Update")
+		self:RegisterEvent('PLAYER_ENTERING_WORLD', "Update")
 	end
 
 	function comboPoints:AcceptUnit(unit)
 		return unit == "player"
 	end
 
-	function comboPoints:Test(aura, unit)
-		local points = GetComboPoints("player")
+	function comboPoints:Test()
+		local points = GetComboPoints("player", "target")
 		return true, points, false, nil, points == MAX_COMBO_POINTS, "glowing"
 	end
 
-	function comboPoints:PLAYER_COMBO_POINTS()
-		InlineAura:AuraChanged("player")
+	function comboPoints:UNIT_COMBO_POINTS(_, unit)
+		if unit == "player" then
+			return InlineAura:AuraChanged("player")
+		end
 	end
+
+	function comboPoints:Update()
+		return InlineAura:AuraChanged("player")
+	end
+
 end
 
 ------------------------------------------------------------------------------
@@ -335,4 +344,3 @@ function dispellState:Test(_, unit)
 		return false, nil, true, maxExpirationTime, true, GetBorderHighlight(magicOnly, false)
 	end
 end
-

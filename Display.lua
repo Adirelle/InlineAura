@@ -365,7 +365,7 @@ local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow -- Hook protec
 
 function ns.ActionButton_HideOverlayGlow_Hook(self)
 	local state = buttons[self]
-	if state and state.highlight == "glowing" then
+	if state and (state.highlight == "glowing" or (state.action == "macro" and ns.overlayedSpells[state.spell])) then
 		return ActionButton_ShowOverlayGlow(self)
 	end
 end

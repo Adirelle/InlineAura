@@ -269,6 +269,7 @@ local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 end
 
 local overlayedSpells = {}
+ns.overlayedSpells = overlayedSpells
 
 local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
@@ -276,9 +277,6 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	local hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight
 	local hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight
 	local spell = ...
-	if overlayedSpells[spell] then
-		hasHighlight, highlight = true, "glowing"
-	end
 	for i = 1, select('#', ...) do
 		local aura = select(i, ...)
 		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]

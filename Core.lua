@@ -901,8 +901,8 @@ local addonSupport = {
 		self:RegisterButtons("BT4Button", 120) -- should not be necessary
 	end,
 }
-addonSupport.CooldownCount = OmniCC
-addonSupport.tullaCC = OmniCC
+addonSupport.CooldownCount = addonSupport.OmniCC
+addonSupport.tullaCC = addonSupport.OmniCC
 
 local librarySupport = {
 	["LibButtonFacade"] = function(self, lib, minor)

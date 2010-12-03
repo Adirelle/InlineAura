@@ -363,7 +363,6 @@ local function GetAuraToDisplay(spell, target, specific)
 				highlight = GetBorderHighlight(UnitIsDebuffable(target), true)
 			end
 		end
-		dprint('GetAuraToDisplay', specific.highlight, specific.invertHighlight, '|', prevHighlight, '=>', highlight)
 	end
 
 	return (not hideStack) and count ~= 0 and count or nil, (not hideCountdown) and expirationTime or nil, highlight
@@ -931,35 +930,27 @@ local librarySupport = {
 	end
 }
 
-function InlineAura:ADDON_LOADED()
+function InlineAura:CheckAddonSupport()
 	for major, handler in pairs(librarySupport) do
 		local lib, minor = LibStub(major, true)
 		if lib then
 			librarySupport[major] = nil
-			safecall(handler, self, lib, minor)
-			--@debug@
-			dprint(major, 'support activated')
-			--@end-debug@
+			handler(self, lib, minor)
 		end
 	end
 	for name, handler in pairs(addonSupport) do
 		if IsAddOnLoaded(name) then
 			addonSupport[name] = nil
-			safecall(handler, self)
-			--@debug@
-			dprint(name, 'support activated')
-			--@end-debug@
+			handler(self)
 		else
-			local _, _, _, enabled, loadable, reason = GetAddOnInfo("name")
+			local _, _, _, enabled, loadable, reason = GetAddOnInfo(name)
 			if not enabled or not loadable then
 				addonSupport[name] = nil
-				--@debug@
-				dprint(name, 'support disabled', reason and _G["ADDON_"..reason])
-				--@end-debug@
 			end
 		end
 	end
 	if not next(addonSupport) and not next(librarySupport) then
+		self.CheckAddonSupport, addonSupport, librarySupport = nil, nil, nil
 		self:UnregisterEvent('ADDON_LOADED')
 		return true
 	end
@@ -969,53 +960,33 @@ end
 -- Initialization
 ------------------------------------------------------------------------------
 
-function InlineAura:SPELLS_CHANGED()
-	-- Remove current defaults from database
-	self.db:RegisterDefaults(nil)
+function InlineAura:LoadSpellDefaults(event)
+	--@debug@
+	dprint('Loaded default settings on', event)
+	--@end-debug@
+
+	-- Remove current defaults
+	if self.db then
+		self.db:RegisterDefaults(nil)
+	end
 
 	-- Insert spell defaults
-	DEFAULT_OPTIONS.profile.spells = safecall(self.LoadDefaults, self)
+	DEFAULT_OPTIONS.profile.spells = safecall(InlineAura_LoadDefaults, self)
 
-	-- Register new defaults
-	self.db:RegisterDefaults(DEFAULT_OPTIONS)
+	-- Register updated defaults
+	if self.db then
+		self.db:RegisterDefaults(DEFAULT_OPTIONS)
+	end
 
-	-- Clean references
-	self:Unregister('SPELLS_CHANGED')
-	self.SPELLS_CHANGED = nil
-	self.LoadDefaults = nil
+	-- Clean up
+	self:UnregisterEvent('SPELLS_CHANGED')
+	InlineAura_LoadDefaults = nil
 
-	-- Update all
 	self:RequireUpdate(true)
 end
 
-function InlineAura:OnInitialize()
-
-	-- Retrieve default spell configuration
-	if InlineAura_LoadDefaults then
-		if IsLoggedIn() then
-			-- Delayed loading thanks to AddonLoader, hopefully the spell data are available
-			DEFAULT_OPTIONS.profile.spells = safecall(InlineAura_LoadDefaults, self)
-			self.SPELLS_CHANGED = nil
-		else
-			-- Wait for the first SPELLS_CHANGED to ensure spell data are available
-			self.LoadDefaults = InlineAura_LoadDefaults
-			self:RegisterEvent('SPELLS_CHANGED')
-		end
-		-- Clean up global namespace
-		InlineAura_LoadDefaults = nil
-	end
-
-	-- Saved variables setup
-	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
-	db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
-	db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
-	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
-	self.db = db
-	ns.db = db
-
-	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
-
-	-- Update the database from previous versions
+-- Upgrade the database from previous versions
+function InlineAura:UpgradeProfile()
 	for name, spell in pairs(db.profile.spells) do
 		if type(spell) == "table" and not spell.default then
 			local units = spell.unitsToScan
@@ -1040,6 +1011,32 @@ function InlineAura:OnInitialize()
 			spell.unitsToScan = nil
 		end
 	end
+	self:RequireUpdate(true)
+end
+
+function InlineAura:OnInitialize()
+	-- Retrieve default spell configuration
+	if InlineAura_LoadDefaults then
+		if IsLoggedIn() then
+			-- Already logged in, spell data should be available
+			self:LoadSpellDefaults('Initialize')
+		else
+			-- Wait for the first SPELLS_CHANGED to ensure spell data are available
+			self:RegisterEvent('SPELLS_CHANGED', "LoadSpellDefaults")
+		end
+	end
+
+	-- Saved variables setup
+	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
+	db.RegisterCallback(self, 'OnProfileChanged', 'UpgradeProfile')
+	db.RegisterCallback(self, 'OnProfileCopied', 'UpgradeProfile')
+	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
+	self.db = db
+	ns.db = db
+
+	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
+
+	self:UpgradeProfile()
 
 	self.bigCountdown = true
 	self.firstEnable = true
@@ -1077,8 +1074,8 @@ function InlineAura:OnEnable()
 	end
 
 	-- Check for addon and library support
-	if not self:ADDON_LOADED() then
-		self:RegisterEvent('ADDON_LOADED')
+	if self.CheckAddonSupport and not self:CheckAddonSupport() then
+		self:RegisterEvent('ADDON_LOADED', "CheckAddonSupport")
 	end
 
 	-- Set basic event listening up
@@ -1119,5 +1116,3 @@ end
 
 -- InterfaceOptionsFrame spy
 CreateFrame("Frame", nil, InterfaceOptionsFrameAddOns):SetScript('OnShow', LoadConfigGUI)
-
-

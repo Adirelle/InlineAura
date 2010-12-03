@@ -767,6 +767,8 @@ function InlineAura_LoadDefaults(self)
 			84963  -- Inquisition
 		)
 
+		SelfTalentProc(635, 94686) -- Holy Light => Crusader
+
 		GroupBuffs( 7294) -- Retribution Aura
 		GroupBuffs(32223) -- Crusader Aura
 

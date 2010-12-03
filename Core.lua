@@ -888,57 +888,200 @@ function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(event, id)
 	end
 end
 
-local updateFrame
-function InlineAura:OnEnable()
+------------------------------------------------------------------------------
+-- Addon and library support
+------------------------------------------------------------------------------
 
-	-- Retrieve default spell configuration, if loaded
-	if InlineAura_LoadDefaults then
-		safecall(InlineAura_LoadDefaults, self)
-		InlineAura_LoadDefaults = nil
+local addonSupport = {
+	Dominos = function(self)
+		self:RegisterButtons("DominosActionButton", 120)
+		hooksecurefunc(Dominos.ActionButton, "Skin", ActionButton_OnLoad_Hook)
+	end,
+	OmniCC = function(self)
+		self.bigCountdown = false
+	end,
+	Bartender4 = function(self)
+		self:RegisterButtons("BT4Button", 120) -- should not be necessary
+	end,
+}
+addonSupport.CooldownCount = OmniCC
+addonSupport.tullaCC = OmniCC
+
+local librarySupport = {
+	["LibButtonFacade"] = function(self, lib, minor)
+		ns.HaveLibButtonFacade(lib)
+		local callback = function()	return self:RequireUpdate(true)	end
+		lib:RegisterSkinCallback("Blizzard", callback)
+		lib:RegisterSkinCallback("Dominos", callback)
+		lib:RegisterSkinCallback("Bartender4", callback)
+	end,
+	["LibActionButton-1.0"] = function(self, lib, minor)
+		if minor >= 11 then -- Callbacks and GetAllButtons() are supported since minor 11
+			lib.RegisterCallback(self, "OnButtonCreated", function(_, button) return InitializeButton(button) end)
+			lib.RegisterCallback(self, "OnButtonUpdate", function(_, button) return UpdateAction_Hook(button) end)
+			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return UpdateButtonUsable_Hook(button) end)
+			lib.RegisterCallback(self, "OnButtonState", function(_, button) return UpdateButtonState_Hook(button) end)
+			for button in pairs(lib:GetAllButtons()) do
+				newButtons[button] = true
+			end
+		else
+			local _, loader = issecurevariable(lib, "CreateButton")
+			print("|cffff0000InlineAura: the version of LibActionButton-1.0 embedded in", (loader or "???"), "is not supported. Please consider updating it.|r")
+		end
 	end
+}
 
-	if not self.db then
-		-- Saved variables setup
-		db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
-		db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
-		db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
-		db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
-		self.db = db
-		ns.db = db
-
-		LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
-
-		-- Update the database from previous versions
-		for name, spell in pairs(db.profile.spells) do
-			if type(spell) == "table" and not spell.default then
-				local units = spell.unitsToScan
-				if type(units) ~= "table" then units = nil end
-				local auraType = spell.auraType
-				if auraType == "buff" then
-					if units and units.pet then
-						auraType = "pet"
-					elseif units and units.player and not units.target and not units.focus then
-						auraType = "self"
-					else
-						auraType = "regular"
-					end
-				elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
-					auraType = "regular"
-				end
-				if spell.alternateColor then
-					spell.highlight = "glowing"
-					spell.alternateColor = nil
-				end
-				spell.auraType = auraType
-				spell.unitsToScan = nil
+function InlineAura:ADDON_LOADED()
+	for major, handler in pairs(librarySupport) do
+		local lib, minor = LibStub(major, true)
+		if lib then
+			librarySupport[major] = nil
+			safecall(handler, self, lib, minor)
+			--@debug@
+			dprint(major, 'support activated')
+			--@end-debug@
+		end
+	end
+	for name, handler in pairs(addonSupport) do
+		if IsAddOnLoaded(name) then
+			addonSupport[name] = nil
+			safecall(handler, self)
+			--@debug@
+			dprint(name, 'support activated')
+			--@end-debug@
+		else
+			local _, _, _, enabled, loadable, reason = GetAddOnInfo("name")
+			if not enabled or not loadable then
+				addonSupport[name] = nil
+				--@debug@
+				dprint(name, 'support disabled', reason and _G["ADDON_"..reason])
+				--@end-debug@
 			end
 		end
 	end
+	if not next(addonSupport) and not next(librarySupport) then
+		self:UnregisterEvent('ADDON_LOADED')
+		return true
+	end
+end
 
-	-- Setup
+------------------------------------------------------------------------------
+-- Initialization
+------------------------------------------------------------------------------
+
+function InlineAura:SPELLS_CHANGED()
+	-- Remove current defaults from database
+	self.db:RegisterDefaults(nil)
+
+	-- Insert spell defaults
+	DEFAULT_OPTIONS.profile.spells = safecall(self.LoadDefaults, self)
+
+	-- Register new defaults
+	self.db:RegisterDefaults(DEFAULT_OPTIONS)
+
+	-- Clean references
+	self:Unregister('SPELLS_CHANGED')
+	self.SPELLS_CHANGED = nil
+	self.LoadDefaults = nil
+
+	-- Update all
+	self:RequireUpdate(true)
+end
+
+function InlineAura:OnInitialize()
+
+	-- Retrieve default spell configuration
+	if InlineAura_LoadDefaults then
+		if IsLoggedIn() then
+			-- Delayed loading thanks to AddonLoader, hopefully the spell data are available
+			DEFAULT_OPTIONS.profile.spells = safecall(InlineAura_LoadDefaults, self)
+			self.SPELLS_CHANGED = nil
+		else
+			-- Wait for the first SPELLS_CHANGED to ensure spell data are available
+			self.LoadDefaults = InlineAura_LoadDefaults
+			self:RegisterEvent('SPELLS_CHANGED')
+		end
+		-- Clean up global namespace
+		InlineAura_LoadDefaults = nil
+	end
+
+	-- Saved variables setup
+	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
+	db.RegisterCallback(self, 'OnProfileChanged', 'RequireUpdate')
+	db.RegisterCallback(self, 'OnProfileCopied', 'RequireUpdate')
+	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
+	self.db = db
+	ns.db = db
+
+	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
+
+	-- Update the database from previous versions
+	for name, spell in pairs(db.profile.spells) do
+		if type(spell) == "table" and not spell.default then
+			local units = spell.unitsToScan
+			if type(units) ~= "table" then units = nil end
+			local auraType = spell.auraType
+			if auraType == "buff" then
+				if units and units.pet then
+					auraType = "pet"
+				elseif units and units.player and not units.target and not units.focus then
+					auraType = "self"
+				else
+					auraType = "regular"
+				end
+			elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
+				auraType = "regular"
+			end
+			if spell.alternateColor then
+				spell.highlight = "glowing"
+				spell.alternateColor = nil
+			end
+			spell.auraType = auraType
+			spell.unitsToScan = nil
+		end
+	end
+
 	self.bigCountdown = true
+	self.firstEnable = true
+	self.mouseoverTimer = 1
+end
 
-	-- Setup basic event listening up
+local updateFrame
+function InlineAura:OnEnable()
+
+	if self.firstEnable then
+		self.firstEnable = nil
+
+		local ActionButton_HideOverlayGlow_Hook = ns.ActionButton_HideOverlayGlow_Hook
+		local UpdateButtonState_Hook = ns.UpdateButtonState_Hook
+		local UpdateButtonUsable_Hook = ns.UpdateButtonUsable_Hook
+
+		-- Hooks
+		hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
+		hooksecurefunc('ActionButton_UpdateState', function(...) return safecall(UpdateButtonState_Hook, ...) end)
+		hooksecurefunc('ActionButton_UpdateUsable', function(...) return safecall(UpdateButtonUsable_Hook, ...) end)
+		hooksecurefunc('ActionButton_Update', function(...) return safecall(ActionButton_Update_Hook, ...) end)
+		hooksecurefunc('ActionButton_HideOverlayGlow', function(...) return safecall(ActionButton_HideOverlayGlow_Hook, ...) end)
+
+		-- Our bucket thingy
+		updateFrame = CreateFrame("Frame")
+		updateFrame:SetScript('OnUpdate', function(_, elapsed) return self:OnUpdate(elapsed) end)
+
+		-- standard buttons
+		self:RegisterButtons("ActionButton", 12)
+		self:RegisterButtons("BonusActionButton", 12)
+		self:RegisterButtons("MultiBarRightButton", 12)
+		self:RegisterButtons("MultiBarLeftButton", 12)
+		self:RegisterButtons("MultiBarBottomRightButton", 12)
+		self:RegisterButtons("MultiBarBottomLeftButton", 12)
+	end
+
+	-- Check for addon and library support
+	if not self:ADDON_LOADED() then
+		self:RegisterEvent('ADDON_LOADED')
+	end
+
+	-- Set basic event listening up
 	self:RegisterEvent('UNIT_AURA')
 	self:RegisterEvent('UNIT_PET')
 	self:RegisterEvent('PLAYER_TARGET_CHANGED')
@@ -949,71 +1092,11 @@ function InlineAura:OnEnable()
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
 	self:RegisterEvent('UPDATE_MACROS')
-
 	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
 	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE')
 
-	-- standard buttons
-	self:RegisterButtons("ActionButton", 12)
-	self:RegisterButtons("BonusActionButton", 12)
-	self:RegisterButtons("MultiBarRightButton", 12)
-	self:RegisterButtons("MultiBarLeftButton", 12)
-	self:RegisterButtons("MultiBarBottomRightButton", 12)
-	self:RegisterButtons("MultiBarBottomLeftButton", 12)
-
-	local ActionButton_HideOverlayGlow_Hook = ns.ActionButton_HideOverlayGlow_Hook
-	local UpdateButtonState_Hook = ns.UpdateButtonState_Hook
-	local UpdateButtonUsable_Hook = ns.UpdateButtonUsable_Hook
-
-	-- Hooks
-	hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
-	hooksecurefunc('ActionButton_UpdateState', function(...) return safecall(UpdateButtonState_Hook, ...) end)
-	hooksecurefunc('ActionButton_UpdateUsable', function(...) return safecall(UpdateButtonUsable_Hook, ...) end)
-	hooksecurefunc('ActionButton_Update', function(...) return safecall(ActionButton_Update_Hook, ...) end)
-	hooksecurefunc('ActionButton_HideOverlayGlow', function(...) return safecall(ActionButton_HideOverlayGlow_Hook, ...) end)
-
-	-- ButtonFacade support
-	ns.EnableLibButtonFacadeSupport()
-
-	-- Miscellanous addon support
-	if Dominos then
-		self:RegisterButtons("DominosActionButton", 120)
-		hooksecurefunc(Dominos.ActionButton, "Skin", ActionButton_OnLoad_Hook)
-		ns.RegisterLBFCallback("Dominos")
-	end
-	if OmniCC or CooldownCount then
-		InlineAura.bigCountdown = false
-	end
-	local LAB, LAB_version = LibStub("LibActionButton-1.0", true)
-	if LAB then
-		if LAB_version >= 11 then -- Callbacks and GetAllButtons() are supported since minor 11
-			--@debug@
-			dprint("Found LibActionButton-1.0 version", LAB_version)
-			--@end-debug@
-			LAB.RegisterCallback(self, "OnButtonCreated", function(_, button) return InitializeButton(button) end)
-			LAB.RegisterCallback(self, "OnButtonUpdate", function(_, button) return UpdateAction_Hook(button) end)
-			LAB.RegisterCallback(self, "OnButtonUsable", function(_, button) return UpdateButtonUsable_Hook(button) end)
-			LAB.RegisterCallback(self, "OnButtonState", function(_, button) return UpdateButtonState_Hook(button) end)
-			for button in pairs(LAB:GetAllButtons()) do
-				newButtons[button] = true
-			end
-		else
-			local _, loader = issecurevariable(LAB, "CreateButton")
-			print("|cffff0000InlineAura: the version of LibActionButton-1.0 embedded in", (loader or "???"), "is not supported. Please consider updating it.|r")
-		end
-	end
-	if Bartender4 then
-		self:RegisterButtons("BT4Button", 120) -- should not be necessary
-		ns.RegisterLBFCallback("Bartender4")
-	end
-
 	-- Refresh everything
 	self:RequireUpdate(true)
-
-	-- Our bucket thingy
-	self.mouseoverTimer = 1
-	updateFrame = CreateFrame("Frame")
-	updateFrame:SetScript('OnUpdate', function(_, elapsed) return self:OnUpdate(elapsed) end)
 
 	-- Scan unit in case of delayed loading
 	self:PLAYER_ENTERING_WORLD()

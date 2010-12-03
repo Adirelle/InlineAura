@@ -374,6 +374,14 @@ local function SetVertexColor(texture, r, g, b, a)
 	return texture:SetVertexColor(r, g, b, a)
 end
 
+-- LibButtonFacade compatibility
+function ns.HaveLibButtonFacade(lib)
+	SetVertexColor = function(texture, r, g, b, a)
+		local R, G, B, A = texture:GetVertexColor()
+		return texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
+	end
+end
+
 function ns.UpdateButtonState_Hook(self)
 	local state = buttons[self]
 	if not state then return end
@@ -396,34 +404,5 @@ function ns.UpdateButtonUsable_Hook(self)
 		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
 		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0);
 	end
-end
-
-------------------------------------------------------------------------------
--- LibButtonFacade compatibility
-------------------------------------------------------------------------------
-
-local LBF
-
-local function LBF_SetVertexColor(texture, r, g, b, a)
-	local R, G, B, A = texture:GetVertexColor()
-	return texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
-end
-
-local function LBF_Callback()
-	return InlineAura:RequireUpdate(true)
-end
-
-function ns.EnableLibButtonFacadeSupport()
-	if not LBF then
-		LBF = LibStub('LibButtonFacade', true)
-		if LBF then
-			SetVertexColor = LBF_SetVertexColor
-			return ns.RegisterLBFCallback("Blizzard")
-		end
-	end
-end
-
-function ns.RegisterLBFCallback(skin)
-	return LBF and LBF:RegisterSkinCallback(skin, LBF_Callback)
 end
 

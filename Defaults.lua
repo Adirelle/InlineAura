@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 function InlineAura_LoadDefaults(self)
 
-	local SPELL_DEFAULTS = self.DEFAULT_OPTIONS.profile.spells
+	local SPELL_DEFAULTS = {}
 
 	local _, class = UnitClass('player')
 	local version = "@file-hash@/@project-version@"
@@ -828,4 +828,5 @@ function InlineAura_LoadDefaults(self)
 		end
 	end
 
+	return SPELL_DEFAULTS
 end

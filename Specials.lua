@@ -67,11 +67,13 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	local MAX_COMBO_POINTS = MAX_COMBO_POINTS
 	InlineAura:RegisterSpecial(
 		"COMBO_POINTS", function()
-			local points = GetComboPoints("player")
+			local points = GetComboPoints("player", "target")
 			return points, points == MAX_COMBO_POINTS
 		end,
-		"PLAYER_COMBO_POINTS", function()
-			return InlineAura:AuraChanged("player")
+		"UNIT_COMBO_POINTS", function(self, event, unit)
+			if unit == "player" then
+				return self:AuraChanged("player")
+			end
 		end
 	)
 end

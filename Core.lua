@@ -264,7 +264,9 @@ local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 		name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, helpfulFilter)
 	end
 	if name then
-		return true, count ~= 0 and count or nil, true, duration ~= 0 and expirationTime or nil, true, GetBorderHighlight(isDebuff, MY_UNITS[caster])
+		if duration == 0 then duration = nil end
+		if count == 0 then count = nil end
+		return count, count, duration and expirationTime, expirationTime, true, GetBorderHighlight(isDebuff, MY_UNITS[caster])
 	end
 end
 
@@ -285,11 +287,19 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 		else
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 		end
-		if hasNewCount then
-			hasCount, count = true, newCount
-		end
-		if hasNewCountdown and (not hasCountdown or not newExpiratiomTime or (expirationTime and newExpiratiomTime > expirationTime)) then
-			hasCountdown, expirationTime = true, newExpiratiomTime
+		if hasNewCount and hasNewCountdown and hasCount and hasCountdown then
+			if newCount > count then
+				count, expirationTime = newCount, newExpiratiomTime
+			elseif newCount == count and newExpiratiomTime > expirationTime then
+				expirationTime = newExpiratiomTime
+			end
+		else
+			if hasNewCount and newCount > (hasCount and count or 0) then
+				hasCount, count = true, newCount
+			end
+			if hasNewCountdown and newExpiratiomTime > (hasCountdown and expirationTime or 0) then
+				hasCountdown, expirationTime = true, newExpiratiomTime
+			end
 		end
 		if hasNewHighlight then
 			hasHighlight, highlight = true, newHighlight

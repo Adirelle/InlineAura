@@ -365,234 +365,70 @@ local function BuildSelectDesc(text, ...)
 	return text
 end
 
----- Main panel options
+local statusColors = { ignore = "ff7744", preset = "00ffff", user = "44ff44", global = "cccccc" }
 
-local spellPanelHandler = {}
-local spellSpecificHandler = {}
-
-local spellToAdd
-
-local spellOptions = {
-	name = L['Spell specific settings'],
-	type = 'group',
-	handler = spellPanelHandler,
-	args = {
-		addInput = {
-			name = L['New spell name'],
-			desc = L['Enter the name of the spell or item for which you want to add specific settings. Only active spells of your spellbook and items with "On Use:" effect are allowed.'],
-			type = 'input',
-			get = function(info) return spellToAdd end,
-			set = function(info, value)
-				if value and value:trim() ~= "" then
-					spellToAdd = ValidateName(value)
-				else
-					spellToAdd = nil
-				end
-			end,
-			validate = 'ValidateNewSpellName',
-			order = 10,
-		},
-		addButton = {
-			name = L['Add spell'],
-			desc = L['Click to create specific settings for the spell.'],
-			type = 'execute',
-			order = 20,
-			func = function(info)
-				if spellPanelHandler:IsDefined(spellToAdd) then
-					spellSpecificHandler:SelectSpell(spellToAdd)
-				else
-					info.handler:AddSpell(spellToAdd)
-				end
-				spellToAdd = nil
-			end,
-			disabled = function() return not spellToAdd end,
-		},
-		editList = {
-			name = L['Spell to edit'],
-			desc = L['Select the spell to edit or to remove its specific settings. Spells with specific defaults are written in |cff77ffffcyan|r. Removed spells with specific defaults are written in |cff777777gray|r.'],
-			type = 'select',
-			get = function(info) return spellSpecificHandler:GetSelectedSpell() end,
-			set = function(info, value) spellSpecificHandler:SelectSpell(value) end,
-			disabled = 'HasNoSpell',
-			values = 'GetSpellList',
-			order = 30,
-		},
-		removeButton = {
-			name = L['Remove spell'],
-			desc = L['Remove spell specific settings.'],
-			type = 'execute',
-			func = function(info)
-				info.handler:RemoveSpell(spellSpecificHandler:GetSelectedSpell())
-			end,
-			disabled = function()
-				return not spellPanelHandler:IsDefined(spellSpecificHandler:GetSelectedSpell())
-			end,
-			confirm = true,
-			confirmText = L['Do you really want to remove these aura specific settings ?'],
-			order = 40,
-		},
-		restoreDefaults = {
-			name = function()
-				return spellPanelHandler:HasDefault(spellSpecificHandler:GetSelectedSpell()) and L['Restore defaults'] or L['Reset settings']
-			end,
-			desc = function()
-				return spellPanelHandler:HasDefault(spellSpecificHandler:GetSelectedSpell()) and L['Restore default settings of the selected spell.'] or L['Reset settings to global defaults.']
-			end,
-			type = 'execute',
-			func = function(info)
-				spellPanelHandler:RestoreDefaults(spellSpecificHandler:GetSelectedSpell())
-			end,
-			order = 45,
-		},
-		settings = {
-			name = function(info) return spellSpecificHandler:GetSelectedSpellName() end,
-			type = 'group',
-			hidden = 'IsNoSpellSelected',
-			handler = spellSpecificHandler,
-			get = 'Get',
-			set = 'Set',
-			inline = true,
-			order = 50,
-			args = {
-				disable = {
-					name = L['Ignore'],
-					desc = L['Have Inline Aura totally ignores this spell. No highlight, countdown nor stack display.'],
-					type = 'toggle',
-					arg = 'disabled',
-					order = 10,
-				},
-				auraType = {
-					name = L['(De)buff type'],
-					desc = BuildSelectDesc(
-						L["Select the type of (de)buff of this spell. This is used to select the unit to watch for this spell."],
-						L["Regular"], L["watch hostile units for harmful spells and friendly units for helpful spells."],
-						L["Self"], L["watch your (de)buffs in any case."],
-						L["Pet"], L["watch pet (de)buffs in any case."],
-						L["Special"], L["display special values that are not (de)buffs."]
-					),
-					type = 'select',
-					arg = 'auraType',
-					disabled = 'IsSpellDisabled',
-					values = {
-						regular = L['Regular'],
-						self = L['Self'],
-						pet = isPetClass and L['Pet'] or nil,
-						special = L['Special'] or nil,
-					},
-					order = 20,
-				},
-				specialAlias = {
-					name = L['Value to display'],
-					desc = L['Select which special value should be displayed.'],
-					type = 'select',
-					arg = 'aliases',
-					disabled = 'IsSpellDisabled',
-					get = function(info) return info.handler.db.aliases and info.handler.db.aliases[1] end,
-					set = function(info, value)
-						if not info.handler.db.aliases then
-							info.handler.db.aliases = { value }
-						else
-							info.handler.db.aliases[1] = value
-						end
-						InlineAura:RequireUpdate(true)
-					end,
-					values = GetSpecialList,
-					hidden = function(info) return not info.handler:IsSpecial() end,
-					order = 30,
-				} or nil,
-				onlyMine = {
-					name = L['Only show mine'],
-					desc = L["Only display the (de)buff if it has been applied by yourself, your pet or your vehicle."].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
-					type = 'toggle',
-					arg = 'onlyMine',
-					tristate = true,
-					disabled = 'IsSpellDisabled',
-					hidden = 'IsSpecial',
-					order = 30,
-				},
-				hideCountdown = {
-					name = L['No countdown'],
-					desc = L['Hide the countdown text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
-					type = 'toggle',
-					arg = 'hideCountdown',
-					tristate = true,
-					disabled = 'IsSpellDisabled',
-					hidden = 'IsSpecial',
-					order = 35,
-				},
-				hideStack = {
-					name = L['No application count'],
-					desc = L['Hide the application count text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
-					type = 'toggle',
-					arg = 'hideStack',
-					tristate = true,
-					disabled = 'IsSpellDisabled',
-					hidden = 'IsSpecial',
-					order = 40,
-				},
-				highlight = {
-					name = L['Highlight effect'],
-					desc = BuildSelectDesc(
-						L['Inline Aura can highlight the action button when the (de)buff is found.'],
-						L['None'], L['Do not highlight the button.'],
-						L['Dim'], L['Dim the button when the (de)buff is NOT found (reversed logic).'],
-						L['Colored border'], L['Display a colored border. Its color depends on the kind and owner of the (de)buff.'],
-						L['Glowing animation'], L['Display the Blizzard shiny, animated border.']
-					),
-					type = 'select',
-					arg = 'highlight',
-					disabled = 'IsSpellDisabled',
-					order = 50,
-					values = {
-						none = L['None'],
-						dim = L['Dim'],
-						border = L['Colored border'],
-						glowing = L['Glowing animation'],
-					}
-				},
-				invertHighlight = {
-					name = L['Invert highlight'],
-					desc = L["Invert the highlight condition, highlightning when the (de)buff is not found."],
-					type = 'toggle',
-					arg = 'invertHighlight',
-					disabled = function(info) return info.handler:IsSpellDisabled(info) or info.handler.db.highlight == "none" end,
-					order = 55,
-				},
-				aliases = {
-					name = L['Additional (de)buffs'],
-					desc = L['Enter additional names to test. This allows to detect alternative or equivalent (de)buffs. Some spells also apply (de)buffs that do not have the same name.\nNote: both buffs and debuffs are tested whether the base spell is harmlful or helpful.'],
-					usage = L['Enter one name per line. They are spell-checked ; errors will prevents you to validate.'],
-					type = 'input',
-					arg = 'aliases',
-					disabled = 'IsSpellDisabled',
-					multiline = true,
-					get = 'GetAliases',
-					set = 'SetAliases',
-					validate = 'ValidateAliases',
-					hidden = 'IsSpecial',
-					order = 60,
-				},
-			},
-		},
-	},
-}
-
+local GetSpellList
 do
 	local spellList = {}
-	function spellPanelHandler:GetSpellList()
+
+	local function AddEntry(action, param)
+		local key, icon, label, _
+		if action == 'item' then
+			label, _, _, _, _, _, _, _, _, icon = GetItemInfo(param)
+			key = label and GetItemSpell(label)
+			if not key then return end
+			label = format("%s (%s)", key, label)
+		elseif action == 'spell' then
+			label, _, icon = GetSpellInfo(param)
+			key = label
+		end
+		if key and label then
+			if icon then
+				label = format("%s |T%s:20:20:0:0:64:64:4:60:4:60|t", label, icon)
+			end
+			local settings = rawget(InlineAura.db.profile.spells, key)
+			local status = settings and settings.status or "global"
+			spellList[key] = format("|cff%s%s|r", statusColors[status], label)
+		end
+	end
+
+	function GetSpellList()
 		wipe(spellList)
-		for name, data in pairs(InlineAura.db.profile.spells) do
-			if type(data) == 'table' then
-				if self:HasDefault(name) and data.default then
-					if GetSpellInfo(name) then
-						spellList[name] = '|cff77ffff'..name..'|r'
-					end
+		-- Scan action buttons for spells and items
+		for button, state in pairs(InlineAura.buttons) do
+			local action, param = state.action, state.param
+			if action == "macro" then
+				local macro = param
+				param = GetMacroSpell(macro)
+				if param and param ~= "" then
+					action = "spell"
 				else
-					spellList[name] = name
+					param = GetMacroItem(macro)
+					if param and param ~= "" then
+						action = "item"
+					else
+						action = nil
+					end
 				end
-			elseif data == REMOVED then
-				if GetSpellInfo(name) then
-					spellList[name] = '|cff777777'..name..'|r'
+			end
+			AddEntry(action, param)
+		end
+		-- Add spell from spellbooks
+		local index = 1
+		repeat
+			local name = GetSpellInfo(index, "spell")
+			if name and not spellList[name] and not IsPassiveSpell(name) then
+				AddEntry("spell", name)
+			end
+			index = index + 1
+		until not name
+		-- Merge current settings
+		for key in pairs(InlineAura.db.profile.spells) do
+			if not spellList[key] then
+				if GetSpellInfo(key) then
+					AddEntry("spell", key)
+				elseif GetItemInfo(key) then
+					AddEntry("item", key)
 				end
 			end
 		end
@@ -600,117 +436,171 @@ do
 	end
 end
 
-function spellPanelHandler:HasNoSpell()
-	return not next(self:GetSpellList())
-end
+---- Spell panel options
 
-function spellPanelHandler:IsDefined(name)
-	return name and type(rawget(InlineAura.db.profile.spells, name)) == "table"
-end
+local spellSpecificHandler = {}
 
-function spellPanelHandler:HasDefault(name)
-	return name and SPELL_DEFAULTS[name]
-end
-
-local function copyDefaults(dst, src, enforceTables)
-	for k,v in pairs(src) do
-		if type(v) == "table" then
-			local dv = dst[k]
-			if dv == nil or (type(dv) ~= "table" and enforceTables) then
-				dv = {}
-				dst[k] = dv
-			end
-			if type(dv) == 'table' then
-				copyDefaults(dv, v, enforceTables)
-			end
-		else
-			dst[k] = v
-		end
-	end
-end
-
-local function createSpellwithDefaults(name)
-	local spell = {}
-	copyDefaults(spell, SPELL_DEFAULTS['**'], true)
-	if SPELL_DEFAULTS[name] then
-		copyDefaults(spell, SPELL_DEFAULTS[name], false)
-	end
-	InlineAura.db.profile.spells[name] = spell
-end
-
-function spellPanelHandler:ValidateNewSpellName(info, value)
-	if not value or value:trim() == "" then
-		return true
-	end
-	local name, nameType = ValidateName(value)
-	local message
-	if not name then
-		message = format(L["Unknown spell or item: %s."], tostring(value))
-	elseif nameType == 'keyword' then
-		message = L['Keywords are not allowed.']
-	elseif nameType == 'spell' then
-		local unknown, passive = not GetSpellInfo(name), IsPassiveSpell(name)
-		if unknown or passive then
-			message = format(L["You cannot define settings for %s, as you could not put them in any action bar anyway."], unknown and L['an spell not in your spellbook'] or L['a passive spell'])
-		end
-	elseif nameType == 'item' then
-		if not GetItemSpell(name) then
-			message = L["You cannot define settings for an item that has no on-use effect."]
-		end
-	end
-	if message then
-		local dialog = self.errorDialog
-		if not dialog then
-			dialog = CreateFrame("Frame", nil, spellPanel, "DialogBoxFrame")
-			dialog:SetFrameStrata("FULLSCREEN_DIALOG")
-			dialog:SetSize(384, 128)
-			dialog.text = dialog:CreateFontString(nil, "ARTWORK", "GameFontRedLarge")
-			dialog.text:SetWidth(360)
-			dialog.text:SetPoint("TOP", 0, -16)
-			self.errorDialog = dialog
-			spellPanel:HookScript('OnHide', function() dialog:Hide() end)
-		end
-		dialog.text:SetText(message)
-		dialog:Show()
-	elseif self.errorDialog and self.errorDialog:IsShown() then
-		self.errorDialog:Hide()
-	end
-	return not message
-end
-			
-function spellPanelHandler:AddSpell(name)
-	createSpellwithDefaults(name)
-	spellSpecificHandler:SelectSpell(name)
-	InlineAura:RequireUpdate(true)
-end
-
-function spellPanelHandler:RemoveSpell(name)
-	if SPELL_DEFAULTS[name] then
-		InlineAura.db.profile.spells[name] = REMOVED
-	else
-		InlineAura.db.profile.spells[name] = nil
-	end
-	InlineAura:RequireUpdate(true)
-	spellSpecificHandler:ListUpdated()
-end
-
-function spellPanelHandler:RestoreDefaults(name)
-	createSpellwithDefaults(name)
-	InlineAura:RequireUpdate(true)
-	spellSpecificHandler:ListUpdated()
-end
+local spellOptions = {
+	name = L['Spell specific settings'],
+	type = 'group',
+	handler = spellSpecificHandler,
+	get = 'Get',
+	set = 'Set',
+	disabled = 'IsReadOnly',
+	hidden = 'IsNotViewable',
+	args = {
+		spell = {
+			name = L['Spell'],
+			desc = L['Select the spell to edit or to remove its specific settings. Spells with specific defaults are written in |cff77ffffcyan|r. Removed spells with specific defaults are written in |cff777777gray|r.'],
+			type = 'select',
+			width = 'double',
+			get = function(info) return spellSpecificHandler:GetSelectedSpell() end,
+			set = function(info, value) spellSpecificHandler:SelectSpell(value) end,
+			values = GetSpellList,
+			disabled = false,
+			hidden = false,
+			order = 10,
+		},
+		status = {
+			name = L['Type'],
+			type = "select",
+			arg = 'status',
+			values = 'GetStatusList',
+			get = 'GetStatus',
+			set = 'SetStatus',
+			disabled = false,
+			hidden = 'IsNoSpellSelected',
+			order = 20,
+		},
+		reset = {
+			name = L['Reset'],
+			type = "execute",
+			func = "Reset",
+			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsReadOnly() end,
+			order = 30,
+		},
+		_lookupHeader = {
+			name = L['Lookup'],
+			type = 'header',
+			order = 50,
+		},
+		auraType = {
+			name = L['(De)buff type'],
+			desc = BuildSelectDesc(
+				L["Select the type of (de)buff of this spell. This is used to select the unit to watch for this spell."],
+				L["Regular"], L["watch hostile units for harmful spells and friendly units for helpful spells."],
+				L["Self"], L["watch your (de)buffs in any case."],
+				L["Pet"], L["watch pet (de)buffs in any case."],
+				L["Special"], L["display special values that are not (de)buffs."]
+			),
+			type = 'select',
+			arg = 'auraType',
+			values = {
+				regular = L['Regular'],
+				self = L['Self'],
+				pet = isPetClass and L['Pet'] or nil,
+				special = L['Special'] or nil,
+			},
+			order = 60,
+		},
+		specialAlias = {
+			name = L['Value to display'],
+			desc = L['Select which special value should be displayed.'],
+			type = 'select',
+			arg = 'aliases',
+			get = function(info) return info.handler.db.aliases and info.handler.db.aliases[1] end,
+			set = function(info, value)
+				if not info.handler.db.aliases then
+					info.handler.db.aliases = { value }
+				else
+					info.handler.db.aliases[1] = value
+				end
+				InlineAura:RequireUpdate(true)
+			end,
+			values = GetSpecialList,
+			disabled = 'IsReadOnly',
+			hidden = function(info) return info.handler:IsNotViewable() or not info.handler:IsSpecial() end,
+			order = 70,
+		},
+		aliases = {
+			name = L['Additional (de)buffs'],
+			desc = L['Enter additional names to test. This allows to detect alternative or equivalent (de)buffs. Some spells also apply (de)buffs that do not have the same name.\nNote: both buffs and debuffs are tested whether the base spell is harmlful or helpful.'],
+			usage = L['Enter one name per line. They are spell-checked ; errors will prevents you to validate.'],
+			type = 'input',
+			width = 'full',
+			arg = 'aliases',
+			multiline = true,
+			get = 'GetAliases',
+			set = 'SetAliases',
+			validate = 'ValidateAliases',
+			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
+			order = 70,
+		},
+		onlyMine = {
+			name = L['Only show mine'],
+			desc = L["Only display the (de)buff if it has been applied by yourself, your pet or your vehicle."].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
+			type = 'toggle',
+			arg = 'onlyMine',
+			tristate = true,
+			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
+			order = 65,
+		},
+		hideCountdown = {
+			name = L['No countdown'],
+			desc = L['Hide the countdown text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
+			type = 'toggle',
+			arg = 'hideCountdown',
+			tristate = true,
+			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
+			order = 90,
+		},
+		hideStack = {
+			name = L['No application count'],
+			desc = L['Hide the application count text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
+			type = 'toggle',
+			arg = 'hideStack',
+			tristate = true,
+			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
+			order = 100,
+		},
+		_highlightHeader = {
+			name = L['Highlight'],
+			type = 'header',
+			order = 110,
+		},
+		highlight = {
+			name = L['Effect'],
+			desc = BuildSelectDesc(
+				L['Inline Aura can highlight the action button when the (de)buff is found.'],
+				L['None'], L['Do not highlight the button.'],
+				L['Dim'], L['Dim the button when the (de)buff is NOT found (reversed logic).'],
+				L['Colored border'], L['Display a colored border. Its color depends on the kind and owner of the (de)buff.'],
+				L['Glowing animation'], L['Display the Blizzard shiny, animated border.']
+			),
+			type = 'select',
+			arg = 'highlight',
+			values = {
+				none = L['None'],
+				dim = L['Dim'],
+				border = L['Colored border'],
+				glowing = L['Glowing animation'],
+			},
+			order = 120,
+		},
+		invertHighlight = {
+			name = L['Invert'],
+			desc = L["Invert the highlight condition, highlightning when the (de)buff is not found."],
+			type = 'toggle',
+			arg = 'invertHighlight',
+			disabled = function(info) return info.handler:IsReadOnly() or info.handler.db.highlight == "none" end,
+			order = 130,
+		},
+	},
+}
 
 ---- Specific aura options
 
 function spellSpecificHandler:ListUpdated()
-	if self.name and type(rawget(InlineAura.db.profile.spells, self.name)) == 'table' then
-		return self:SelectSpell(self.name)
-	end
-	for name, data in pairs(InlineAura.db.profile.spells) do
-		if type(data) == 'table' then
-			return self:SelectSpell(name)
-		end
-	end
 	self:SelectSpell(nil)
 end
 
@@ -722,30 +612,75 @@ function spellSpecificHandler:GetSelectedSpellName()
 	return self.name or "???"
 end
 
+function spellSpecificHandler:GetStatus()
+	return self.status
+end
+
+function spellSpecificHandler:SetStatus(_, status)
+	InlineAura.db.profile.spells[self.name].status = status
+	self:SelectSpell(self.name)
+end
+
+local function copy(src, dst)
+	for k, v in pairs(src) do
+		if type(v) == "table" then
+			dst[k] = copy(v, {})
+		else
+			dst[k] = v
+		end
+	end
+	return dst
+end
+
+local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
+function spellSpecificHandler:Reset()
+	if self:IsReadOnly() then return end
+	local settings = InlineAura.db.profile.spells[self.name]
+	wipe(settings)
+	copy(SPELL_DEFAULTS[self.name] or SPELL_DEFAULTS['**'], settings)
+	settings.status = "user"
+end
+
+do
+	local values = {
+		global = format('|cff%s%s|r', statusColors.global, L['None (global settings)']),
+		preset = format('|cff%s%s|r', statusColors.preset, L['Preset']),
+		user = format('|cff%s%s|r', statusColors.user, L['User-defined']),
+		ignore = format('|cff%s%s|r', statusColors.ignore, L['Ignored']),
+	}
+	local tmp = copy(values, {})
+	function spellSpecificHandler:GetStatusList()
+		tmp.preset = SPELL_DEFAULTS[self.name] and values.preset or nil
+		return tmp
+	end
+end
+
 function spellSpecificHandler:SelectSpell(name)
-	local db = name and rawget(InlineAura.db.profile.spells, name)
-	if type(db) == 'table' then
-		self.name, self.db = name, db
-	elseif db == REMOVED then
-		self.name, self.db = name, nil
+	if name then
+		self.name, self.db, self.status = name, InlineAura:GetSpellSettings(name)
 	else
-		self.name, self.db = nil, nil
+		self.name, self.db, self.status = nil, nil, nil
 	end
 end
 
 function spellSpecificHandler:IsNoSpellSelected()
-	return not self.db
+	return not self.name
 end
 
-function spellSpecificHandler:IsSpellDisabled()
-	return not self.db or self.db.disabled
+function spellSpecificHandler:IsNotViewable()
+	return not self.name or (self.status ~= "preset" and self.status ~= "user")
+end
+
+function spellSpecificHandler:IsReadOnly()
+	return self.status ~= "user"
 end
 
 function spellSpecificHandler:IsSpecial()
-	return not self.db or self.db.auraType == "special"
+	return self.db and self.db.auraType == "special"
 end
 
 function spellSpecificHandler:Set(info, ...)
+	if self:IsReadOnly() then return end
 	if info.type == 'color' then
 		local color = self.db[info.arg]
 		color[1], color[2], color[3], color[4] = ...
@@ -760,7 +695,6 @@ function spellSpecificHandler:Set(info, ...)
 	else
 		self.db[info.arg] = ...
 	end
-	self.db.default = nil
 	InlineAura:RequireUpdate(true)
 end
 
@@ -818,7 +752,7 @@ end
 
 do
 	local GetSpellInfo, GetItemInfo = GetSpellInfo, GetItemInfo, strlower, rawget
-	local keywords = InlineAura.stateKeywords	
+	local keywords = InlineAura.stateKeywords
 	local id = 0
 	local function doValidateName(value)
 		if keywords[value] then
@@ -849,7 +783,7 @@ do
 			end
 		end
 	end
-	
+
 	local validNames = setmetatable({}, {
 		__mode = 'kv',
 		__index = function(self, key)

@@ -109,10 +109,9 @@ local DEFAULT_OPTIONS = {
 		colorStack        = { 1.0, 1.0, 0.0, 1.0 },
 		spells = {
 			['**'] = {
-				disabled = false,
+				status = 'global',
 				auraType = 'regular',
 				highlight = 'border',
-				default = false,
 			},
 		},
 		enabledUnits = {
@@ -380,6 +379,18 @@ end
 -- Aura updating
 ------------------------------------------------------------------------------
 
+function InlineAura:GetSpellSettings(id)
+	local settings = rawget(db.profile.spells, id)
+	local status = settings and settings.status or "global"
+	if status == "preset" then
+		return DEFAULT_OPTIONS.profile.spells[id], status
+	elseif status == "user" then
+		return settings, status
+	else
+		return nil, status
+	end
+end
+
 local function FilterEmpty(v) if v and strtrim(tostring(v)) ~= "" and v ~= 0 then return v end end
 
 local function FindMacroOptions(...)
@@ -439,30 +450,26 @@ local function AnalyzeAction(action, param)
 	end
 
 	local auraType = item and "self" or "regular"
+	local id = item or spell
 
 	-- Check spell hooks
-	local spellHook = stateSpellHooks[item or spell]
+	local spellHook = stateSpellHooks[id]
 	if spellHook then
 		local overrideAuraType = spellHook.OverrideAuraType
 		if type(overrideAuraType) == "string" then
 			auraType = overrideAuraType
 		elseif type(overrideAuraType) == "function" then
-			auraType = overrideAuraType(spellHook, item or spell) or auraType
+			auraType = overrideAuraType(spellHook, id) or auraType
 		end
 	end
 
 	-- Check for specific settings
-	local specific = rawget(db.profile.spells, item or spell)
-	if type(specific) == "table" then
-		if specific.disabled then
-			return -- Don't want to handle
-		end
-		if specific.auraType then
-			auraType = specific.auraType
-		end
-	else
-		specific = nil
+	local specific, status = InlineAura:GetSpellSettings(id)
+	if status == "ignore" then
+		return -- Don't want to handle
 	end
+
+	auraType = specific and specific.auraType or auraType
 
 	-- Solve special aura types ASAP
 	if auraType == "self" or auraType == "special" then
@@ -979,7 +986,7 @@ function InlineAura:LoadSpellDefaults(event)
 	end
 
 	-- Insert spell defaults
-	DEFAULT_OPTIONS.profile.spells = safecall(InlineAura_LoadDefaults, self)
+	safecall(InlineAura_LoadDefaults, self, DEFAULT_OPTIONS.profile.spells)
 
 	-- Register updated defaults
 	if self.db then

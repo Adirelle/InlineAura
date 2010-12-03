@@ -20,9 +20,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 -- Per class defaults
 ------------------------------------------------------------------------------
 
-function InlineAura_LoadDefaults(self)
-
-	local SPELL_DEFAULTS = {}
+function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 
 	local _, class = UnitClass('player')
 	local version = "@file-hash@/@project-version@"
@@ -58,6 +56,9 @@ function InlineAura_LoadDefaults(self)
 			if not SPELL_DEFAULTS[name] then
 				SPELL_DEFAULTS[name] = {
 					id = id,
+					status = 'preset',
+					auraType = 'regular',
+					highlight = 'border',
 					hideStack = true,
 				}
 			end
@@ -822,7 +823,6 @@ function InlineAura_LoadDefaults(self)
 	-- Cleanup
 	for name, spell in pairs(SPELL_DEFAULTS) do
 		spell.id = nil
-		spell.default = true
 		if spell.aliases and #(spell.aliases) > 0 then
 			spell.aliases = { unpack(spell.aliases) }
 		else
@@ -830,5 +830,4 @@ function InlineAura_LoadDefaults(self)
 		end
 	end
 
-	return SPELL_DEFAULTS
 end

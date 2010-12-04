@@ -739,14 +739,36 @@ function spellSpecificHandler:SetAliases(info, value)
 	addon:RequireUpdate(true)
 end
 
+local dialog
+local function ShowErrorMessage(message)
+	if not dialog then
+		dialog = CreateFrame("Frame", nil, spellPanel, "DialogBoxFrame")
+		dialog:SetFrameStrata("FULLSCREEN_DIALOG")
+		dialog:SetSize(384, 128)
+		dialog.text = dialog:CreateFontString(nil, "ARTWORK", "GameFontRedLarge")
+		dialog.text:SetWidth(360)
+		dialog.text:SetPoint("TOP", 0, -16)
+		spellPanel:HookScript('OnHide', function() dialog:Hide() end)
+	end
+	dialog.text:SetText(message)
+	dialog:Show()
+end
+
+local invalids = {}
 function spellSpecificHandler:ValidateAliases(info, value)
+	wipe(invalids)
 	for name in tostring(value):gmatch("[^\n]+") do
 		name = name:trim()
 		if name ~= "" and not ValidateName(name) then
-			return L["Unknown spell: %s"]:format(name)
+			tinsert(invalids, name)
 		end
 	end
-	return true
+	if #invalids > 0 then
+		ShowErrorMessage(format(L["Invalid spell names:\n%s."], table.concat(invalids, "\n")))
+	else
+		return true
+	end
+	return valid
 end
 
 -----------------------------------------------------------------------------
@@ -754,7 +776,11 @@ end
 -----------------------------------------------------------------------------
 
 do
-	local GetSpellInfo, GetItemInfo = GetSpellInfo, GetItemInfo, strlower, rawget
+	-- Convert to lowercase, trim leading and trailing spaces, and convert Unicode non-breaking space to simple space
+	local function normalize(name)
+		return gsub(strtrim(strlower(name)), "\194\160", " ")
+	end
+
 	local keywords = addon.stateKeywords
 	local id = 0
 	local function doValidateName(value)
@@ -765,23 +791,15 @@ do
 		if spellId then
 			return GetSpellInfo(spellId), 'spell'
 		end
-		local itemId = tonumber(strmatch('item:(%d+)', value))
-		if itemId then
-			return GetItemInfo(itemId), 'item'
-		end
-		local itemName = GetItemInfo(value)
-		if itemName then
-			return itemName, 'item'
-		end
 		local knownSpell = GetSpellInfo(value)
 		if knownSpell then
 			return knownSpell, 'spell'
 		end
-		value = strlower(value)
+		value = normalize(value)
 		while id < 100000 do -- Arbitrary high spell id
 			local name = GetSpellInfo(id)
 			id = id + 1
-			if name and strlower(name) == value then
+			if name and normalize(name) == value then
 				return name, 'spell'
 			end
 		end

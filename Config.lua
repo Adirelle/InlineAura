@@ -406,7 +406,9 @@ do
 					end
 				end
 			end
-			AddEntry(action, param)
+			if action and param then
+				AddEntry(action, param)
+			end
 		end
 		-- Add spell from spellbooks
 		local index = 1
@@ -424,6 +426,11 @@ do
 					AddEntry("spell", key)
 				elseif GetItemInfo(key) then
 					AddEntry("item", key)
+				else
+					--@debug@
+					addon.dprint("Can't find out if it is an item or a spell, deleting:", key)
+					--@end-debug@
+					addon.db.profile.spells[key] = nil
 				end
 			end
 		end

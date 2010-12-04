@@ -16,21 +16,19 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 --]]
 
-local addonName, ns = ...
+local addonName, addon = ...
 
 ------------------------------------------------------------------------------
 -- Our main frame
 ------------------------------------------------------------------------------
 
-InlineAura = LibStub('AceAddon-3.0'):NewAddon('InlineAura', 'AceEvent-3.0')
-local InlineAura = InlineAura
+LibStub('AceAddon-3.0'):NewAddon(addon, 'InlineAura', 'AceEvent-3.0')
 
 ------------------------------------------------------------------------------
 -- Retrieve the localization table
 ------------------------------------------------------------------------------
 
-local L = ns.L
-InlineAura.L = L
+local L = addon.L
 
 ------------------------------------------------------------------------------
 -- Locals
@@ -46,8 +44,7 @@ local configUpdated = false
 local buttons = {}
 local newButtons = {}
 local activeButtons = {}
-InlineAura.buttons = buttons
-ns.buttons = buttons
+addon.buttons = buttons
 
 ------------------------------------------------------------------------------
 -- Make often-used globals local
@@ -79,7 +76,7 @@ if AdiDebug then
 	dprint = AdiDebug:GetSink('InlineAura')
 end
 --@end-debug@
-InlineAura.dprint = dprint
+addon.dprint = dprint
 
 ------------------------------------------------------------------------------
 -- Constants
@@ -123,7 +120,7 @@ local DEFAULT_OPTIONS = {
 		}
 	},
 }
-InlineAura.DEFAULT_OPTIONS = DEFAULT_OPTIONS
+addon.DEFAULT_OPTIONS = DEFAULT_OPTIONS
 
 -- Events only needed if the unit is enabled
 local UNIT_EVENTS = {
@@ -137,19 +134,21 @@ local UNIT_EVENTS = {
 
 local MY_UNITS = { player = true, pet = true, vehicle = true }
 
--- These two functions return nil when unit does not exist
-local function UnitIsBuffable(unit) return MY_UNITS[unit] or UnitCanAssist('player', unit) end
-local function UnitIsDebuffable(unit) return UnitCanAttack('player', unit) end
+function addon.UnitIsBuffable(unit)
+	return MY_UNITS[unit] or UnitCanAssist('player', unit)
+end
 
-local function UnitIsMine(unit) return unit and MY_UNITS[unit] end
+function addon.UnitIsDebuffable(unit)
+	return UnitCanAttack('player', unit)
+end
 
-ns.UnitIsBuffable, ns.UnitIsDebuffable, ns.UnitIsMine = UnitIsBuffable, UnitIsDebuffable, UnitIsMine
-
-local function GetBorderHighlight(isDebuff, isMine)
+function addon.GetBorderHighlight(isDebuff, isMine)
 	return strjoin('', 'border', isDebuff and "Debuff" or "Buff", isMine and "Mine" or "Others")
 end
 
-ns.GetBorderHighlight = GetBorderHighlight
+local UnitIsBuffable = addon.UnitIsBuffable
+local UnitIsDebuffable = addon.UnitIsDebuffable
+local GetBorderHighlight = addon.GetBorderHighlight
 
 ------------------------------------------------------------------------------
 -- Safecall
@@ -167,7 +166,7 @@ do
 			if handler == _ERRORMESSAGE then
 				if not reported[msg] then
 					reported[msg] = true
-					print('|cffff0000InlineAura error report:|r', msg)
+					print('|cffff0000addon error report:|r', msg)
 				end
 			else
 				handler(msg)
@@ -180,7 +179,7 @@ do
 	function safecall(...)
 		return safecall_inner(pcall(...))
 	end
-	ns.safecall = safecall
+	addon.safecall = safecall
 end
 
 ------------------------------------------------------------------------------
@@ -193,7 +192,7 @@ local stateSpellHooks = {}
 local statePrototype = { Debug = function() end }
 --@debug@
 if AdiDebug then
-	AdiDebug:Embed(statePrototype, "InlineAura")
+	AdiDebug:Embed(statePrototype, "addon")
 else
 --@end-debug@
 	function statePrototype.Debug() end
@@ -201,10 +200,10 @@ else
 end
 --@end-debug@
 
-InlineAura.stateModules = stateModules
-InlineAura.stateKeywords = stateKeywords
-InlineAura.stateSpellHooks = stateSpellHooks
-InlineAura.statePrototype = statePrototype
+addon.stateModules = stateModules
+addon.stateKeywords = stateKeywords
+addon.stateSpellHooks = stateSpellHooks
+addon.statePrototype = statePrototype
 
 function statePrototype:OnDisable()
 	for keyword, module in pairs(stateKeywords) do
@@ -243,7 +242,7 @@ end
 
 -- Registry methods
 
-function InlineAura:NewStateModule(name, ...)
+function addon:NewStateModule(name, ...)
 	assert(not stateModules[name], format("State module %q already defined", name))
 	local special = self:NewModule(name, statePrototype, 'AceEvent-3.0', ...)
 	stateModules[name] = special
@@ -270,7 +269,7 @@ local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 end
 
 local overlayedSpells = {}
-ns.overlayedSpells = overlayedSpells
+addon.overlayedSpells = overlayedSpells
 
 local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
@@ -379,7 +378,7 @@ end
 -- Aura updating
 ------------------------------------------------------------------------------
 
-function InlineAura:GetSpellSettings(id)
+function addon:GetSpellSettings(id)
 	local settings = rawget(db.profile.spells, id)
 	local status = settings and settings.status or "global"
 	if status == "preset" then
@@ -417,7 +416,7 @@ local function GuessSpellTarget(helpful)
 		return "player"
 	elseif IsModifiedClick("FOCUSCAST") then
 		return "focus"
-	elseif helpful and not UnitIsBuffable("target") and (InlineAura.db.profile.emulateAutoSelfCast or GetCVarBool("autoSelfCast")) then
+	elseif helpful and not UnitIsBuffable("target") and (addon.db.profile.emulateAutoSelfCast or GetCVarBool("autoSelfCast")) then
 		return "player"
 	else
 		return "target"
@@ -464,7 +463,7 @@ local function AnalyzeAction(action, param)
 	end
 
 	-- Check for specific settings
-	local specific, status = InlineAura:GetSpellSettings(id)
+	local specific, status = addon:GetSpellSettings(id)
 	if status == "ignore" then
 		return -- Don't want to handle
 	end
@@ -564,7 +563,7 @@ local function UpdateButtonAura(self, force)
 			self:Debug("GetAuraToDisplay: updating countdown and/or stack", expirationTime, count)
 			--@end-debug@
 			state.count, state.expirationTime = count, expirationTime
-			ns.ShowCountdownAndStack(self, expirationTime, count)
+			addon.ShowCountdownAndStack(self, expirationTime, count)
 		end
 	end
 end
@@ -646,7 +645,7 @@ local function InitializeButton(self)
 	buttons[self] = { button = self }
 	--@debug@
 	if AdiDebug then
-		AdiDebug:Embed(self, 'InlineAura')
+		AdiDebug:Embed(self, 'addon')
 	else
 	--@end-debug@
 		self.Debug = self.Debug or NOOP
@@ -686,9 +685,9 @@ end
 local function UpdateUnitListeners()
 	for unit, event in pairs(UNIT_EVENTS) do
 		if db.profile.enabledUnits[unit] then
-			InlineAura:RegisterEvent(event)
+			addon:RegisterEvent(event)
 		else
-			InlineAura:UnregisterEvent(event)
+			addon:UnregisterEvent(event)
 		end
 	end
 end
@@ -702,18 +701,18 @@ local function UpdateConfig()
 	UpdateUnitListeners()
 
 	-- Update timer skins
-	ns.UpdateWidgets()
+	addon:UpdateWidgets()
 end
 
 local mouseoverUnit
 local function UpdateMouseover(elapsed)
 	-- Track mouseover changes, since most events aren't fired for mouseover
 	if unitGUIDs['mouseover'] ~= UnitGUID('mouseover') then
-		InlineAura:UPDATE_MOUSEOVER_UNIT("OnUpdate-changed")
+		addon:UPDATE_MOUSEOVER_UNIT("OnUpdate-changed")
 	elseif not mouseoverUnit then
-		InlineAura.mouseoverTimer = InlineAura.mouseoverTimer + elapsed
-		if InlineAura.mouseoverTimer > 0.5 then
-			InlineAura:UPDATE_MOUSEOVER_UNIT("OnUpdate-timer")
+		addon.mouseoverTimer = addon.mouseoverTimer + elapsed
+		if addon.mouseoverTimer > 0.5 then
+			addon:UPDATE_MOUSEOVER_UNIT("OnUpdate-timer")
 		end
 	end
 end
@@ -732,7 +731,7 @@ local function UpdateButtons()
 	end
 end
 
-function InlineAura:OnUpdate(elapsed)
+function addon:OnUpdate(elapsed)
 	-- Configuration has been updated
 	if configUpdated then
 		safecall(UpdateConfig)
@@ -758,12 +757,12 @@ function InlineAura:OnUpdate(elapsed)
 
 end
 
-function InlineAura:RequireUpdate(config)
+function addon:RequireUpdate(config)
 	configUpdated = config
 	needUpdate = true
 end
 
-function InlineAura:RegisterButtons(prefix, count)
+function addon:RegisterButtons(prefix, count)
 	for id = 1, count do
 		local button = _G[prefix .. id]
 		if button and not buttons[button] and not newButtons[button] then
@@ -776,7 +775,7 @@ end
 -- Event handling
 ------------------------------------------------------------------------------
 
-function InlineAura:AuraChanged(unit)
+function addon:AuraChanged(unit)
 	local oldGUID = unitGUIDs[unit]
 	local realUnit = ApplyVehicleModifier(unit)
 	local guid = realUnit and db.profile.enabledUnits[unit] and UnitGUID(realUnit)
@@ -795,23 +794,23 @@ function InlineAura:AuraChanged(unit)
 	end
 end
 
-function InlineAura:UNIT_ENTERED_VEHICLE(event, unit)
+function addon:UNIT_ENTERED_VEHICLE(event, unit)
 	if unit == 'player' then
 		return self:AuraChanged("player")
 	end
 end
 
-function InlineAura:UNIT_AURA(event, unit)
+function addon:UNIT_AURA(event, unit)
 	return self:AuraChanged(unit)
 end
 
-function InlineAura:UNIT_PET(event, unit)
+function addon:UNIT_PET(event, unit)
 	if unit == 'player' then
 		return self:AuraChanged("pet")
 	end
 end
 
-function InlineAura:PLAYER_ENTERING_WORLD(event)
+function addon:PLAYER_ENTERING_WORLD(event)
 	for unit, enabled in pairs(db.profile.enabledUnits) do
 		if enabled then
 			self:AuraChanged(unit)
@@ -819,11 +818,11 @@ function InlineAura:PLAYER_ENTERING_WORLD(event)
 	end
 end
 
-function InlineAura:PLAYER_FOCUS_CHANGED(event)
+function addon:PLAYER_FOCUS_CHANGED(event)
 	return self:AuraChanged("focus")
 end
 
-function InlineAura:PLAYER_TARGET_CHANGED(event)
+function addon:PLAYER_TARGET_CHANGED(event)
 	return self:AuraChanged("target")
 end
 
@@ -857,7 +856,7 @@ local function GetUnitForMouseover()
 	end
 end
 
-function InlineAura:UPDATE_MOUSEOVER_UNIT(event)
+function addon:UPDATE_MOUSEOVER_UNIT(event)
 	--@debug@
 	dprint('UPDATE_MOUSEOVER_UNIT', event)
 	--@end-debug@
@@ -865,11 +864,11 @@ function InlineAura:UPDATE_MOUSEOVER_UNIT(event)
 	return self:AuraChanged("mouseover")
 end
 
-function InlineAura:MODIFIER_STATE_CHANGED(event)
+function addon:MODIFIER_STATE_CHANGED(event)
 	return self:RequireUpdate()
 end
 
-function InlineAura:CVAR_UPDATE(event, name)
+function addon:CVAR_UPDATE(event, name)
 	if name == 'AUTO_SELF_CAST_TEXT' then
 		--@debug@
 		dprint('CVAR_UPDATE', event)
@@ -878,15 +877,15 @@ function InlineAura:CVAR_UPDATE(event, name)
 	end
 end
 
-function InlineAura:UPDATE_BINDINGS(event, name)
+function addon:UPDATE_BINDINGS(event, name)
 	return self:RequireUpdate(true)
 end
 
-function InlineAura:UPDATE_MACROS(event, name)
+function addon:UPDATE_MACROS(event, name)
 	return self:RequireUpdate(true)
 end
 
-function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
+function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
 	local name = GetSpellInfo(id)
 	if name and not overlayedSpells[name] then
 		overlayedSpells[name] = true
@@ -894,7 +893,7 @@ function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
 	end
 end
 
-function InlineAura:SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(event, id)
+function addon:SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(event, id)
 	local name = GetSpellInfo(id)
 	if name and overlayedSpells[name] then
 		overlayedSpells[name] = nil
@@ -923,7 +922,7 @@ addonSupport.tullaCC = addonSupport.OmniCC
 
 local librarySupport = {
 	["LibButtonFacade"] = function(self, lib, minor)
-		ns.HaveLibButtonFacade(lib)
+		self:HasLibButtonFacade(lib)
 		local callback = function()	return self:RequireUpdate(true)	end
 		lib:RegisterSkinCallback("Blizzard", callback)
 		lib:RegisterSkinCallback("Dominos", callback)
@@ -931,8 +930,8 @@ local librarySupport = {
 	end,
 	["LibActionButton-1.0"] = function(self, lib, minor)
 		if minor >= 11 then -- Callbacks and GetAllButtons() are supported since minor 11
-			local UpdateButtonState_Hook = ns.UpdateButtonState_Hook
-			local UpdateButtonUsable_Hook = ns.UpdateButtonUsable_Hook
+			local UpdateButtonState_Hook = addon.UpdateButtonState_Hook
+			local UpdateButtonUsable_Hook = addon.UpdateButtonUsable_Hook
 			lib.RegisterCallback(self, "OnButtonCreated", function(_, button) return InitializeButton(button) end)
 			lib.RegisterCallback(self, "OnButtonUpdate", function(_, button) return UpdateAction_Hook(button) end)
 			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return UpdateButtonUsable_Hook(button) end)
@@ -942,12 +941,12 @@ local librarySupport = {
 			end
 		else
 			local _, loader = issecurevariable(lib, "CreateButton")
-			print("|cffff0000InlineAura: the version of LibActionButton-1.0 embedded in", (loader or "???"), "is not supported. Please consider updating it.|r")
+			print("|cffff0000addon: the version of LibActionButton-1.0 embedded in", (loader or "???"), "is not supported. Please consider updating it.|r")
 		end
 	end
 }
 
-function InlineAura:CheckAddonSupport()
+function addon:CheckAddonSupport()
 	for major, handler in pairs(librarySupport) do
 		local lib, minor = LibStub(major, true)
 		if lib then
@@ -977,7 +976,7 @@ end
 -- Initialization
 ------------------------------------------------------------------------------
 
-function InlineAura:LoadSpellDefaults(event)
+function addon:LoadSpellDefaults(event)
 	--@debug@
 	dprint('Loaded default settings on', event)
 	--@end-debug@
@@ -997,13 +996,13 @@ function InlineAura:LoadSpellDefaults(event)
 
 	-- Clean up
 	self:UnregisterEvent('SPELLS_CHANGED')
-	InlineAura_LoadDefaults = nil
+	addon_LoadDefaults = nil
 
 	self:RequireUpdate(true)
 end
 
 -- Upgrade the database from previous versions
-function InlineAura:UpgradeProfile()
+function addon:UpgradeProfile()
 	for name, spell in pairs(db.profile.spells) do
 		if type(spell) == "table" then
 			if spell.disabled then
@@ -1041,7 +1040,7 @@ function InlineAura:UpgradeProfile()
 	self:RequireUpdate(true)
 end
 
-function InlineAura:OnInitialize()
+function addon:OnInitialize()
 	-- Retrieve default spell configuration
 	if InlineAura_LoadDefaults then
 		if IsLoggedIn() then
@@ -1059,7 +1058,6 @@ function InlineAura:OnInitialize()
 	db.RegisterCallback(self, 'OnProfileCopied', 'UpgradeProfile')
 	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
 	self.db = db
-	ns.db = db
 
 	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
 
@@ -1071,14 +1069,14 @@ function InlineAura:OnInitialize()
 end
 
 local updateFrame
-function InlineAura:OnEnable()
+function addon:OnEnable()
 
 	if self.firstEnable then
 		self.firstEnable = nil
 
-		local ActionButton_HideOverlayGlow_Hook = ns.ActionButton_HideOverlayGlow_Hook
-		local UpdateButtonState_Hook = ns.UpdateButtonState_Hook
-		local UpdateButtonUsable_Hook = ns.UpdateButtonUsable_Hook
+		local ActionButton_HideOverlayGlow_Hook = addon.ActionButton_HideOverlayGlow_Hook
+		local UpdateButtonState_Hook = addon.UpdateButtonState_Hook
+		local UpdateButtonUsable_Hook = addon.UpdateButtonUsable_Hook
 
 		-- Hooks
 		hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
@@ -1135,8 +1133,8 @@ local function LoadConfigGUI()
 end
 
 -- Chat command line
-SLASH_INLINEAURA1 = "/inlineaura"
-function SlashCmdList.INLINEAURA()
+SLASH_addon1 = "/InlineAura"
+function SlashCmdList.addon()
 	LoadConfigGUI()
 	InterfaceOptionsFrame_OpenToCategory(L['Inline Aura'])
 end

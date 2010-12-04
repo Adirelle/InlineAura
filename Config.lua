@@ -19,17 +19,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 -----------------------------------------------------------------------------
 -- Configuration panel
 -----------------------------------------------------------------------------
-if not InlineAura then return end
 
-local InlineAura = InlineAura
-local L, new, del = InlineAura.L, InlineAura.new, InlineAura.del
+local addon = LibStub('AceAddon-3.0'):GetAddon('InlineAura')
+if not addon then return end
 
--- This is used to prevent AceDB to load the default values for a spell
--- when it has been explictly removed by the user. I'd rather use "false",
--- but it seems AceDB has some issue with it.
-local REMOVED = '**REMOVED**'
-
-local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
+local L = addon.L
+local SPELL_DEFAULTS = addon.DEFAULT_OPTIONS.profile.spells
 
 -----------------------------------------------------------------------------
 -- Default option handler
@@ -38,7 +33,7 @@ local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 local handler = {}
 
 function handler:GetDatabase(info)
-	local db = InlineAura.db.profile
+	local db = addon.db.profile
 	local key = info.arg or info[#info]
 	if type(key) == "table" then
 		for i = 1, #key-1 do
@@ -60,7 +55,7 @@ function handler:Set(info, ...)
 	else
 		db[key] = ...
 	end
-	InlineAura:RequireUpdate(true)
+	addon:RequireUpdate(true)
 end
 
 function handler:Get(info, subKey)
@@ -87,7 +82,7 @@ local positions = {
 }
 local tmp = {}
 function handler:ListTextPositions(info, exclude)
-	local exclude2 = InlineAura.bigCountdown or 'CENTER'
+	local exclude2 = addon.bigCountdown or 'CENTER'
 	wipe(tmp)
 	for pos, label in pairs(positions) do
 		if pos ~= exclude and pos ~= exclude2 then
@@ -136,7 +131,7 @@ local options = {
 			name = L['Precise countdown'],
 			desc = L['Use a more accurate rounding, down to tenths of second, instead of the default Blizzard rounding.'],
 			type = 'toggle',
-			disabled = function(info) return InlineAura.db.profile.hideCountdown end,
+			disabled = function(info) return addon.db.profile.hideCountdown end,
 			order = 45,
 		},
 		decimalCountdownThreshold = {
@@ -146,7 +141,7 @@ local options = {
 			min = 1,
 			max = 10,
 			step = 0.5,
-			disabled = function(info) return InlineAura.db.profile.hideCountdown or not InlineAura.db.profile.preciseCountdown end,
+			disabled = function(info) return addon.db.profile.hideCountdown or not addon.db.profile.preciseCountdown end,
 			order = 46,
 		},
 		targeting = {
@@ -224,7 +219,7 @@ local options = {
 				smallCountdownExplanation = {
 					name = L['Either OmniCC or CooldownCount is loaded so aura countdowns are displayed using small font only.'],
 					type = 'description',
-					hidden = function() return InlineAura.bigCountdown end,
+					hidden = function() return addon.bigCountdown end,
 					order = 5,
 				},
 				fontName = {
@@ -236,9 +231,9 @@ local options = {
 					order = 10,
 				},
 				smallFontSize = {
-					name = function() return InlineAura.bigCountdown and L['Size of small text'] or L['Font size'] end,
+					name = function() return addon.bigCountdown and L['Size of small text'] or L['Font size'] end,
 					desc = function()
-						return InlineAura.bigCountdown and L['The small font is used to display application count.']
+						return addon.bigCountdown and L['The small font is used to display application count.']
 							or L['Adjust the font size of countdown and application count texts.']
 					end,
 					type = 'range',
@@ -254,7 +249,7 @@ local options = {
 					min = 5,
 					max = 30,
 					step = 1,
-					hidden = function() return not InlineAura.bigCountdown end,
+					hidden = function() return not addon.bigCountdown end,
 					order = 30,
 				},
 				fontFlag = {
@@ -273,14 +268,14 @@ local options = {
 					desc = L['Make the countdown color, and size if possible, depends on remaining time.'],
 					type = 'toggle',
 					order = 35,
-					disabled = function() return InlineAura.db.profile.hideCountdown end,
+					disabled = function() return addon.db.profile.hideCountdown end,
 				},
 				colorCountdown = {
 					name = L['Countdown text color'],
 					type = 'color',
 					hasAlpha = true,
 					order = 40,
-					disabled = function() return InlineAura.db.profile.hideCountdown or InlineAura.db.profile.dynamicCountdownColor end,
+					disabled = function() return addon.db.profile.hideCountdown or addon.db.profile.dynamicCountdownColor end,
 				},
 				colorStack = {
 					name = L['Application text color'],
@@ -306,8 +301,8 @@ local options = {
 					desc = L['Select where to place the countdown text when both values are shown.'],
 					type = 'select',
 					arg = 'twoTextFirstPosition',
-					values = function(info) return info.handler:ListTextPositions(info, InlineAura.db.profile.twoTextSecondPosition) end,
-					disabled = function(info) return InlineAura.db.profile.hideCountdown or InlineAura.db.profile.hideStack end,
+					values = function(info) return info.handler:ListTextPositions(info, addon.db.profile.twoTextSecondPosition) end,
+					disabled = function(info) return addon.db.profile.hideCountdown or addon.db.profile.hideStack end,
 					order = 20,
 				},
 				twoTextSecond = {
@@ -315,8 +310,8 @@ local options = {
 					desc = L['Select where to place the application count text when both values are shown.'],
 					type = 'select',
 					arg = 'twoTextSecondPosition',
-					values = function(info) return info.handler:ListTextPositions(info, InlineAura.db.profile.twoTextFirstPosition) end,
-					disabled = function(info) return InlineAura.db.profile.hideCountdown or InlineAura.db.profile.hideStack end,
+					values = function(info) return info.handler:ListTextPositions(info, addon.db.profile.twoTextFirstPosition) end,
+					disabled = function(info) return addon.db.profile.hideCountdown or addon.db.profile.hideStack end,
 					order = 30,
 				},
 				oneText = {
@@ -325,7 +320,7 @@ local options = {
 					type = 'select',
 					arg = 'singleTextPosition',
 					values = "ListTextPositions",
-					disabled = function(info) return InlineAura.db.profile.hideCountdown and InlineAura.db.profile.hideStack end,
+					disabled = function(info) return addon.db.profile.hideCountdown and addon.db.profile.hideStack end,
 					order = 40,
 				},
 			},
@@ -345,7 +340,7 @@ do
 	local t = {}
 	function GetSpecialList()
 		wipe(t)
-		for keyword, module in pairs(InlineAura.stateKeywords) do
+		for keyword, module in pairs(addon.stateKeywords) do
 			t[keyword] = L[keyword]
 		end
 		return t
@@ -386,7 +381,7 @@ do
 			if icon then
 				label = format("%s |T%s:20:20:0:0:64:64:4:60:4:60|t", label, icon)
 			end
-			local settings = rawget(InlineAura.db.profile.spells, key)
+			local settings = rawget(addon.db.profile.spells, key)
 			local status = settings and settings.status or "global"
 			spellList[key] = format("|cff%s%s|r", statusColors[status], label)
 		end
@@ -395,7 +390,7 @@ do
 	function GetSpellList()
 		wipe(spellList)
 		-- Scan action buttons for spells and items
-		for button, state in pairs(InlineAura.buttons) do
+		for button, state in pairs(addon.buttons) do
 			local action, param = state.action, state.param
 			if action == "macro" then
 				local macro = param
@@ -423,7 +418,7 @@ do
 			index = index + 1
 		until not name
 		-- Merge current settings
-		for key in pairs(InlineAura.db.profile.spells) do
+		for key in pairs(addon.db.profile.spells) do
 			if not spellList[key] then
 				if GetSpellInfo(key) then
 					AddEntry("spell", key)
@@ -515,7 +510,7 @@ local spellOptions = {
 				else
 					info.handler.db.aliases[1] = value
 				end
-				InlineAura:RequireUpdate(true)
+				addon:RequireUpdate(true)
 			end,
 			values = GetSpecialList,
 			disabled = 'IsReadOnly',
@@ -617,7 +612,7 @@ function spellSpecificHandler:GetStatus()
 end
 
 function spellSpecificHandler:SetStatus(_, status)
-	InlineAura.db.profile.spells[self.name].status = status
+	addon.db.profile.spells[self.name].status = status
 	self:SelectSpell(self.name)
 end
 
@@ -632,10 +627,9 @@ local function copy(src, dst)
 	return dst
 end
 
-local SPELL_DEFAULTS = InlineAura.DEFAULT_OPTIONS.profile.spells
 function spellSpecificHandler:Reset()
 	if self:IsReadOnly() then return end
-	local settings = InlineAura.db.profile.spells[self.name]
+	local settings = addon.db.profile.spells[self.name]
 	wipe(settings)
 	copy(SPELL_DEFAULTS[self.name] or SPELL_DEFAULTS['**'], settings)
 	settings.status = "user"
@@ -657,7 +651,7 @@ end
 
 function spellSpecificHandler:SelectSpell(name)
 	if name then
-		self.name, self.db, self.status = name, InlineAura:GetSpellSettings(name)
+		self.name, self.db, self.status = name, addon:GetSpellSettings(name)
 	else
 		self.name, self.db, self.status = nil, nil, nil
 	end
@@ -695,7 +689,7 @@ function spellSpecificHandler:Set(info, ...)
 	else
 		self.db[info.arg] = ...
 	end
-	InlineAura:RequireUpdate(true)
+	addon:RequireUpdate(true)
 end
 
 function spellSpecificHandler:Get(info, key)
@@ -733,7 +727,7 @@ function spellSpecificHandler:SetAliases(info, value)
 		self.db.aliases = nil
 	end
 	self.db.default = nil
-	InlineAura:RequireUpdate(true)
+	addon:RequireUpdate(true)
 end
 
 function spellSpecificHandler:ValidateAliases(info, value)
@@ -752,7 +746,7 @@ end
 
 do
 	local GetSpellInfo, GetItemInfo = GetSpellInfo, GetItemInfo, strlower, rawget
-	local keywords = InlineAura.stateKeywords
+	local keywords = addon.stateKeywords
 	local id = 0
 	local function doValidateName(value)
 		if keywords[value] then
@@ -818,8 +812,8 @@ AceConfig:RegisterOptionsTable('InlineAura-main', options)
 AceConfig:RegisterOptionsTable('InlineAura-spells', spellOptions)
 
 -- Register profile options
-local dbOptions = LibStub('AceDBOptions-3.0'):GetOptionsTable(InlineAura.db)
-LibStub('LibDualSpec-1.0'):EnhanceOptions(dbOptions, InlineAura.db)
+local dbOptions = LibStub('AceDBOptions-3.0'):GetOptionsTable(addon.db)
+LibStub('LibDualSpec-1.0'):EnhanceOptions(dbOptions, addon.db)
 AceConfig:RegisterOptionsTable('InlineAura-profiles', dbOptions)
 
 -- Create Blizzard AddOn option frames
@@ -829,7 +823,7 @@ spellPanel = AceConfigDialog:AddToBlizOptions('InlineAura-spells', L['Spell spec
 AceConfigDialog:AddToBlizOptions('InlineAura-profiles', L['Profiles'], mainTitle)
 
 -- Update selected spell on database change
-InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileChanged', 'ListUpdated')
-InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileCopied', 'ListUpdated')
-InlineAura.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')
+addon.db.RegisterCallback(spellSpecificHandler, 'OnProfileChanged', 'ListUpdated')
+addon.db.RegisterCallback(spellSpecificHandler, 'OnProfileCopied', 'ListUpdated')
+addon.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')
 spellSpecificHandler:ListUpdated()

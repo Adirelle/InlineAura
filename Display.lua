@@ -16,16 +16,17 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 --]]
 
-local addonName, ns = ...
+local addonName, addon = ...
 
 ------------------------------------------------------------------------------
 -- Import
 ------------------------------------------------------------------------------
 
-local L = ns.L
-local dprint = ns.dprint
-local safecall = ns.safecall
-local buttons = ns.buttons
+local L = addon.L
+local dprint = addon.dprint
+local safecall = addon.safecall
+local buttons = addon.buttons
+local overlayedSpells = addon.overlayedSpells
 
 ------------------------------------------------------------------------------
 -- LibSharedMedia
@@ -124,10 +125,10 @@ function baseProto:SetPosition(position)
 end
 
 function baseProto:ApplySettings()
-	self.font = LSM:Fetch(LSM.MediaType.FONT, ns.db.profile.fontName)
-	self.fontFlag =  ns.db.profile.fontFlag
-	self.fontSize = ns.db.profile[self.sizeKey]
-	self.fontColor = ns.db.profile[self.colorKey]
+	self.font = LSM:Fetch(LSM.MediaType.FONT, addon.db.profile.fontName)
+	self.fontFlag = addon.db.profile.fontFlag
+	self.fontSize = addon.db.profile[self.sizeKey]
+	self.fontColor = addon.db.profile[self.colorKey]
 	return self:UpdateFont()
 end
 
@@ -167,10 +168,10 @@ function countdownProto:UpdateFont()
 end
 
 function countdownProto:ApplySettings()
-	self.sizeKey = InlineAura.bigCountdown and "largeFontSize" or "smallFontSize"
-	self.getCountdownText = ns.db.profile.preciseCountdown and self.GetPreciseCountdownText or self.GetImpreciseCountdownText
-	self.decimalThreshold = ns.db.profile.decimalCountdownThreshold
-	self.getFontSize = ns.db.profile.dynamicCountdownColor and self.GetDynamicFontSize or self.GetStaticFontSize
+	self.sizeKey = addon.bigCountdown and "largeFontSize" or "smallFontSize"
+	self.getCountdownText = addon.db.profile.preciseCountdown and self.GetPreciseCountdownText or self.GetImpreciseCountdownText
+	self.decimalThreshold = addon.db.profile.decimalCountdownThreshold
+	self.getFontSize = addon.db.profile.dynamicCountdownColor and self.GetDynamicFontSize or self.GetStaticFontSize
 	return baseProto.ApplySettings(self)
 end
 
@@ -327,14 +328,14 @@ function UpdateTextLayout(countdown, stack)
 		stack = nil
 	end
 	if countdown and stack then
-		countdown:SetPosition(ns.db.profile.twoTextFirstPosition)
-		stack:SetPosition(ns.db.profile.twoTextSecondPosition)
+		countdown:SetPosition(addon.db.profile.twoTextFirstPosition)
+		stack:SetPosition(addon.db.profile.twoTextSecondPosition)
 	elseif countdown or stack then
-		(countdown or stack):SetPosition(ns.db.profile.singleTextPosition)
+		(countdown or stack):SetPosition(addon.db.profile.singleTextPosition)
 	end
 end
 
-function ns.ShowCountdownAndStack(button, expirationTime, count)
+function addon.ShowCountdownAndStack(button, expirationTime, count)
 	local countdown = GetCountdown(button, expirationTime)
 	if countdown then
 		countdown:SetValue(expirationTime)
@@ -349,7 +350,7 @@ function ns.ShowCountdownAndStack(button, expirationTime, count)
 	end
 end
 
-function ns.UpdateWidgets()
+function addon:UpdateWidgets()
 	for button, widget in pairs(countdowns) do
 		widget:ApplySettings()
 	end
@@ -363,10 +364,10 @@ end
 
 local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow -- Hook protection
 
-function ns.ActionButton_HideOverlayGlow_Hook(self)
-	local state = buttons[self]
-	if state and (state.highlight == "glowing" or (state.action == "macro" and ns.overlayedSpells[state.spell])) then
-		return ActionButton_ShowOverlayGlow(self)
+function addon.ActionButton_HideOverlayGlow_Hook(button)
+	local state = buttons[button]
+	if state and (state.highlight == "glowing" or (state.action == "macro" and overlayedSpells[state.spell])) then
+		return ActionButton_ShowOverlayGlow(button)
 	end
 end
 
@@ -375,32 +376,32 @@ local function SetVertexColor(texture, r, g, b, a)
 end
 
 -- LibButtonFacade compatibility
-function ns.HaveLibButtonFacade(lib)
+function addon:HasLibButtonFacade()
 	SetVertexColor = function(texture, r, g, b, a)
 		local R, G, B, A = texture:GetVertexColor()
 		return texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
 	end
 end
 
-function ns.UpdateButtonState_Hook(self)
-	local state = buttons[self]
+function addon.UpdateButtonState_Hook(button)
+	local state = buttons[button]
 	if not state then return end
-	local texture = self:GetCheckedTexture()
+	local texture = button:GetCheckedTexture()
 	local border = state.highlight and strmatch(state.highlight, '^border(.+)$')
-	local color = border and ns.db.profile["color"..border]
+	local color = border and addon.db.profile["color"..border]
 	if color then
-		self:SetChecked(true)
+		button:SetChecked(true)
 		return SetVertexColor(texture, unpack(color))
 	else
 		return texture:SetVertexColor(1, 1, 1)
 	end
 end
 
-function ns.UpdateButtonUsable_Hook(self)
-	local state = buttons[self]
+function addon.UpdateButtonUsable_Hook(button)
+	local state = buttons[button]
 	if not state then return end
-	if state.highlight == "dim" and IsUsableAction(self.action) then
-		local name = self:GetName()
+	if state.highlight == "dim" and IsUsableAction(button.action) then
+		local name = button:GetName()
 		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
 		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0);
 	end

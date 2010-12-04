@@ -16,18 +16,18 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 --]]
 
-local _, ns = ...
+local _, addon = ...
 
 local locale = GetLocale()
 local L = setmetatable({}, {__index = function(self, key)
 	local value = tostring(key)
 	if key ~= nil then self[key] = value end
 	--@debug@
-	InlineAura.dprint("Missing locale:", value)
+	addon.dprint("Missing locale:", value)
 	--@end-debug@
 	return value
 end})
-ns.L = L
+addon.L = L
 
 -- Hard-coded locales
 L["COMBO_POINTS"] = "Combo points"
@@ -40,6 +40,7 @@ L["ABOVE20"] = "Above 20% health"
 L["ABOVE25"] = "Above 25% health"
 L["ABOVE35"] = "Above 35% health"
 L["ABOVE80"] = "Above 80% health"
+L["DISPELLABLE"] = "(De)buff you can dispell"
 
 --@noloc[[
 -- Locales from GlobalStrings.lua

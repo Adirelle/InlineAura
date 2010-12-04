@@ -319,10 +319,12 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 		"WARRIOR",  7386, -- Sunder Armor
 		"WARRIOR", 20243, -- Devastate
 		"ROGUE",    8647, -- Expose Armor
-		"DRUID",   91565, -- Faerie Fire
+		"DRUID",     770, -- Faerie Fire (balance)
+		"DRUID",   16857, -- Faerie Fire (feral)
+		"DRUID",   91565, -- Faerie Fire (the actual debuff)
 		"HUNTER",  35387, -- Corrosive Spit (pet ability)
 		"HUNTER",  50498  -- Tear Armor (pet ability)
-	)
+	):WithStack()
 
 	-- Reduced Healing (25%)
 	SharedAuras(
@@ -716,10 +718,6 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 	------------------------------------------------------------------------------
 	elseif class == 'DRUID' then
 	------------------------------------------------------------------------------
-
-		-- Faerie Fire debuff and spell ids are different
-		Aliases(  770, 91565)
-		Aliases(16857, 91565)
 
 		-- Display eclipse energy
 		ShowSpecial("LUNAR_ENERGY", 5176) -- Wrath

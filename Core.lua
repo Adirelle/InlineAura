@@ -931,6 +931,8 @@ local librarySupport = {
 	end,
 	["LibActionButton-1.0"] = function(self, lib, minor)
 		if minor >= 11 then -- Callbacks and GetAllButtons() are supported since minor 11
+			local UpdateButtonState_Hook = ns.UpdateButtonState_Hook
+			local UpdateButtonUsable_Hook = ns.UpdateButtonUsable_Hook
 			lib.RegisterCallback(self, "OnButtonCreated", function(_, button) return InitializeButton(button) end)
 			lib.RegisterCallback(self, "OnButtonUpdate", function(_, button) return UpdateAction_Hook(button) end)
 			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return UpdateButtonUsable_Hook(button) end)

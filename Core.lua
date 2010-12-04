@@ -1003,27 +1003,37 @@ end
 -- Upgrade the database from previous versions
 function InlineAura:UpgradeProfile()
 	for name, spell in pairs(db.profile.spells) do
-		if type(spell) == "table" and not spell.default then
-			local units = spell.unitsToScan
-			if type(units) ~= "table" then units = nil end
-			local auraType = spell.auraType
-			if auraType == "buff" then
-				if units and units.pet then
-					auraType = "pet"
-				elseif units and units.player and not units.target and not units.focus then
-					auraType = "self"
-				else
+		if type(spell) == "table" then
+			if spell.disabled then
+				spell.status = "ignore"
+				spell.disabled = nil
+			else
+				if not spell.status then
+					spell.status = "user"
+				end
+				local units = spell.unitsToScan
+				if type(units) ~= "table" then units = nil end
+				local auraType = spell.auraType
+				if auraType == "buff" then
+					if units and units.pet then
+						auraType = "pet"
+					elseif units and units.player and not units.target and not units.focus then
+						auraType = "self"
+					else
+						auraType = "regular"
+					end
+				elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
 					auraType = "regular"
 				end
-			elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
-				auraType = "regular"
+				if spell.alternateColor then
+					spell.highlight = "glowing"
+					spell.alternateColor = nil
+				end
+				spell.auraType = auraType
+				spell.unitsToScan = nil
 			end
-			if spell.alternateColor then
-				spell.highlight = "glowing"
-				spell.alternateColor = nil
-			end
-			spell.auraType = auraType
-			spell.unitsToScan = nil
+		else
+			db.profile.spells[name] = { status = "global" }
 		end
 	end
 	self:RequireUpdate(true)

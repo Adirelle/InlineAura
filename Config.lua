@@ -831,6 +831,7 @@ end
 
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
 
 -- Register main options
 AceConfig:RegisterOptionsTable('InlineAura-main', options)
@@ -855,4 +856,14 @@ addon.db.RegisterCallback(spellSpecificHandler, 'OnProfileCopied', 'ListUpdated'
 addon.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')
 spellSpecificHandler:ListUpdated()
 
+-- Manage to update the spell list on certain events
+spellPanel:SetScript('OnEvent', function(self)
+	if self:IsVisible() then
+		AceConfigRegistry:NotifyChange("InlineAura-spells")
+		spellSpecificHandler:ListUpdated()
+	end
+end)
+spellPanel:RegisterEvent('SPELLS_CHANGED')
+spellPanel:RegisterEvent('UPDATE_MACROS')
+spellPanel:RegisterEvent('ACTIONBAR_SLOT_CHANGED')
 

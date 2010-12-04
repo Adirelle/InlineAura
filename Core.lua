@@ -572,7 +572,7 @@ end
 -- Action handling
 ------------------------------------------------------------------------------
 
-local function UpdateAction_Hook(self)
+local function UpdateAction_Hook(self, forceUpdate)
 	local state = buttons[self]
 	if not state then return end
 	local action, param
@@ -592,10 +592,9 @@ local function UpdateAction_Hook(self)
 			action, param = nil, nil
 		end
 	end
-	if action ~= state.action or param ~= state.param then
+	if forceUpdate or action ~= state.action or param ~= state.param then
 		state.action, state.param = action, param
 		activeButtons[self] = (action and param) or nil
-		local forceUpdate
 		if action ~= "macro" then
 			local spell, targetHint, specific = AnalyzeAction(action, param)
 			if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
@@ -726,8 +725,14 @@ end
 
 local function UpdateButtons()
 	-- Update all buttons
-	for button in pairs(activeButtons) do
-		UpdateButtonAura(button, needUpdate or configUpdated)
+	if configUpdated then
+		for button in pairs(buttons) do
+			UpdateAction_Hook(button, true)
+		end
+	else
+		for button in pairs(activeButtons) do
+			UpdateButtonAura(button, needUpdate)
+		end
 	end
 end
 

@@ -613,6 +613,7 @@ end
 
 function spellSpecificHandler:SetStatus(_, status)
 	addon.db.profile.spells[self.name].status = status
+	addon:RequireUpdate(true)
 	self:SelectSpell(self.name)
 end
 
@@ -633,6 +634,7 @@ function spellSpecificHandler:Reset()
 	wipe(settings)
 	copy(SPELL_DEFAULTS[self.name] or SPELL_DEFAULTS['**'], settings)
 	settings.status = "user"
+	addon:RequireUpdate(true)
 end
 
 do

@@ -312,11 +312,6 @@ local function GetAuraToDisplay(spell, target, specific)
 	local onlyMyBuffs = db.profile.onlyMyBuffs
 	local onlyMyDebuffs = db.profile.onlyMyDebuffs
 
-	-- No pet aura when no real pet is available
-	if target == "pet" and (not UnitExists("pet") or UnitIsUnit("pet", "vehicle")) then
-		return
-	end
-
 	-- Specific spell overrides global settings
 	if specific then
 		aliases = specific.aliases
@@ -511,11 +506,6 @@ local function UpdateButtonAura(self, force)
 		if target == "friend" or target == "foe" then
 			target = GuessMacroTarget(state.param) or target
 		end
-		--@debug@
-		if force then
-			self:Debug('UpdateButtonAura: macro:', state.param, '=>', macroAction, macroParam, '=>', spell, target, specific)
-		end
-		--@end-debug@
 	else
 		spell, target, specific = state.spell, state.targetHint, state.specific
 	end
@@ -523,11 +513,6 @@ local function UpdateButtonAura(self, force)
 	-- Find actual units for these
 	if target == "friend" or target == "foe" then
 		target = FilterEmpty(SecureButton_GetModifiedUnit(self)) or GuessSpellTarget(target == "friend")
-		--@debug@
-		if force then
-			self:Debug('UpdateButtonAura: smart target:', target)
-		end
-		--@end-debug@
 	end
 
 	-- Get the GUID
@@ -540,8 +525,7 @@ local function UpdateButtonAura(self, force)
 		state.guid = guid
 
 		local count, expirationTime, highlight
-
-		if spell and target then
+		if spell and target and UnitExists(target) and UnitIsVisible(target) and UnitIsConnected(target) and not UnitIsDeadOrGhost(target) then
 			count, expirationTime, highlight = GetAuraToDisplay(spell, target, specific)
 			--@debug@
 			self:Debug("GetAuraToDisplay", spell, target, specific, "=>", "count=", count, "expirationTime=", expirationTime, "highlight=", highlight)

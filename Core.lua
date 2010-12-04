@@ -62,8 +62,6 @@ local SecureCmdOptionParse, GetMacroBody = SecureCmdOptionParse, GetMacroBody
 local GetCVarBool, SecureButton_GetModifiedUnit = GetCVarBool, SecureButton_GetModifiedUnit
 local GetMacroSpell, GetMacroItem, IsHelpfulItem = GetMacroSpell, GetMacroItem, IsHelpfulItem
 
-local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow -- Hook protection
-
 ------------------------------------------------------------------------------
 -- Libraries and helpers
 ------------------------------------------------------------------------------
@@ -591,10 +589,11 @@ local function UpdateAction_Hook(self, forceUpdate)
 		if action == "item" and param and not GetItemSpell(GetItemInfo(param) or param) then
 			action, param = nil, nil
 		end
+		state.spellId = (action == "spell") and tonumber(param)
 	end
 	if forceUpdate or action ~= state.action or param ~= state.param then
 		state.action, state.param = action, param
-		activeButtons[self] = (action and param) or nil
+		activeButtons[self] = (action and param and state) or nil
 		if action ~= "macro" then
 			local spell, targetHint, specific = AnalyzeAction(action, param)
 			if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
@@ -623,7 +622,7 @@ local function Blizzard_GetAction(self)
 end
 
 local function Blizzard_Update(self)
-	ActionButton_UpdateOverlayGlow(self)
+	addon.ActionButton_UpdateOverlayGlow_Hook(self)
 	ActionButton_UpdateState(self)
 	ActionButton_UpdateUsable(self)
 end
@@ -633,7 +632,7 @@ local function LAB_GetAction(self)
 end
 
 local function LAB_Update(self)
-	ActionButton_UpdateOverlayGlow(self)
+	addon.ActionButton_UpdateOverlayGlow_Hook(self)
 	return self:UpdateAction(true)
 end
 
@@ -641,16 +640,12 @@ local function NOOP() end
 local function InitializeButton(self)
 	if buttons[self] then return end
 	local state = { button = self }
-	buttons[self] = { button = self }
-	--@debug@
+	buttons[self] = state
 	if AdiDebug then
-		AdiDebug:Embed(self, 'addon')
-	else
-	--@end-debug@
-		self.Debug = self.Debug or NOOP
-	--@debug@
+		AdiDebug:Embed(self, 'InlineAura')
+	elseif not self.Debug then
+		self.Debug = NOOP
 	end
-	--@end-debug@
 	if self.__LAB_Version then
 		self.__IA_GetAction = LAB_GetAction
 		self.__IA_Update = LAB_Update
@@ -892,20 +887,17 @@ end
 
 function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
 	local name = GetSpellInfo(id)
-	if name and not overlayedSpells[name] then
-		overlayedSpells[name] = true
-		return self:AuraChanged("player")
+	local enable = (event == "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW") or nil
+	if overlayedSpells[name] ~= enable then
+		addon.dprint("Spell glowing", name, '=>', enable)
+		overlayedSpells[name] = enable
+		for button, state in pairs(activeButtons) do
+			if state.action == "macro" and state.spell == name then
+				self.ActionButton_UpdateOverlayGlow_Hook(button)
+			end
+		end
 	end
 end
-
-function addon:SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(event, id)
-	local name = GetSpellInfo(id)
-	if name and overlayedSpells[name] then
-		overlayedSpells[name] = nil
-		return self:AuraChanged("player")
-	end
-end
-
 ------------------------------------------------------------------------------
 -- Addon and library support
 ------------------------------------------------------------------------------
@@ -1079,16 +1071,18 @@ function addon:OnEnable()
 	if self.firstEnable then
 		self.firstEnable = nil
 
-		local ActionButton_HideOverlayGlow_Hook = addon.ActionButton_HideOverlayGlow_Hook
 		local UpdateButtonState_Hook = addon.UpdateButtonState_Hook
 		local UpdateButtonUsable_Hook = addon.UpdateButtonUsable_Hook
 
-		-- Hooks
+		-- Secure hooks
 		hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
 		hooksecurefunc('ActionButton_UpdateState', function(...) return safecall(UpdateButtonState_Hook, ...) end)
 		hooksecurefunc('ActionButton_UpdateUsable', function(...) return safecall(UpdateButtonUsable_Hook, ...) end)
 		hooksecurefunc('ActionButton_Update', function(...) return safecall(ActionButton_Update_Hook, ...) end)
-		hooksecurefunc('ActionButton_HideOverlayGlow', function(...) return safecall(ActionButton_HideOverlayGlow_Hook, ...) end)
+
+		-- Raw hooks (hopefully not breaking anything)
+		_G.ActionButton_HideOverlayGlow = addon.ActionButton_HideOverlayGlow_Hook
+		_G.ActionButton_UpdateOverlayGlow_Hook = addon.ActionButton_UpdateOverlayGlow_Hook
 
 		-- Our bucket thingy
 		updateFrame = CreateFrame("Frame")
@@ -1120,7 +1114,7 @@ function addon:OnEnable()
 	self:RegisterEvent('UPDATE_BINDINGS')
 	self:RegisterEvent('UPDATE_MACROS')
 	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
-	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE')
+	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE', 'SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
 
 	-- Refresh everything
 	self:RequireUpdate(true)

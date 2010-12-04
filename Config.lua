@@ -854,3 +854,5 @@ addon.db.RegisterCallback(spellSpecificHandler, 'OnProfileChanged', 'ListUpdated
 addon.db.RegisterCallback(spellSpecificHandler, 'OnProfileCopied', 'ListUpdated')
 addon.db.RegisterCallback(spellSpecificHandler, 'OnProfileReset', 'ListUpdated')
 spellSpecificHandler:ListUpdated()
+
+

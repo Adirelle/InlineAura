@@ -362,12 +362,38 @@ function addon:UpdateWidgets()
 	end
 end
 
-local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow -- Hook protection
+-- Keep unhooked functions
+local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
+local ActionButton_HideOverlayGlow = ActionButton_HideOverlayGlow
+local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow
+
+local function IsGlowing(state)
+	return state.highlight == "glowing"
+		or (state.spellId and IsSpellOverlayed(state.spellId))
+		or (state.action == "macro" and overlayedSpells[state.spell])
+end
 
 function addon.ActionButton_HideOverlayGlow_Hook(button)
 	local state = buttons[button]
-	if state and (state.highlight == "glowing" or (state.action == "macro" and overlayedSpells[state.spell])) then
-		return ActionButton_ShowOverlayGlow(button)
+	if state then
+		if not IsGlowing(state) then
+			ActionButton_HideOverlayGlow(button)
+		end
+	else
+		ActionButton_HideOverlayGlow(button)
+	end
+end
+
+function addon.ActionButton_UpdateOverlayGlow_Hook(button)
+	local state = buttons[button]
+	if state then
+		if IsGlowing(state) then
+			ActionButton_ShowOverlayGlow(button)
+		else
+			ActionButton_HideOverlayGlow(button)
+		end
+	else
+		ActionButton_UpdateOverlayGlow(button)
 	end
 end
 

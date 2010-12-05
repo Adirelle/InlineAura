@@ -329,38 +329,51 @@ local options = {
 }
 
 -----------------------------------------------------------------------------
--- Class specific options
------------------------------------------------------------------------------
-
-local _, playerClass = UnitClass("player")
-local isPetClass = (playerClass == "WARLOCK" or playerclass == "MAGE" or playerClass == "DEATHKNIGHT" or playerClass == "HUNTER")
-
-local GetSpecialList
-do
-	local t = {}
-	function GetSpecialList()
-		wipe(t)
-		for keyword, module in pairs(addon.stateKeywords) do
-			t[keyword] = L[keyword]
-		end
-		return t
-	end
-end
-
------------------------------------------------------------------------------
 -- Spell specific options
 -----------------------------------------------------------------------------
 
 -- Upvalues
-local ValidateName, spellPanel
 
+local spellPanel
 local spellSpecificHandler = {}
 
-local statusColors = { ignore = "ff7744", preset = "00ffff", user = "44ff44", global = "cccccc" }
+local _, playerClass = UnitClass("player")
+local isPetClass = (playerClass == "WARLOCK" or playerclass == "MAGE" or playerClass == "DEATHKNIGHT" or playerClass == "HUNTER")
+
+-- Constants
+
+local SPELLBOOK_FORMAT = SPELLBOOK..': %s'
+
+local STATUS_COLORS = { ignore = "ff7744", preset = "00ffff", user = "44ff44", global = "cccccc" }
+local STATUS_LABELS = {
+	global = format('|cff%s%s|r', STATUS_COLORS.global, L['None']),
+	preset = format('|cff%s%s|r', STATUS_COLORS.preset, L['Preset']),
+	user = format('|cff%s%s|r', STATUS_COLORS.user, L['User-defined']),
+	ignore = format('|cff%s%s|r', STATUS_COLORS.ignore, L['Ignored']),
+}
+
+-- List of keywords
+
+local keywordList = {}
+function spellSpecificHandler:GetKeywordList()
+	wipe(keywordList)
+	for keyword, module in pairs(addon.stateKeywords) do
+		keywordList[keyword] = L[keyword]
+	end
+	return keywordList
+end
 
 -- List of spells
 
 local spellList = {}
+
+local function HasSpellPreset(name)
+	return name and not not SPELL_DEFAULTS[name]
+end
+
+local function IsSpellInList(name)
+	return name and not not spellList[name]
+end
 
 local function AddEntry(action, param)
 	local key, icon, label, _
@@ -378,7 +391,7 @@ local function AddEntry(action, param)
 			label = format("|T%s:20:20:0:0:64:64:4:60:4:60|t %s", icon, label)
 		end
 		local _, status = addon:GetSpellSettings(key)
-		spellList[key] = format("|cff%s%s|r", statusColors[status], label)
+		spellList[key] = format("|cff%s%s|r", STATUS_COLORS[status], label)
 	end
 end
 
@@ -399,11 +412,7 @@ local function MergeSettings(settings, noDefaults)
 			local allow = true
 			if noDefaults then
 				local _, status = addon:GetSpellSettings(key)
-				if SPELL_DEFAULTS[key] then
-					allow = (status ~= "preset")
-				else
-					allow = (status ~= "global")
-				end
+				allow = status ~= (HasSpellPreset(key) and "preset" or "global")
 			end
 			if allow then
 				if GetSpellInfo(key) then
@@ -416,7 +425,7 @@ local function MergeSettings(settings, noDefaults)
 	end
 end
 
-local function GetSpellList()
+function spellSpecificHandler:GetSpellList()
 	wipe(spellList)
 	local pref = addon.db.profile.configSpellSources
 	if pref.actionbars then
@@ -464,17 +473,16 @@ end
 -- The list of source of spells
 
 local spellListList = {}
-local spellbookFmt = SPELLBOOK..': %s'
-local function GetSpellListList()
+function spellSpecificHandler:GetSpellListList()
 	wipe(spellListList)
 	spellListList.actionbars = ACTIONBAR_LABEL
 	spellListList.modified = L['Modified settings']
 	spellListList.preset = L['Presets']
-	spellListList.spellbook_pet = UnitExists("pet") and format(spellbookFmt, COMBATLOG_FILTER_STRING_MY_PET) or nil
+	spellListList.spellbook_pet = UnitExists("pet") and format(SPELLBOOK_FORMAT, COMBATLOG_FILTER_STRING_MY_PET) or nil
 	for i = 1, GetNumSpellTabs() do
 		local name, _, _, numSlots = GetSpellTabInfo(i)
 		if numSlots > 0 then
-			spellListList["spellbook"..i] = format(spellbookFmt, name)
+			spellListList["spellbook"..i] = format(SPELLBOOK_FORMAT, name)
 		end
 	end
 	return spellListList
@@ -489,7 +497,228 @@ local function BuildSelectDesc(text, ...)
 	return text
 end
 
----- Spell panel options
+local function copy(src, dst)
+	for k, v in pairs(src) do
+		if type(v) == "table" then
+			dst[k] = copy(v, {})
+		else
+			dst[k] = v
+		end
+	end
+	return dst
+end
+
+-- Current spell selection handling
+
+function spellSpecificHandler:ListUpdated()
+	if not spellList[self.name] then
+		self:SelectSpell(nil)
+	end
+end
+
+function spellSpecificHandler:GetSelectedSpell()
+	return self.name
+end
+
+function spellSpecificHandler:GetSelectedSpellName()
+	return self.name or "???"
+end
+
+function spellSpecificHandler:SelectSpell(name)
+	if name then
+		self.name, self.db, self.status = name, addon:GetSpellSettings(name)
+	else
+		self.name, self.db, self.status = nil, nil, nil
+	end
+end
+
+function spellSpecificHandler:IsNoSpellSelected()
+	return not self.name
+end
+
+-- Current spell status handling
+
+function spellSpecificHandler:GetStatus()
+	return self.status
+end
+
+function spellSpecificHandler:SetStatus(_, status)
+	addon.db.profile.spells[self.name].status = status
+	addon:RequireUpdate(true)
+	self:SelectSpell(self.name)
+end
+
+function spellSpecificHandler:Reset()
+	if self:IsReadOnly() then return end
+	local settings = addon.db.profile.spells[self.name]
+	wipe(settings)
+	copy(SPELL_DEFAULTS[self.name] or SPELL_DEFAULTS['**'], settings)
+	settings.status = "user"
+	addon:RequireUpdate(true)
+end
+
+local statusList = copy(STATUS_LABELS, {})
+function spellSpecificHandler:GetStatusList()
+	statusList.preset = HasSpellPreset(self.name) and STATUS_LABELS.preset or nil
+	return statusList
+end
+
+function spellSpecificHandler:IsNotViewable()
+	return not self.name or (self.status ~= "preset" and self.status ~= "user")
+end
+
+function spellSpecificHandler:IsReadOnly()
+	return self.status ~= "user"
+end
+
+function spellSpecificHandler:IsSpecial()
+	return self.db and self.db.auraType == "special"
+end
+
+-- Generic attribute handling
+
+function spellSpecificHandler:Set(info, ...)
+	if self:IsReadOnly() then return end
+	if info.type == 'color' then
+		local color = self.db[info.arg]
+		color[1], color[2], color[3], color[4] = ...
+	elseif info.type == 'multiselect' then
+		local key, value = ...
+		value = value and true or false
+		if type(self.db[info.arg]) ~= 'table' then
+			self.db[info.arg] = { key = value }
+		else
+			self.db[info.arg][key] = value
+		end
+	else
+		self.db[info.arg] = ...
+	end
+	addon:RequireUpdate(true)
+end
+
+function spellSpecificHandler:Get(info, key)
+	if info.type == 'color' then
+		return unpack(self.db[info.arg])
+	elseif info.type == 'multiselect' then
+		return type(self.db[info.arg]) == "table" and self.db[info.arg][key]
+	else
+		return self.db[info.arg]
+	end
+end
+
+-- Aliases handling
+
+function spellSpecificHandler:GetAliases(info)
+	local aliases = self.db.aliases
+	return type(aliases) == 'table' and table.concat(aliases, "\n") or nil
+end
+
+-- Spell name validation
+
+-- Convert to lowercase, trim leading and trailing spaces, and convert Unicode non-breaking space to simple space
+local function normalize(name)
+	return gsub(strtrim(strlower(name)), "\194\160", " ")
+end
+
+local keywords = addon.stateKeywords
+local id = 0
+local function doValidateName(value)
+	if keywords[value] then
+		return value, 'keyword'
+	end
+	local spellId = tonumber(strmatch('spell:(%d+)', value))
+	if spellId then
+		return GetSpellInfo(spellId), 'spell'
+	end
+	local knownSpell = GetSpellInfo(value)
+	if knownSpell then
+		return knownSpell, 'spell'
+	end
+	value = normalize(value)
+	while id < 100000 do -- Arbitrary high spell id
+		local name = GetSpellInfo(id)
+		id = id + 1
+		if name and normalize(name) == value then
+			return name, 'spell'
+		end
+	end
+end
+
+local validNames = setmetatable({}, {
+	__mode = 'kv',
+	__index = function(self, key)
+		local name, type = doValidateName(key)
+		local result = name and strjoin('|', name, type) or false
+		self[key] = result
+		return result
+	end
+})
+
+local function ValidateName(name)
+	if type(name) == "string" then
+		local info = validNames[name]
+		if info then
+			return strsplit('|', info)
+		end
+	end
+end
+
+local dialog
+local function ShowErrorMessage(message)
+	if not dialog then
+		dialog = CreateFrame("Frame", nil, spellPanel, "DialogBoxFrame")
+		dialog:SetFrameStrata("FULLSCREEN_DIALOG")
+		dialog:SetSize(384, 128)
+		dialog.text = dialog:CreateFontString(nil, "ARTWORK", "GameFontRedLarge")
+		dialog.text:SetWidth(360)
+		dialog.text:SetPoint("TOP", 0, -16)
+		spellPanel:HookScript('OnHide', function() dialog:Hide() end)
+	end
+	dialog.text:SetText(message)
+	dialog:Show()
+end
+
+function spellSpecificHandler:SetAliases(info, value)
+	local aliases = self.db.aliases
+	if aliases then
+		wipe(aliases)
+	else
+		aliases = {}
+	end
+	for name in tostring(value):gmatch("[^\n]+") do
+		name = name:trim()
+		if name ~= "" then
+			local name = ValidateName(name)
+			table.insert(aliases, name)
+		end
+	end
+	if #aliases > 0 then
+		self.db.aliases = aliases
+	else
+		self.db.aliases = nil
+	end
+	self.db.default = nil
+	addon:RequireUpdate(true)
+end
+
+local invalids = {}
+function spellSpecificHandler:ValidateAliases(info, value)
+	wipe(invalids)
+	for name in tostring(value):gmatch("[^\n]+") do
+		name = name:trim()
+		if name ~= "" and not ValidateName(name) then
+			tinsert(invalids, name)
+		end
+	end
+	if #invalids > 0 then
+		ShowErrorMessage(format(L["Invalid spell names:\n%s."], table.concat(invalids, "\n")))
+	else
+		return true
+	end
+	return valid
+end
+
+-- The spell options themselves
 
 local spellOptions = {
 	name = L['Spell specific settings'],
@@ -500,6 +729,17 @@ local spellOptions = {
 	disabled = 'IsReadOnly',
 	hidden = 'IsNotViewable',
 	args = {
+		spell = {
+			name = L['Current spell'],
+			desc = L['Select the spell to edit. The color of the name is based on the setting type for the spell (see Type option below).'],
+			type = 'select',
+			get = function(info) return spellSpecificHandler:GetSelectedSpell() end,
+			set = function(info, value) spellSpecificHandler:SelectSpell(value) end,
+			values = 'GetSpellList',
+			disabled = false,
+			hidden = false,
+			order = 10,
+		},
 		configSpellSources = {
 			name = L['Lists spells from ...'],
 			desc = BuildSelectDesc(
@@ -513,30 +753,19 @@ local spellOptions = {
 			control = 'Dropdown',
 			get = function(info, key) return addon.db.profile.configSpellSources[key] end,
 			set = function(info, key, value) addon.db.profile.configSpellSources[key] = value end,
-			values = GetSpellListList,
+			values = 'GetSpellListList',
 			disabled = false,
 			hidden = false,
-			order = 5,
-		},
-		spell = {
-			name = L['Current spell'],
-			desc = L['Select the spell to edit. The color of the name is based on the setting type for the spell (see Type option below).'],
-			type = 'select',
-			get = function(info) return spellSpecificHandler:GetSelectedSpell() end,
-			set = function(info, value) spellSpecificHandler:SelectSpell(value) end,
-			values = GetSpellList,
-			disabled = false,
-			hidden = false,
-			order = 10,
+			order = 15,
 		},
 		status = {
-			name = L['Settings type'],
+			name = L['Type of settings'],
 			desc = BuildSelectDesc(
 				L["The kind of settings to use for the spell."],
-				format('|cff%s%s|r', statusColors.global, L['None']), L['no specific settings for this spell ; use global ones.'],
-				format('|cff%s%s|r', statusColors.preset, L['Preset']), L['use the predefined settings shipped with Inline Aura.'],
-				format('|cff%s%s|r', statusColors.user, L['User-defined']), L['use your own settings.'],
-				format('|cff%s%s|r', statusColors.ignore, L['Ignored']), L['totally ignore the spell ; do not show any countdown or highlight.']
+				STATUS_LABELS.global, L['no specific settings for this spell ; use global ones.'],
+				STATUS_LABELS.preset, L['use the predefined settings shipped with Inline Aura.'],
+				STATUS_LABELS.user, L['use your own settings.'],
+				STATUS_LABELS.ignore, L['totally ignore the spell ; do not show any countdown or highlight.']
 			),
 			type = "select",
 			arg = 'status',
@@ -592,7 +821,7 @@ local spellOptions = {
 				end
 				addon:RequireUpdate(true)
 			end,
-			values = GetSpecialList,
+			values = 'GetSpecialList',
 			disabled = 'IsReadOnly',
 			hidden = function(info) return info.handler:IsNotViewable() or not info.handler:IsSpecial() end,
 			order = 70,
@@ -672,233 +901,6 @@ local spellOptions = {
 		},
 	},
 }
-
----- Specific aura options
-
-function spellSpecificHandler:ListUpdated()
-	if not spellList[self.name] then
-		self:SelectSpell(nil)
-	end
-end
-
-function spellSpecificHandler:GetSelectedSpell()
-	return self.name
-end
-
-function spellSpecificHandler:GetSelectedSpellName()
-	return self.name or "???"
-end
-
-function spellSpecificHandler:GetStatus()
-	return self.status
-end
-
-function spellSpecificHandler:SetStatus(_, status)
-	addon.db.profile.spells[self.name].status = status
-	addon:RequireUpdate(true)
-	self:SelectSpell(self.name)
-end
-
-local function copy(src, dst)
-	for k, v in pairs(src) do
-		if type(v) == "table" then
-			dst[k] = copy(v, {})
-		else
-			dst[k] = v
-		end
-	end
-	return dst
-end
-
-function spellSpecificHandler:Reset()
-	if self:IsReadOnly() then return end
-	local settings = addon.db.profile.spells[self.name]
-	wipe(settings)
-	copy(SPELL_DEFAULTS[self.name] or SPELL_DEFAULTS['**'], settings)
-	settings.status = "user"
-	addon:RequireUpdate(true)
-end
-
-do
-	local values = {
-		global = format('|cff%s%s|r', statusColors.global, L['None']),
-		preset = format('|cff%s%s|r', statusColors.preset, L['Preset']),
-		user = format('|cff%s%s|r', statusColors.user, L['User-defined']),
-		ignore = format('|cff%s%s|r', statusColors.ignore, L['Ignored']),
-	}
-	local tmp = copy(values, {})
-	function spellSpecificHandler:GetStatusList()
-		tmp.preset = SPELL_DEFAULTS[self.name] and values.preset or nil
-		return tmp
-	end
-end
-
-function spellSpecificHandler:SelectSpell(name)
-	if name then
-		self.name, self.db, self.status = name, addon:GetSpellSettings(name)
-	else
-		self.name, self.db, self.status = nil, nil, nil
-	end
-end
-
-function spellSpecificHandler:IsNoSpellSelected()
-	return not self.name
-end
-
-function spellSpecificHandler:IsNotViewable()
-	return not self.name or (self.status ~= "preset" and self.status ~= "user")
-end
-
-function spellSpecificHandler:IsReadOnly()
-	return self.status ~= "user"
-end
-
-function spellSpecificHandler:IsSpecial()
-	return self.db and self.db.auraType == "special"
-end
-
-function spellSpecificHandler:Set(info, ...)
-	if self:IsReadOnly() then return end
-	if info.type == 'color' then
-		local color = self.db[info.arg]
-		color[1], color[2], color[3], color[4] = ...
-	elseif info.type == 'multiselect' then
-		local key, value = ...
-		value = value and true or false
-		if type(self.db[info.arg]) ~= 'table' then
-			self.db[info.arg] = { key = value }
-		else
-			self.db[info.arg][key] = value
-		end
-	else
-		self.db[info.arg] = ...
-	end
-	addon:RequireUpdate(true)
-end
-
-function spellSpecificHandler:Get(info, key)
-	if info.type == 'color' then
-		return unpack(self.db[info.arg])
-	elseif info.type == 'multiselect' then
-		return type(self.db[info.arg]) == "table" and self.db[info.arg][key]
-	else
-		return self.db[info.arg]
-	end
-end
-
-function spellSpecificHandler:GetAliases(info)
-	local aliases = self.db.aliases
-	return type(aliases) == 'table' and table.concat(aliases, "\n") or nil
-end
-
-function spellSpecificHandler:SetAliases(info, value)
-	local aliases = self.db.aliases
-	if aliases then
-		wipe(aliases)
-	else
-		aliases = {}
-	end
-	for name in tostring(value):gmatch("[^\n]+") do
-		name = name:trim()
-		if name ~= "" then
-			local name = ValidateName(name)
-			table.insert(aliases, name)
-		end
-	end
-	if #aliases > 0 then
-		self.db.aliases = aliases
-	else
-		self.db.aliases = nil
-	end
-	self.db.default = nil
-	addon:RequireUpdate(true)
-end
-
-local dialog
-local function ShowErrorMessage(message)
-	if not dialog then
-		dialog = CreateFrame("Frame", nil, spellPanel, "DialogBoxFrame")
-		dialog:SetFrameStrata("FULLSCREEN_DIALOG")
-		dialog:SetSize(384, 128)
-		dialog.text = dialog:CreateFontString(nil, "ARTWORK", "GameFontRedLarge")
-		dialog.text:SetWidth(360)
-		dialog.text:SetPoint("TOP", 0, -16)
-		spellPanel:HookScript('OnHide', function() dialog:Hide() end)
-	end
-	dialog.text:SetText(message)
-	dialog:Show()
-end
-
-local invalids = {}
-function spellSpecificHandler:ValidateAliases(info, value)
-	wipe(invalids)
-	for name in tostring(value):gmatch("[^\n]+") do
-		name = name:trim()
-		if name ~= "" and not ValidateName(name) then
-			tinsert(invalids, name)
-		end
-	end
-	if #invalids > 0 then
-		ShowErrorMessage(format(L["Invalid spell names:\n%s."], table.concat(invalids, "\n")))
-	else
-		return true
-	end
-	return valid
-end
-
------------------------------------------------------------------------------
--- Spell name validation
------------------------------------------------------------------------------
-
-do
-	-- Convert to lowercase, trim leading and trailing spaces, and convert Unicode non-breaking space to simple space
-	local function normalize(name)
-		return gsub(strtrim(strlower(name)), "\194\160", " ")
-	end
-
-	local keywords = addon.stateKeywords
-	local id = 0
-	local function doValidateName(value)
-		if keywords[value] then
-			return value, 'keyword'
-		end
-		local spellId = tonumber(strmatch('spell:(%d+)', value))
-		if spellId then
-			return GetSpellInfo(spellId), 'spell'
-		end
-		local knownSpell = GetSpellInfo(value)
-		if knownSpell then
-			return knownSpell, 'spell'
-		end
-		value = normalize(value)
-		while id < 100000 do -- Arbitrary high spell id
-			local name = GetSpellInfo(id)
-			id = id + 1
-			if name and normalize(name) == value then
-				return name, 'spell'
-			end
-		end
-	end
-
-	local validNames = setmetatable({}, {
-		__mode = 'kv',
-		__index = function(self, key)
-			local name, type = doValidateName(key)
-			local result = name and strjoin('|', name, type) or false
-			self[key] = result
-			return result
-		end
-	})
-
-	function ValidateName(name)
-		if type(name) == "string" then
-			local info = validNames[name]
-			if info then
-				return strsplit('|', info)
-			end
-		end
-	end
-end
 
 -----------------------------------------------------------------------------
 -- Setup

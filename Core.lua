@@ -271,145 +271,150 @@ end
 -- Aura lookup
 ------------------------------------------------------------------------------
 
-local function CheckAura(aura, unit, helpfulFilter, harmfulFilter)
+local function FirstNotNull(a, b) if a ~= nil then return a else return b end end
+
+local function CheckAura(aura, unit, onlyMyBuffs, onlyMyDebuffs)
 	local isDebuff = false
-	local name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, harmfulFilter)
+	local name, _, _, count, _, duration, expirationTime, caster = UnitDebuff(unit, aura, nil, onlyMyDebuffs and "PLAYER" or nil)
 	if name then
 		isDebuff = true
 	else
-		name, _, _, count, _, duration, expirationTime, caster = UnitAura(unit, aura, nil, helpfulFilter)
+		name, _, _, count, _, duration, expirationTime, caster = UnitBuff(unit, aura, nil, onlyMyBuffs and "PLAYER" or nil)
 	end
 	if name then
 		if duration == 0 then duration = nil end
 		if count == 0 then count = nil end
-		return count, count, duration and expirationTime, expirationTime, true, GetBorderHighlight(isDebuff, MY_UNITS[caster])
+		return count, count, duration and expirationTime, expirationTime, true, GetBorderHighlight(isDebuff, MY_UNITS[caster]), isDebuff and 10 or 20
 	end
 end
 
-local overlayedSpells = {}
-addon.overlayedSpells = overlayedSpells
-
-local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
-	local helpfulFilter = onlyMyBuffs and "HELPFUL PLAYER" or "HELPFUL"
-	local harmfulFilter = onlyMyDebuffs and "HARMFUL PLAYER" or "HARMFUL"
+local function AuraLookup(unit, helpfulFilter, harmfulFilter, ...)
 	local hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight
-	local hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight
+	local hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority
+	local priority = 0
 	local spell = ...
 	for i = 1, select('#', ...) do
 		local aura = select(i, ...)
 		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]
 		if stateModule and stateModule:CanTestUnit(unit, aura, spell) then
-			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
+			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
+			if not newPriority then newPriority = 30 end
 			dprint("AuraLookup", aura, stateModule, "=>", hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight)
 		else
-			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)
+			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority = CheckAura(aura, unit, onlyMyBuffs, onlyMyDebuffs)
+			if not newPriority then newPriority = 0 end
 		end
-		if hasNewCount and hasNewCountdown and hasCount and hasCountdown then
-			if newCount > count then
-				count, expirationTime = newCount, newExpiratiomTime
-			elseif newCount == count and newExpiratiomTime > expirationTime then
-				expirationTime = newExpiratiomTime
+		if newPriority > priority then
+			-- If priority goes up, replace old values with the new ones
+			if hasNewCount then
+				hasCount, count, priority = true, newCount, newPriority
 			end
-		else
-			if strmatch(aura, "ENERGY") then
-				dprint("AuraLookup(count)", aura, "current=", hasCount, count, "new=", hasNewCount, newCount)
+			if hasNewCountdown then
+				hasCountdown, expirationTime, priority = true, newExpiratiomTime, newPriority
 			end
-			if hasNewCount and newCount > (hasCount and count or 0) then
-				hasCount, count = true, newCount
+			if hasNewHighlight then
+				hasHighlight, highlight, priority = true, newHighlight, newPriority
 			end
-			if hasNewCountdown and newExpiratiomTime > (hasCountdown and expirationTime or 0) then
-				hasCountdown, expirationTime = true, newExpiratiomTime
+		elseif newPriority == priority then
+			-- With same priorities, smartly combine values
+			if hasNewCount and hasNewCountdown and hasCount and hasCountdown then
+				if newCount > count then
+					count, expirationTime = newCount, newExpiratiomTime
+				elseif newCount == count and newExpiratiomTime > expirationTime then
+					expirationTime = newExpiratiomTime
+				end
+			else
+				if strmatch(aura, "ENERGY") then
+					dprint("AuraLookup(count)", aura, "current=", hasCount, count, "new=", hasNewCount, newCount)
+				end
+				if hasNewCount and newCount > (hasCount and count or 0) then
+					hasCount, count = true, newCount
+				end
+				if hasNewCountdown and newExpiratiomTime > (hasCountdown and expirationTime or 0) then
+					hasCountdown, expirationTime = true, newExpiratiomTime
+				end
 			end
-		end
-		if hasNewHighlight then
-			hasHighlight, highlight = true, newHighlight
+			if hasNewHighlight then
+				hasHighlight, highlight = true, newHighlight
+			end
 		end
 	end
-	return hasCount and count or nil, hasCountdown and expirationTime or nil, hasHighlight and highlight or nil
+	return hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight
 end
 
 local function GetAuraToDisplay(spell, target, specific)
-	-- No specific settings, keep it simple
-	if not specific then
-		local count, expirationTime, highlight = AuraLookup(target, db.profile.onlyMyBuffs, db.profile.onlyMyDebuffs, spell)
-		return (not db.profile.hideStack) and count ~= 0 and count or nil, (not db.profile.hideCountdown) and expirationTime or nil, highlight
-	end
-	
-	local count, expirationTime, highlight
+
+	local hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight
 	local hideStack, hideCountdown
-	if specific.auraType == "special" then		
-		local module = stateKeywords[specific.special]
-		if module then
-			local hasCount, hasCountdown, hasHighlight
-			if module:CanTestUnit(target, specific.special, spell) then
-				hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = module:Test(specific.special, target, "HELPFUL PLAYER", "HARMFUL PLAYER", spell)
+
+	if not specific then
+		-- No specific settings: pretty straightforward
+		hideStack, hideCountdown = db.profile.hideStack, db.profile.hideCountdown
+		hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = CheckAura(spell, target, db.profile.onlyMyBuffs, db.profile.onlyMyDebuffs)
+
+	else
+
+		if specific.auraType == "special" then
+			-- Special: use only the matching module
+
+			local module = stateKeywords[specific.special]
+			if module and module:CanTestUnit(target, specific.special, spell) then
+				hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = module:Test(specific.special, target, true, true, spell)
 			end
-			if not hasCount then count = nil end
-			if not hasCountdown then expirationTime = nil end
-			if not hasHighlight then highlight = nil end
-		end
-	else
-		--
-		local onlyMyBuffs, onlyMyDebuffs
-		if specific.onlyMine ~= nil then
-			onlyMyBuffs, onlyMyDebuffs = specific.onlyMine, specific.onlyMine
+
 		else
-			onlyMyBuffs, onlyMyDebuffs = db.profile.onlyMyBuffs, db.profile.onlyMyDebuffs
+			-- Has specific settings but not special
+
+			-- Get boolean settings
+			hideStack = FirstNotNull(specific.hideStack, db.profile.hideStack)
+			hideCountdown = FirstNotNull(specific.hideCountdown, db.profile.hideCountdown)
+			local onlyMyBuffs = FirstNotNull(specific.onlyMine, db.profile.onlyMyBuffs)
+			local onlyMyDebuffs = FirstNotNull(specific.onlyMine, db.profile.onlyMyDebuffs)
+
+			if specific.aliases then
+				-- Has aliases: we need to test them all and combine the results
+				hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(specific.aliases))
+			else
+				-- No alias: simple test
+				hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = CheckAura(spell, target, onlyMyBuffs, onlyMyDebuffs)
+			end
 		end
-		
-		--
-		if specific.hideStack ~= nil then
-			hideStack = specific.hideStack
+
+		if not hasHighlight then highlight = nil end
+
+		local prevHighlight = highlight
+		if specific.highlight == "none" then
+			highlight = nil
 		else
-			hideStack = db.profile.hideStack
-		end
-		
-		--
-		if specific.hideCountdown ~= nil then
-			hideCountdown = specific.hideCountdown
-		else
-			hideCountdown = db.profile.hideCountdown
-		end
-		
-		if specific.aliases then
-			count, expirationTime, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(specific.aliases))
-		else
-			count, expirationTime, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell)
+			local show, hide = specific.highlight, nil
+			if highlight == "glowing" then
+				-- Glowing has precedence
+				show = highlight
+			elseif show == "border" and highlight and strmatch(highlight, '^border') then
+				-- Reuse provided border color
+				show = highlight
+			elseif show == "dim" then
+				-- These one has inverted logic
+				show, hide = hide, show
+			end
+			if specific.invertHighlight then
+				-- Invert if the user asked for it
+				show, hide = hide, show
+			end
+			-- Select the state that actually match the result from AuraLookup
+			if highlight then
+				highlight = show
+			else
+				highlight = hide
+			end
+			if highlight == "border" then
+				-- Still "border", a specific color must be chosen
+				highlight = GetBorderHighlight(UnitIsDebuffable(target), true)
+			end
 		end
 	end
 
-	local prevHighlight = highlight
-	if specific.highlight == "none" then
-		highlight = nil
-	else
-		local show, hide = specific.highlight, nil
-		if highlight == "glowing" then
-			-- Glowing has precedence
-			show = highlight
-		elseif show == "border" and highlight and strmatch(highlight, '^border') then
-		  -- Reuse provided border color
-			show = highlight
-		elseif show == "dim" then
-			-- These one has inverted logic
-			show, hide = hide, show
-		end
-		if specific.invertHighlight then
-			-- Invert if the user asked for it
-			show, hide = hide, show
-		end
-		-- Select the state that actually match the result from AuraLookup
-		if highlight then
-			highlight = show
-		else
-			highlight = hide
-		end
-		if highlight == "border" then
-			-- Still "border", a specific color must be chosen
-			highlight = GetBorderHighlight(UnitIsDebuffable(target), true)
-		end
-	end
-
-	return (not hideStack) and count ~= 0 and count or nil, (not hideCountdown) and expirationTime or nil, highlight
+	return (hasCount and not hideStack and count ~= 0) and count or nil, (hasCountdown and not hideCountdown) and expirationTime or nil, highlight
 end
 
 ------------------------------------------------------------------------------
@@ -494,10 +499,10 @@ local function AnalyzeAction(action, param)
 	if status == "ignore" then
 		return -- Don't want to handle
 	end
-	if specific then	
+	if specific then
 		auraType = specific.auraType
 	end
-	
+
 	-- Check modules, either through "special" aura type or spell hooks
 	local module
 	if auraType == "special" then
@@ -923,6 +928,9 @@ function addon:UPDATE_MACROS(event, name)
 	return self:RequireUpdate(true)
 end
 
+local overlayedSpells = {}
+addon.overlayedSpells = overlayedSpells
+
 function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
 	local name = GetSpellInfo(id)
 	local enable = (event == "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW") or nil
@@ -1101,7 +1109,7 @@ function addon:OnEnable()
 
 	if self.firstEnable then
 		self.firstEnable = nil
-		
+
 		-- Retrieve default spell configuration
 		if InlineAura_LoadDefaults then
 			if IsLoggedIn() then

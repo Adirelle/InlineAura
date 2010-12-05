@@ -1052,55 +1052,73 @@ function addon:LoadSpellDefaults(event)
 	self:UpgradeProfile()
 end
 
+local SV_VERSION = 1
+
+-- Mark new profiles with the database version
+function addon:NewProfile()
+	db.profile.version = SV_VERSION
+	self:RequireUpdate(true)
+end
+
 -- Upgrade the database from previous versions
 function addon:UpgradeProfile()
 	if not self.defaultsLoaded then return end
 
-	for name, spell in pairs(db.profile.spells) do
-		if type(spell) == "table" then
-			if spell.disabled then
-				spell.status = "ignore"
-				spell.disabled = nil
-			else
-				local units = spell.unitsToScan
-				spell.unitsToScan = nil
-				if type(units) == "table" then
-					local auraType = spell.auraType
-					if auraType == "buff" then
-						if units.pet then
-							spell.auraType = "pet"
-						elseif units.player and not units.target and not units.focus then
-							spell.auraType = "self"
-						else
+	-- Upgrade only if needed
+	if (db.profile.version or 0) < SV_VERSION then
+
+		for name, spell in pairs(db.profile.spells) do
+			if type(spell) == "table" then
+				if spell.disabled then
+					spell.status = "ignore"
+					spell.disabled = nil
+				else
+					local units = spell.unitsToScan
+					spell.unitsToScan = nil
+					if type(units) == "table" then
+						local auraType = spell.auraType
+						if auraType == "buff" then
+							if units.pet then
+								spell.auraType = "pet"
+							elseif units.player and not units.target and not units.focus then
+								spell.auraType = "self"
+							else
+								spell.auraType = "regular"
+							end
+						elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
 							spell.auraType = "regular"
 						end
-					elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
-						spell.auraType = "regular"
+					elseif not units then
+						if auraType == "special" and not spell.special and spell.aliases then
+							spell.special = spell.aliases[1]
+							spell.aliases = nil
+						end
 					end
-				elseif not units then
-					if auraType == "special" and not spell.special and spell.aliases then
-						spell.special = spell.aliases[1]
-						spell.aliases = nil
+					if spell.alternateColor then
+						spell.highlight = "glowing"
+						spell.alternateColor = nil
 					end
 				end
-				if spell.alternateColor then
-					spell.highlight = "glowing"
-					spell.alternateColor = nil
-				end
+			else
+				db.profile.spells[name] = { status = "global" }
 			end
-		else
-			db.profile.spells[name] = { status = "global" }
 		end
+
+		-- Do not forget to "tag" the upgraded profile
+		db.profile.version = SV_VERSION
 	end
+
+	-- And update all
 	self:RequireUpdate(true)
 end
 
 function addon:OnInitialize()
 	-- Saved variables setup
 	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
+	db.RegisterCallback(self, 'OnNewProfile', 'NewProfile')
+	db.RegisterCallback(self, 'OnProfileReset', 'NewProfile')
 	db.RegisterCallback(self, 'OnProfileChanged', 'UpgradeProfile')
 	db.RegisterCallback(self, 'OnProfileCopied', 'UpgradeProfile')
-	db.RegisterCallback(self, 'OnProfileReset', 'RequireUpdate')
 	self.db = db
 
 	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")

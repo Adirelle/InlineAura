@@ -32,7 +32,7 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 	-- Get the spell name, throwing error if not found
 	local function GetSpellName(id, level, noStrict)
 		local name
-		if type(id) == "string" and strmatch(id, "^[A-Z][%w_]*$") and noStrict then
+		if type(id) == "string" and self.allKeywords[id] and noStrict then
 			name = id
 		else
 			name = GetSpellInfo(id)
@@ -118,7 +118,7 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 			OnPet = function(spell) spell.auraType = "pet" end,
 			ShowSpecial = function(spell, keyword)
 				spell.auraType = "special"
-				singleMethods.Aliases(spell, keyword)
+				spell.special = keyword
 			end,
 			-- Highlight
 			Glowing = function(spell) spell.highlight = "glowing" end,

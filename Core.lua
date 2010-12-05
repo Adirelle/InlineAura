@@ -190,46 +190,67 @@ end
 ------------------------------------------------------------------------------
 
 local stateModules = {}
-local statePrototype = {}
 local stateKeywords = {}
 local stateSpellHooks = {}
+
+local statePrototype = {}
+statePrototype.auraType = "special"
+statePrototype.specialTarget = "player"
+statePrototype.keywords = {}
+statePrototype.spellHooks = {}
+
 if AdiDebug then
-	AdiDebug:Embed(statePrototype, "addon")
+	AdiDebug:Embed(statePrototype, "InlineAura")
 else
 	function statePrototype.Debug() end
 end
 
-addon.stateKeywords = stateKeywords
-
-function statePrototype:OnDisable()
-	for keyword, module in pairs(stateKeywords) do
-		if module == self then
-			stateKeywords[keyword] = nil
-		end
+addon.allKeywords = {}
+function statePrototype:OnInitialize()
+	--self:SetEnabledState(not not next(self.spellHooks))
+	for i, keyword in pairs(self.keywords) do
+		addon.allKeywords[keyword] = self
 	end
-	for spell, module in pairs(stateSpellHooks) do
-		if module == self then
-			stateSpellHooks[spell] = nil
-		end
-	end
+	dprint(self, 'initialized')
 end
 
-function statePrototype:RegisterKeywords(...)
-	for i = 1, select('#', ...) do
-		local keyword = select(i, ...)
+function statePrototype:OnEnable()
+	for i, keyword in pairs(self.keywords) do
 		stateKeywords[keyword] = self
 	end
+	for i, spell in pairs(self.spellHooks) do
+		stateSpellHooks[spell] = self
+	end
+	if self.PostEnable then
+		self:PostEnable()
+	end
 end
 
-function statePrototype:RegisterSpellHooks(...)
-	for i = 1, select('#', ...) do
-		local spell = select(i, ...)
-		stateSpellHooks[spell] = self
+function statePrototype:OnDisable()
+	for i, keyword in pairs(self.keywords) do
+		stateKeywords[keyword] = nil
+	end
+	for i, spell in pairs(self.spellHooks) do
+		stateSpellHooks[spell] = nil
 	end
 end
 
 function statePrototype:CanTestUnit(unit, aura, spell)
-	return true
+	if self.auraType == "special" then
+		if self.specialTarget == "foe" then
+			return UnitIsDebuffable(unit)
+		elseif self.specialTarget == "friend" then
+			return UnitIsBuffable(unit)
+		else
+			return unit == self.specialTarget
+		end
+	elseif self.auraType == "self" then
+		return unit == "player"
+	elseif self.auraType == "pet" then
+		return unit == "pet"
+	else
+		return true
+	end
 end
 
 function statePrototype:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
@@ -307,63 +328,84 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	return hasCount and count or nil, hasCountdown and expirationTime or nil, hasHighlight and highlight or nil
 end
 
-local EMPTY_TABLE = {}
 local function GetAuraToDisplay(spell, target, specific)
-	local aliases
-	local hideStack = db.profile.hideStack
-	local hideCountdown = db.profile.hideCountdown
-	local onlyMyBuffs = db.profile.onlyMyBuffs
-	local onlyMyDebuffs = db.profile.onlyMyDebuffs
-
-	-- Specific spell overrides global settings
-	if specific then
-		aliases = specific.aliases
+	-- No specific settings, keep it simple
+	if not specific then
+		local count, expirationTime, highlight = AuraLookup(target, db.profile.onlyMyBuffs, db.profile.onlyMyDebuffs, spell)
+		return (not db.profile.hideStack) and count ~= 0 and count or nil, (not db.profile.hideCountdown) and expirationTime or nil, highlight
+	end
+	
+	local count, expirationTime, highlight
+	local hideStack, hideCountdown
+	if specific.auraType == "special" then		
+		local module = stateKeywords[specific.special]
+		if module then
+			local hasCount, hasCountdown, hasHighlight
+			if module:CanTestUnit(target, specific.special, spell) then
+				hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = module:Test(specific.special, target, "HELPFUL PLAYER", "HARMFUL PLAYER", spell)
+			end
+			if not hasCount then count = nil end
+			if not hasCountdown then expirationTime = nil end
+			if not hasHighlight then highlight = nil end
+		end
+	else
+		--
+		local onlyMyBuffs, onlyMyDebuffs
+		if specific.onlyMine ~= nil then
+			onlyMyBuffs, onlyMyDebuffs = specific.onlyMine, specific.onlyMine
+		else
+			onlyMyBuffs, onlyMyDebuffs = db.profile.onlyMyBuffs, db.profile.onlyMyDebuffs
+		end
+		
+		--
 		if specific.hideStack ~= nil then
 			hideStack = specific.hideStack
+		else
+			hideStack = db.profile.hideStack
 		end
+		
+		--
 		if specific.hideCountdown ~= nil then
 			hideCountdown = specific.hideCountdown
+		else
+			hideCountdown = db.profile.hideCountdown
 		end
-		if specific.auraType == "special" then
-			onlyMyBuffs, onlyMyDebuffs, hideStack, hideCountdown = true, true, false, false
-		elseif specific.onlyMine ~= nil then
-			onlyMyBuffs, onlyMyDebuffs = specific.onlyMine, specific.onlyMine
+		
+		if specific.aliases then
+			count, expirationTime, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(specific.aliases))
+		else
+			count, expirationTime, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell)
 		end
 	end
 
-	-- Look for the aura or its aliases
-	local count, expirationTime, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(aliases or  EMPTY_TABLE))
-
-	if specific then
-		local prevHighlight = highlight
-		if specific.highlight == "none" then
-			highlight = nil
+	local prevHighlight = highlight
+	if specific.highlight == "none" then
+		highlight = nil
+	else
+		local show, hide = specific.highlight, nil
+		if highlight == "glowing" then
+			-- Glowing has precedence
+			show = highlight
+		elseif show == "border" and highlight and strmatch(highlight, '^border') then
+		  -- Reuse provided border color
+			show = highlight
+		elseif show == "dim" then
+			-- These one has inverted logic
+			show, hide = hide, show
+		end
+		if specific.invertHighlight then
+			-- Invert if the user asked for it
+			show, hide = hide, show
+		end
+		-- Select the state that actually match the result from AuraLookup
+		if highlight then
+			highlight = show
 		else
-			local show, hide = specific.highlight, nil
-			if highlight == "glowing" then
-				-- Glowing has precedence
-				show = highlight
-			elseif show == "border" and highlight and strmatch(highlight, '^border') then
-			  -- Reuse provided border color
-				show = highlight
-			elseif show == "dim" then
-				-- These one has inverted logic
-				show, hide = hide, show
-			end
-			if specific.invertHighlight then
-				-- Invert if the user asked for it
-				show, hide = hide, show
-			end
-			-- Select the state that actually match the result from AuraLookup
-			if highlight then
-				highlight = show
-			else
-				highlight = hide
-			end
-			if highlight == "border" then
-				-- Still "border", a specific color must be chosen
-				highlight = GetBorderHighlight(UnitIsDebuffable(target), true)
-			end
+			highlight = hide
+		end
+		if highlight == "border" then
+			-- Still "border", a specific color must be chosen
+			highlight = GetBorderHighlight(UnitIsDebuffable(target), true)
 		end
 	end
 
@@ -447,27 +489,36 @@ local function AnalyzeAction(action, param)
 	local auraType = item and "self" or "regular"
 	local id = item or spell
 
-	-- Check spell hooks
-	local spellHook = stateSpellHooks[id]
-	if spellHook then
-		local overrideAuraType = spellHook.OverrideAuraType
-		if type(overrideAuraType) == "string" then
-			auraType = overrideAuraType
-		elseif type(overrideAuraType) == "function" then
-			auraType = overrideAuraType(spellHook, id) or auraType
-		end
-	end
-
 	-- Check for specific settings
 	local specific, status = addon:GetSpellSettings(id)
 	if status == "ignore" then
 		return -- Don't want to handle
 	end
+	if specific then	
+		auraType = specific.auraType
+	end
+	
+	-- Check modules, either through "special" aura type or spell hooks
+	local module
+	if auraType == "special" then
+		module = specific.special and stateKeywords[specific.special]
+	else
+		module = stateSpellHooks[id]
+	end
+	if module then
+		auraType = module.auraType
+	end
 
-	auraType = specific and specific.auraType or auraType
+	--@debug@
+	if specific and specific.auraType == "special" then
+		dprint(id, "special", specific.special, module, '=>', auraType, module.specialTarget)
+	end
+	--@end-debug@
 
 	-- Solve special aura types ASAP
-	if auraType == "self" or auraType == "special" then
+	if auraType == "special" then
+		return spell, module.specialTarget, specific
+	elseif auraType == "self" then
 		return spell, "player", specific
 	elseif auraType == "pet" then
 		return spell, "pet", specific
@@ -1010,6 +1061,10 @@ function addon:UpgradeProfile()
 				elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
 					auraType = "regular"
 				end
+				if auraType == "special" and not spell.special and spell.aliases then
+					spell.special = spell.aliases[1]
+					spell.aliases = nil
+				end
 				if spell.alternateColor then
 					spell.highlight = "glowing"
 					spell.alternateColor = nil
@@ -1025,17 +1080,6 @@ function addon:UpgradeProfile()
 end
 
 function addon:OnInitialize()
-	-- Retrieve default spell configuration
-	if InlineAura_LoadDefaults then
-		if IsLoggedIn() then
-			-- Already logged in, spell data should be available
-			self:LoadSpellDefaults('Initialize')
-		else
-			-- Wait for the first SPELLS_CHANGED to ensure spell data are available
-			self:RegisterEvent('SPELLS_CHANGED', "LoadSpellDefaults")
-		end
-	end
-
 	-- Saved variables setup
 	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
 	db.RegisterCallback(self, 'OnProfileChanged', 'UpgradeProfile')
@@ -1057,6 +1101,17 @@ function addon:OnEnable()
 
 	if self.firstEnable then
 		self.firstEnable = nil
+		
+		-- Retrieve default spell configuration
+		if InlineAura_LoadDefaults then
+			if IsLoggedIn() then
+				-- Already logged in, spell data should be available
+				self:LoadSpellDefaults('OnEnable')
+			else
+				-- Wait for the first SPELLS_CHANGED to ensure spell data are available
+				self:RegisterEvent('SPELLS_CHANGED', "LoadSpellDefaults")
+			end
+		end
 
 		local UpdateButtonState_Hook = addon.UpdateButtonState_Hook
 		local UpdateButtonUsable_Hook = addon.UpdateButtonUsable_Hook

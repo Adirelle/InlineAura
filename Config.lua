@@ -357,7 +357,7 @@ local STATUS_LABELS = {
 local keywordList = {}
 function spellSpecificHandler:GetKeywordList()
 	wipe(keywordList)
-	for keyword, module in pairs(addon.stateKeywords) do
+	for keyword in pairs(addon.allKeywords) do
 		keywordList[keyword] = L[keyword]
 	end
 	return keywordList
@@ -577,33 +577,58 @@ end
 
 -- Generic attribute handling
 
+function spellSpecificHandler:GetDatabase(info)
+	local db, key = self.db, info.arg or info[#info]
+	if type(key) == "table" then
+		for i = 1, #key-1 do
+			db = db[key[i]]
+		end
+		key = key[#key]
+	end
+	return db, key
+end
+
 function spellSpecificHandler:Set(info, ...)
 	if self:IsReadOnly() then return end
+	local db, key = self:GetDatabase(info)
 	if info.type == 'color' then
-		local color = self.db[info.arg]
+		local color = db[key]
 		color[1], color[2], color[3], color[4] = ...
 	elseif info.type == 'multiselect' then
-		local key, value = ...
+		local subKey, value = ...
 		value = value and true or false
-		if type(self.db[info.arg]) ~= 'table' then
-			self.db[info.arg] = { key = value }
+		if type(db[key]) ~= 'table' then
+			db[key] = { [subKey] = value }
 		else
-			self.db[info.arg][key] = value
+			db[key][subKey] = value
 		end
 	else
-		self.db[info.arg] = ...
+		db[key] = ...
 	end
 	addon:RequireUpdate(true)
 end
 
-function spellSpecificHandler:Get(info, key)
+function spellSpecificHandler:Get(info, subKey)
+	local db, key = self:GetDatabase(info)
 	if info.type == 'color' then
-		return unpack(self.db[info.arg])
+		return unpack(db[key])
 	elseif info.type == 'multiselect' then
-		return type(self.db[info.arg]) == "table" and self.db[info.arg][key]
+		return type(db[key]) == "table" and db[key][subKey]
 	else
-		return self.db[info.arg]
+		return db[key]
 	end
+end
+
+-- Aura type handling
+
+local auraTypeList = {
+	regular = L['Regular'],
+	self = L['Self'],
+}
+function spellSpecificHandler:GetAuraTypeList(_, value)
+	auraTypeList.pet = isPetClass and L['Pet'] or nil
+	auraTypeList.special = next(addon.allKeywords) and L['Special'] or nil
+	return auraTypeList
 end
 
 -- Aliases handling
@@ -620,10 +645,9 @@ local function normalize(name)
 	return gsub(strtrim(strlower(name)), "\194\160", " ")
 end
 
-local keywords = addon.stateKeywords
 local id = 0
 local function doValidateName(value)
-	if keywords[value] then
+	if addon.allKeywords[value] then
 		return value, 'keyword'
 	end
 	local spellId = tonumber(strmatch('spell:(%d+)', value))
@@ -768,7 +792,6 @@ local spellOptions = {
 				STATUS_LABELS.ignore, L['totally ignore the spell ; do not show any countdown or highlight.']
 			),
 			type = "select",
-			arg = 'status',
 			values = 'GetStatusList',
 			get = 'GetStatus',
 			set = 'SetStatus',
@@ -798,30 +821,14 @@ local spellOptions = {
 				L["Special"], L["display special values that are not (de)buffs."]
 			),
 			type = 'select',
-			arg = 'auraType',
-			values = {
-				regular = L['Regular'],
-				self = L['Self'],
-				pet = isPetClass and L['Pet'] or nil,
-				special = L['Special'] or nil,
-			},
+			values = 'GetAuraTypeList',
 			order = 60,
 		},
-		specialAlias = {
+		special = {
 			name = L['Value to display'],
 			desc = L['Select which special value should be displayed.'],
 			type = 'select',
-			arg = 'aliases',
-			get = function(info) return info.handler.db.aliases and info.handler.db.aliases[1] end,
-			set = function(info, value)
-				if not info.handler.db.aliases then
-					info.handler.db.aliases = { value }
-				else
-					info.handler.db.aliases[1] = value
-				end
-				addon:RequireUpdate(true)
-			end,
-			values = 'GetSpecialList',
+			values = 'GetKeywordList',
 			disabled = 'IsReadOnly',
 			hidden = function(info) return info.handler:IsNotViewable() or not info.handler:IsSpecial() end,
 			order = 70,
@@ -832,7 +839,6 @@ local spellOptions = {
 			usage = L['Enter one name per line. They are spell-checked ; errors will prevents you to validate.'],
 			type = 'input',
 			width = 'full',
-			arg = 'aliases',
 			multiline = true,
 			get = 'GetAliases',
 			set = 'SetAliases',
@@ -844,7 +850,6 @@ local spellOptions = {
 			name = L['Only show mine'],
 			desc = L["Only display the (de)buff if it has been applied by yourself, your pet or your vehicle."].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
 			type = 'toggle',
-			arg = 'onlyMine',
 			tristate = true,
 			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
 			order = 65,
@@ -853,7 +858,6 @@ local spellOptions = {
 			name = L['No countdown'],
 			desc = L['Hide the countdown text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
 			type = 'toggle',
-			arg = 'hideCountdown',
 			tristate = true,
 			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
 			order = 90,
@@ -862,7 +866,6 @@ local spellOptions = {
 			name = L['No application count'],
 			desc = L['Hide the application count text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
 			type = 'toggle',
-			arg = 'hideStack',
 			tristate = true,
 			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
 			order = 100,
@@ -882,7 +885,6 @@ local spellOptions = {
 				L['Glowing animation'], L['Display the Blizzard shiny, animated border.']
 			),
 			type = 'select',
-			arg = 'highlight',
 			values = {
 				none = L['None'],
 				dim = L['Dim'],
@@ -895,7 +897,6 @@ local spellOptions = {
 			name = L['Invert'],
 			desc = L["Invert the highlight condition, highlightning when the (de)buff is not found."],
 			type = 'toggle',
-			arg = 'invertHighlight',
 			disabled = function(info) return info.handler:IsReadOnly() or info.handler.db.highlight == "none" end,
 			order = 130,
 		},

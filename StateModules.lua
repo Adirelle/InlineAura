@@ -38,14 +38,10 @@ if playerClass == "WARLOCK" or playerClass == "PALADIN" then
 	local UnitPower = UnitPower
 
 	local powerState = addon:NewStateModule(POWER_TYPE)
+	powerState.keywords = { POWER_TYPE }
 
-	function powerState:OnEnable()
-		self:RegisterKeywords(POWER_TYPE)
+	function powerState:PostEnable()
 		self:RegisterEvent("UNIT_POWER")
-	end
-
-	function powerState:AcceptUnit(unit)
-		return unit == "player"
 	end
 
 	function powerState:Test(aura)
@@ -70,31 +66,22 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	local MAX_COMBO_POINTS = MAX_COMBO_POINTS
 
 	local comboPoints = addon:NewStateModule("ComboPoints")
+	comboPoints.keywords = { "COMBO_POINTS" }
+	comboPoints.specialTarget = "target"
 
-	function comboPoints:OnEnable()
-		self:RegisterKeywords("COMBO_POINTS")
+	function comboPoints:PostEnable()
 		self:RegisterEvent('UNIT_COMBO_POINTS')
-		self:RegisterEvent('PLAYER_TARGET_CHANGED', "Update")
-		self:RegisterEvent('PLAYER_ENTERING_WORLD', "Update")
 	end
 
-	function comboPoints:AcceptUnit(unit)
-		return unit == "player"
-	end
-
-	function comboPoints:Test()
+	function comboPoints:Test(_, unit)
 		local points = GetComboPoints("player", "target")
 		return true, points, false, nil, points == MAX_COMBO_POINTS, "glowing"
 	end
 
 	function comboPoints:UNIT_COMBO_POINTS(_, unit)
-		if unit == "player" then
-			return addon:AuraChanged("player")
+		if unit == "player" or unit == "vehicle" then
+			return addon:AuraChanged("target")
 		end
-	end
-
-	function comboPoints:Update()
-		return addon:AuraChanged("player")
 	end
 
 end
@@ -113,9 +100,9 @@ if playerClass == "DRUID" then
 	local isMoonkin, direction, power
 
 	local eclipseState = addon:NewStateModule("Eclipse")
+	eclipseState.keywords = { "LUNAR_ENERGY", "SOLAR_ENERGY" }
 
-	function eclipseState:OnEnable()
-		self:RegisterKeywords("LUNAR_ENERGY", "SOLAR_ENERGY")
+	function eclipseState:PostEnable()
 		self:RegisterEvent('PLAYER_TALENT_UPDATE')
 		self:PLAYER_TALENT_UPDATE("OnEnable")
 	end
@@ -173,9 +160,6 @@ end
 
 if playerClass == "SHAMAN" then
 
-	local totemState = addon:NewStateModule("Totems")
-	totemState.OverrideAuraType = "self"
-
 	local TOTEMS = {
 		 8075, -- Strength of Earth Totem
 		 3599, -- Searing Totem
@@ -202,19 +186,17 @@ if playerClass == "SHAMAN" then
 			return GetSpellInfo(id), GetSpellNames(...)
 		end
 	end
+	
+	local totemState = addon:NewStateModule("Totems")
+	totemState.keywords = { "TOTEM" }
+	totemState.spellHooks = { GetSpellNames(unpack(TOTEMS)) }
 
-	function totemState:OnEnable()
-		self:RegisterKeywords("TOTEM")
-		self:RegisterSpellHooks(GetSpellNames(unpack(TOTEMS)))
+	function totemState:PostEnable()
 		self:RegisterEvent('PLAYER_TOTEM_UPDATE')
 	end
 
 	function totemState:PLAYER_TOTEM_UPDATE()
 		addon:AuraChanged("player")
-	end
-
-	function totemState:CanTestUnit(unit)
-		return unit == "player"
 	end
 
 	function totemState:Test(spell)
@@ -249,19 +231,25 @@ elseif playerClass == "DRUID" then
 end
 
 if healthThresholds then
-	local healthState = addon:NewStateModule("Health")
-	local states = {}
 
-	function healthState:OnEnable()
-		for i, threshold in ipairs(healthThresholds) do
-			self:RegisterKeywords("BELOW"..threshold, "ABOVE"..threshold)
-		end
-		self:RegisterEvent('UNIT_HEALTH')
-		self:RegisterEvent('UNIT_HEALTH_MAX', 'UNIT_HEALTH')
-		wipe(states)
+	local keywords = {}
+	for i, threshold in ipairs(healthThresholds) do
+		tinsert(keywords, "BELOW"..threshold)
+		tinsert(keywords, "ABOVE"..threshold)
 	end
 
-	local function GetState(unit)
+	local healthState = addon:NewStateModule("Health")
+	healthState.auraType = "regular"
+	healthState.states = {}
+	healthState.keywords = keywords
+
+	function healthState:OnEnable()
+		self:RegisterEvent('UNIT_HEALTH')
+		self:RegisterEvent('UNIT_HEALTH_MAX', 'UNIT_HEALTH')
+		wipe(self.states)
+	end
+
+	function healthState:GetState(unit)
 		if unit and UnitExists(unit) and not UnitIsDeadOrGhost(unit) and addon.db.profile.enabledUnits[unit] then
 			local current, max = UnitHealth(unit), UnitHealthMax(unit)
 			if max > 0 then
@@ -280,9 +268,9 @@ if healthThresholds then
 	end
 
 	function healthState:UNIT_HEALTH(event, unit)
-		local newState = GetState(unit)
-		if newState ~= states[unit] then
-			states[unit] = newState
+		local newState = self:GetState(unit)
+		if newState ~= self.states[unit] then
+			self.states[unit] = newState
 			addon:AuraChanged(unit)
 		end
 	end
@@ -299,7 +287,7 @@ if healthThresholds then
 		if not IsUsableSpell(spell) or (GetSpellCooldown(spell) or 0) ~= 0 then return end
 		local below = tonumber(strmatch(condition, '^BELOW(%d+)$'))
 		local above = tonumber(strmatch(condition, '^ABOVE(%d+)$'))
-		local state = GetState(unit)
+		local state = self:GetState(unit)
 		if state then
 			self:Debug('Test(', condition, unit, '): below:', below, below and state <= below, "above:", above, above and state >= above)
 			return false, nil, false, nil, (below and state <= below) or (above and state >= above), "glowing"
@@ -313,10 +301,8 @@ end
 ------------------------------------------------------------------------------
 
 local dispellState = addon:NewStateModule("Dispell")
-
-function dispellState:OnEnable()
-	self:RegisterKeywords("DISPELLABLE")
-end
+dispellState.auraType = "regular"
+dispellState.keywords = {"DISPELLABLE"}
 
 function dispellState:Test(_, unit)
 	local selectFilter, magicOnly
@@ -342,3 +328,4 @@ function dispellState:Test(_, unit)
 		return false, nil, true, maxExpirationTime, true, GetBorderHighlight(magicOnly, false)
 	end
 end
+

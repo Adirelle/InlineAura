@@ -16,12 +16,12 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 --]]
 
-if not InlineAura then return end
-
-local _, ns = ...
+local _, addon = ...
 local _, playerClass = UnitClass("player")
 
-local UnitIsBuffable, UnitIsDebuffable, UnitIsMine = ns.UnitIsBuffable, ns.UnitIsDebuffable, ns.UnitIsMine
+local UnitIsBuffable = addon.UnitIsBuffable
+local UnitIsDebuffable = addon.UnitIsDebuffable
+local GetBorderHighlight = addon.GetBorderHighlight
 
 ------------------------------------------------------------------------------
 -- Warlocks' Soul Shards and Paladins' Holy Power
@@ -37,7 +37,7 @@ if playerClass == "WARLOCK" or playerClass == "PALADIN" then
 	local SPELL_POWER = _G["SPELL_POWER_"..POWER_TYPE]
 	local UnitPower = UnitPower
 
-	local powerState = InlineAura:NewStateModule(POWER_TYPE)
+	local powerState = addon:NewStateModule(POWER_TYPE)
 
 	function powerState:OnEnable()
 		self:RegisterKeywords(POWER_TYPE)
@@ -55,7 +55,7 @@ if playerClass == "WARLOCK" or playerClass == "PALADIN" then
 
 	function powerState:UNIT_POWER(event, unit, type)
 		if unit == "player" and type == POWER_TYPE then
-			InlineAura:AuraChanged("player")
+			addon:AuraChanged("player")
 		end
 	end
 
@@ -69,7 +69,7 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	local GetComboPoints = GetComboPoints
 	local MAX_COMBO_POINTS = MAX_COMBO_POINTS
 
-	local comboPoints = InlineAura:NewStateModule("ComboPoints")
+	local comboPoints = addon:NewStateModule("ComboPoints")
 
 	function comboPoints:OnEnable()
 		self:RegisterKeywords("COMBO_POINTS")
@@ -89,12 +89,12 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 
 	function comboPoints:UNIT_COMBO_POINTS(_, unit)
 		if unit == "player" then
-			return InlineAura:AuraChanged("player")
+			return addon:AuraChanged("player")
 		end
 	end
 
 	function comboPoints:Update()
-		return InlineAura:AuraChanged("player")
+		return addon:AuraChanged("player")
 	end
 
 end
@@ -112,7 +112,7 @@ if playerClass == "DRUID" then
 
 	local isMoonkin, direction, power
 
-	local eclipseState = InlineAura:NewStateModule("Eclipse")
+	local eclipseState = addon:NewStateModule("Eclipse")
 
 	function eclipseState:OnEnable()
 		self:RegisterKeywords("LUNAR_ENERGY", "SOLAR_ENERGY")
@@ -133,7 +133,7 @@ if playerClass == "DRUID" then
 				self:UnregisterEvent('UNIT_POWER')
 				self:UnregisterEvent('ECLIPSE_DIRECTION_CHANGE')
 			end
-			InlineAura:AuraChanged("player")
+			addon:AuraChanged("player")
 		end
 	end
 
@@ -142,7 +142,7 @@ if playerClass == "DRUID" then
 			local newPower = math.ceil(100 * UnitPower("player", SPELL_POWER_ECLIPSE) / UnitPowerMax("player", SPELL_POWER_ECLIPSE))
 			if newPower ~= power then
 				power = newPower
-				InlineAura:AuraChanged("player")
+				addon:AuraChanged("player")
 			end
 		end
 	end
@@ -151,7 +151,7 @@ if playerClass == "DRUID" then
 		local newDirection = GetEclipseDirection()
 		if newDirection ~= direction then
 			direction = newDirection
-			InlineAura:AuraChanged("player")
+			addon:AuraChanged("player")
 		end
 	end
 
@@ -173,7 +173,7 @@ end
 
 if playerClass == "SHAMAN" then
 
-	local totemState = InlineAura:NewStateModule("Totems")
+	local totemState = addon:NewStateModule("Totems")
 	totemState.OverrideAuraType = "self"
 
 	local TOTEMS = {
@@ -210,7 +210,7 @@ if playerClass == "SHAMAN" then
 	end
 
 	function totemState:PLAYER_TOTEM_UPDATE()
-		InlineAura:AuraChanged("player")
+		addon:AuraChanged("player")
 	end
 
 	function totemState:CanTestUnit(unit)
@@ -249,7 +249,7 @@ elseif playerClass == "DRUID" then
 end
 
 if healthThresholds then
-	local healthState = InlineAura:NewStateModule("Health")
+	local healthState = addon:NewStateModule("Health")
 	local states = {}
 
 	function healthState:OnEnable()
@@ -262,7 +262,7 @@ if healthThresholds then
 	end
 
 	local function GetState(unit)
-		if unit and UnitExists(unit) and not UnitIsDeadOrGhost(unit) and InlineAura.db.profile.enabledUnits[unit] then
+		if unit and UnitExists(unit) and not UnitIsDeadOrGhost(unit) and addon.db.profile.enabledUnits[unit] then
 			local current, max = UnitHealth(unit), UnitHealthMax(unit)
 			if max > 0 then
 				local pct = 100 * current / max
@@ -283,7 +283,7 @@ if healthThresholds then
 		local newState = GetState(unit)
 		if newState ~= states[unit] then
 			states[unit] = newState
-			InlineAura:AuraChanged(unit)
+			addon:AuraChanged(unit)
 		end
 	end
 
@@ -312,13 +312,11 @@ end
 -- Dispell
 ------------------------------------------------------------------------------
 
-local dispellState = InlineAura:NewStateModule("Dispell")
+local dispellState = addon:NewStateModule("Dispell")
 
 function dispellState:OnEnable()
 	self:RegisterKeywords("DISPELLABLE")
 end
-
-local GetBorderHighlight = ns.GetBorderHighlight
 
 function dispellState:Test(_, unit)
 	local selectFilter, magicOnly

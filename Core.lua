@@ -190,23 +190,16 @@ end
 ------------------------------------------------------------------------------
 
 local stateModules = {}
+local statePrototype = {}
 local stateKeywords = {}
 local stateSpellHooks = {}
-local statePrototype = { Debug = function() end }
---@debug@
 if AdiDebug then
 	AdiDebug:Embed(statePrototype, "addon")
 else
---@end-debug@
 	function statePrototype.Debug() end
---@debug@
 end
---@end-debug@
 
-addon.stateModules = stateModules
 addon.stateKeywords = stateKeywords
-addon.stateSpellHooks = stateSpellHooks
-addon.statePrototype = statePrototype
 
 function statePrototype:OnDisable()
 	for keyword, module in pairs(stateKeywords) do
@@ -249,6 +242,7 @@ function addon:NewStateModule(name, ...)
 	assert(not stateModules[name], format("State module %q already defined", name))
 	local special = self:NewModule(name, statePrototype, 'AceEvent-3.0', ...)
 	stateModules[name] = special
+	dprint("New state module:", name)
 	return special
 end
 
@@ -285,6 +279,7 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]
 		if stateModule and stateModule:CanTestUnit(unit, aura, spell) then
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
+			dprint("AuraLookup", aura, stateModule, "=>", hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight)
 		else
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight = CheckAura(aura, unit, helpfulFilter, harmfulFilter)
 		end
@@ -295,6 +290,9 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 				expirationTime = newExpiratiomTime
 			end
 		else
+			if strmatch(aura, "ENERGY") then
+				dprint("AuraLookup(count)", aura, "current=", hasCount, count, "new=", hasNewCount, newCount)
+			end
 			if hasNewCount and newCount > (hasCount and count or 0) then
 				hasCount, count = true, newCount
 			end

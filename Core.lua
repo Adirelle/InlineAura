@@ -115,7 +115,12 @@ local DEFAULT_OPTIONS = {
 			target = true,
 			focus = true,
 			mouseover = false,
-		}
+		},
+		configSpellSources = {
+			['*'] = false,
+			preset = true,
+			actionbars = true,
+		},
 	},
 }
 addon.DEFAULT_OPTIONS = DEFAULT_OPTIONS

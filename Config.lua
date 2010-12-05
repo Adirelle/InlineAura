@@ -351,44 +351,75 @@ end
 -- Spell specific options
 -----------------------------------------------------------------------------
 
+-- Upvalues
 local ValidateName, spellPanel
 
-local function BuildSelectDesc(text, ...)
-	for i = 1, select('#', ...), 2 do
-		text = format("%s\n\n|cff44ff44%s|r: %s", text, select(i, ...))
-	end
-	return text
-end
+local spellSpecificHandler = {}
 
 local statusColors = { ignore = "ff7744", preset = "00ffff", user = "44ff44", global = "cccccc" }
 
-local GetSpellList
-do
-	local spellList = {}
+-- List of spells
 
-	local function AddEntry(action, param)
-		local key, icon, label, _
-		if action == 'item' then
-			label, _, _, _, _, _, _, _, _, icon = GetItemInfo(param)
-			key = label and GetItemSpell(label)
-			if not key then return end
-			label = format("%s (%s)", key, label)
-		elseif action == 'spell' then
-			label, _, icon = GetSpellInfo(param)
-			key = label
+local spellList = {}
+
+local function AddEntry(action, param)
+	local key, icon, label, _
+	if action == 'item' then
+		label, _, _, _, _, _, _, _, _, icon = GetItemInfo(param)
+		key = label and GetItemSpell(label)
+		if not key then return end
+		label = format("%s (%s)", key, label)
+	elseif action == 'spell' then
+		label, _, icon = GetSpellInfo(param)
+		key = label
+	end
+	if key and label then
+		if icon then
+			label = format("|T%s:20:20:0:0:64:64:4:60:4:60|t %s", icon, label)
 		end
-		if key and label then
-			if icon then
-				label = format("%s |T%s:20:20:0:0:64:64:4:60:4:60|t", label, icon)
-			end
-			local settings = rawget(addon.db.profile.spells, key)
-			local status = settings and settings.status or "global"
-			spellList[key] = format("|cff%s%s|r", statusColors[status], label)
+		local _, status = addon:GetSpellSettings(key)
+		spellList[key] = format("|cff%s%s|r", statusColors[status], label)
+	end
+end
+
+local function MergeSpellbook(spellbook, minIndex, maxIndex)
+	for index = minIndex, maxIndex do
+		local name = GetSpellInfo(index, spellbook)
+		if not name then
+			break
+		elseif not spellList[name] and not IsPassiveSpell(name) then
+			AddEntry("spell", name)
 		end
 	end
+end
 
-	function GetSpellList()
-		wipe(spellList)
+local function MergeSettings(settings, noDefaults)
+	for key in pairs(settings) do
+		if not spellList[key] then
+			local allow = true
+			if noDefaults then
+				local _, status = addon:GetSpellSettings(key)
+				if SPELL_DEFAULTS[key] then
+					allow = (status ~= "preset")
+				else
+					allow = (status ~= "global")
+				end
+			end
+			if allow then
+				if GetSpellInfo(key) then
+					AddEntry("spell", key)
+				elseif GetItemInfo(key) then
+					AddEntry("item", key)
+				end
+			end
+		end
+	end
+end
+
+local function GetSpellList()
+	wipe(spellList)
+	local pref = addon.db.profile.configSpellSources
+	if pref.actionbars then
 		-- Scan action buttons for spells and items
 		for button, state in pairs(addon.buttons) do
 			local action, param = state.action, state.param
@@ -410,37 +441,55 @@ do
 				AddEntry(action, param)
 			end
 		end
-		-- Add spell from spellbooks
-		local index = 1
-		repeat
-			local name = GetSpellInfo(index, "spell")
-			if name and not spellList[name] and not IsPassiveSpell(name) then
-				AddEntry("spell", name)
-			end
-			index = index + 1
-		until not name
-		-- Merge current settings
-		for key in pairs(addon.db.profile.spells) do
-			if not spellList[key] then
-				if GetSpellInfo(key) then
-					AddEntry("spell", key)
-				elseif GetItemInfo(key) then
-					AddEntry("item", key)
-				else
-					--@debug@
-					addon.dprint("Can't find out if it is an item or a spell, deleting:", key)
-					--@end-debug@
-					addon.db.profile.spells[key] = nil
-				end
-			end
-		end
-		return spellList
 	end
+	for i = 1, GetNumSpellTabs() do
+		if pref['spellbook'..i] then
+			local _, _, offset, numSlots = GetSpellTabInfo(i)
+			MergeSpellbook(BOOKTYPE_SPELL, 1 + offset, 1 + offset + numSlots)
+		end
+	end
+	if pref.spellbook_pet then
+		MergeSpellbook(BOOKTYPE_PET, 1, math.huge)
+	end
+	if pref.modified then
+		MergeSettings(addon.db.profile.spells, true)
+	end
+	if pref.preset then
+		MergeSettings(SPELL_DEFAULTS)
+	end
+	spellSpecificHandler:ListUpdated()
+	return spellList
+end
+
+-- The list of source of spells
+
+local spellListList = {}
+local spellbookFmt = SPELLBOOK..': %s'
+local function GetSpellListList()
+	wipe(spellListList)
+	spellListList.actionbars = ACTIONBAR_LABEL
+	spellListList.modified = L['Modified settings']
+	spellListList.preset = L['Presets']
+	spellListList.spellbook_pet = UnitExists("pet") and format(spellbookFmt, COMBATLOG_FILTER_STRING_MY_PET) or nil
+	for i = 1, GetNumSpellTabs() do
+		local name, _, _, numSlots = GetSpellTabInfo(i)
+		if numSlots > 0 then
+			spellListList["spellbook"..i] = format(spellbookFmt, name)
+		end
+	end
+	return spellListList
+end
+
+-- Helpers
+
+local function BuildSelectDesc(text, ...)
+	for i = 1, select('#', ...), 2 do
+		text = format("%s\n\n|cff44ff44%s|r: %s", text, select(i, ...))
+	end
+	return text
 end
 
 ---- Spell panel options
-
-local spellSpecificHandler = {}
 
 local spellOptions = {
 	name = L['Spell specific settings'],
@@ -451,11 +500,28 @@ local spellOptions = {
 	disabled = 'IsReadOnly',
 	hidden = 'IsNotViewable',
 	args = {
+		configSpellSources = {
+			name = L['Lists spells from ...'],
+			desc = BuildSelectDesc(
+				L['Sources of spells to show in the "Current spell" dropdown. Use this to reduce that list of spells.'],
+				ACTIONBAR_LABEL, L['spells and items visible on the action bars.'],
+				L['Modified settings'], L['all settings that differ from default ones.'],
+				L['Presets'], L['all the predefined settings, be them in use or not.'],
+				SPELLBOOK, L['spells from matching spellbooks.']
+			),
+			type = 'multiselect',
+			control = 'Dropdown',
+			get = function(info, key) return addon.db.profile.configSpellSources[key] end,
+			set = function(info, key, value) addon.db.profile.configSpellSources[key] = value end,
+			values = GetSpellListList,
+			disabled = false,
+			hidden = false,
+			order = 5,
+		},
 		spell = {
-			name = L['Spell'],
-			desc = L['Select the spell to edit or to remove its specific settings. Spells with specific defaults are written in |cff77ffffcyan|r. Removed spells with specific defaults are written in |cff777777gray|r.'],
+			name = L['Current spell'],
+			desc = L['Select the spell to edit. The color of the name is based on the setting type for the spell (see Type option below).'],
 			type = 'select',
-			width = 'double',
 			get = function(info) return spellSpecificHandler:GetSelectedSpell() end,
 			set = function(info, value) spellSpecificHandler:SelectSpell(value) end,
 			values = GetSpellList,
@@ -464,7 +530,14 @@ local spellOptions = {
 			order = 10,
 		},
 		status = {
-			name = L['Type'],
+			name = L['Settings type'],
+			desc = BuildSelectDesc(
+				L["The kind of settings to use for the spell."],
+				format('|cff%s%s|r', statusColors.global, L['None']), L['no specific settings for this spell ; use global ones.'],
+				format('|cff%s%s|r', statusColors.preset, L['Preset']), L['use the predefined settings shipped with Inline Aura.'],
+				format('|cff%s%s|r', statusColors.user, L['User-defined']), L['use your own settings.'],
+				format('|cff%s%s|r', statusColors.ignore, L['Ignored']), L['totally ignore the spell ; do not show any countdown or highlight.']
+			),
 			type = "select",
 			arg = 'status',
 			values = 'GetStatusList',
@@ -603,7 +676,9 @@ local spellOptions = {
 ---- Specific aura options
 
 function spellSpecificHandler:ListUpdated()
-	self:SelectSpell(nil)
+	if not spellList[self.name] then
+		self:SelectSpell(nil)
+	end
 end
 
 function spellSpecificHandler:GetSelectedSpell()
@@ -646,7 +721,7 @@ end
 
 do
 	local values = {
-		global = format('|cff%s%s|r', statusColors.global, L['None (global settings)']),
+		global = format('|cff%s%s|r', statusColors.global, L['None']),
 		preset = format('|cff%s%s|r', statusColors.preset, L['Preset']),
 		user = format('|cff%s%s|r', statusColors.user, L['User-defined']),
 		ignore = format('|cff%s%s|r', statusColors.ignore, L['Ignored']),

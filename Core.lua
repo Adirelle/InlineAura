@@ -554,24 +554,28 @@ local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
 
-	local spell, target, specific
+	local spell, taget, specific, targetHint
 	if state.action == "macro" then
 		local macroAction, macroParam = GetMacroAction(state.param)
-		spell, target, specific = AnalyzeAction(macroAction, macroParam)
-		if state.spell ~= spell or state.targetHint ~= target or state.specific ~= specific then
-			state.spell, state.targetHint, state.specific = spell, target, specific
+		spell, targetHint, specific = AnalyzeAction(macroAction, macroParam)
+		if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
+			state.spell, state.targetHint, state.specific = spell, targetHint, specific
 			force = true
 		end
-		if target == "friend" or target == "foe" then
-			target = GuessMacroTarget(state.param) or target
+		if targetHint == "friend" or targetHint == "foe" then
+			target = GuessMacroTarget(state.param) or targetHint
+		else
+			target = targetHint
 		end
 	else
-		spell, target, specific = state.spell, state.targetHint, state.specific
+		spell, targetHint, specific = state.spell, state.targetHint, state.specific
 	end
 
 	-- Find actual units for these
-	if target == "friend" or target == "foe" then
-		target = FilterEmpty(SecureButton_GetModifiedUnit(self)) or GuessSpellTarget(target == "friend")
+	if targetHint == "friend" or targetHint == "foe" then
+		target = FilterEmpty(SecureButton_GetModifiedUnit(self)) or GuessSpellTarget(targetHint == "friend")
+	else
+		target = targetHint
 	end
 
 	-- Get the GUID
@@ -584,7 +588,7 @@ local function UpdateButtonAura(self, force)
 		state.guid = guid
 
 		local count, expirationTime, highlight
-		if spell and target and UnitExists(target) and UnitIsVisible(target) and UnitIsConnected(target) and not UnitIsDeadOrGhost(target) then
+		if spell and target and (targetHint ~= "foe" or UnitIsDebuffable(target)) and (targetHint ~= "friend" or UnitIsBuffable(target)) and UnitExists(target) and UnitIsVisible(target) and UnitIsConnected(target) and not UnitIsDeadOrGhost(target) then
 			count, expirationTime, highlight = GetAuraToDisplay(spell, target, specific)
 			--@debug@
 			self:Debug("GetAuraToDisplay", spell, target, specific, "=>", "count=", count, "expirationTime=", expirationTime, "highlight=", highlight)

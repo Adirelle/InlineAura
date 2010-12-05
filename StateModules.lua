@@ -81,6 +81,7 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 
 	function comboPoints:UNIT_COMBO_POINTS(_, unit)
 		if unit == "player" or unit == "vehicle" then
+			addon:AuraChanged("player")
 			return addon:AuraChanged("target")
 		end
 	end

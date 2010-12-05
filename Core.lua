@@ -1045,44 +1045,48 @@ function addon:LoadSpellDefaults(event)
 	self:UnregisterEvent('SPELLS_CHANGED')
 	addon_LoadDefaults = nil
 
-	self:RequireUpdate(true)
+	-- We have them
+	self.defaultsLoaded = true
+
+	-- Now that we have defaults, upgrade the profile
+	self:UpgradeProfile()
 end
 
 -- Upgrade the database from previous versions
 function addon:UpgradeProfile()
+	if not self.defaultsLoaded then return end
+
 	for name, spell in pairs(db.profile.spells) do
 		if type(spell) == "table" then
 			if spell.disabled then
 				spell.status = "ignore"
 				spell.disabled = nil
 			else
-				if not spell.status then
-					spell.status = "user"
-				end
 				local units = spell.unitsToScan
-				if type(units) ~= "table" then units = nil end
-				local auraType = spell.auraType
-				if auraType == "buff" then
-					if units and units.pet then
-						auraType = "pet"
-					elseif units and units.player and not units.target and not units.focus then
-						auraType = "self"
-					else
-						auraType = "regular"
+				spell.unitsToScan = nil
+				if type(units) == "table" then
+					local auraType = spell.auraType
+					if auraType == "buff" then
+						if units.pet then
+							spell.auraType = "pet"
+						elseif units.player and not units.target and not units.focus then
+							spell.auraType = "self"
+						else
+							spell.auraType = "regular"
+						end
+					elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
+						spell.auraType = "regular"
 					end
-				elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
-					auraType = "regular"
-				end
-				if auraType == "special" and not spell.special and spell.aliases then
-					spell.special = spell.aliases[1]
-					spell.aliases = nil
+				elseif not units then
+					if auraType == "special" and not spell.special and spell.aliases then
+						spell.special = spell.aliases[1]
+						spell.aliases = nil
+					end
 				end
 				if spell.alternateColor then
 					spell.highlight = "glowing"
 					spell.alternateColor = nil
 				end
-				spell.auraType = auraType
-				spell.unitsToScan = nil
 			end
 		else
 			db.profile.spells[name] = { status = "global" }
@@ -1100,8 +1104,6 @@ function addon:OnInitialize()
 	self.db = db
 
 	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
-
-	self:UpgradeProfile()
 
 	self.bigCountdown = true
 	self.firstEnable = true
@@ -1123,6 +1125,9 @@ function addon:OnEnable()
 				-- Wait for the first SPELLS_CHANGED to ensure spell data are available
 				self:RegisterEvent('SPELLS_CHANGED', "LoadSpellDefaults")
 			end
+		else
+			self.defaultsLoaded = true
+			self:UpgradeProfile()
 		end
 
 		local UpdateButtonState_Hook = addon.UpdateButtonState_Hook

@@ -817,7 +817,7 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 
 		SelfBuffs(
 			 5277, -- Evasion
-			31224, -- Cloak of Shadows
+			31224  -- Cloak of Shadows
 		)
 
 		-- Show combo points on Kidney Shot, Rupture, Eviscerate

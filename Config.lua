@@ -454,7 +454,7 @@ function spellSpecificHandler:GetSpellList()
 	for i = 1, GetNumSpellTabs() do
 		if pref['spellbook'..i] then
 			local _, _, offset, numSlots = GetSpellTabInfo(i)
-			MergeSpellbook(BOOKTYPE_SPELL, 1 + offset, 1 + offset + numSlots)
+			MergeSpellbook(BOOKTYPE_SPELL, 1 + offset, offset + numSlots)
 		end
 	end
 	if pref.spellbook_pet then

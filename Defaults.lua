@@ -179,12 +179,15 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 	--[[
 	Do not list the (de)buffs that are all auras, procs, passive or come with the normal combat rotation.
 
+	Please also note that it is sometimes useful to list both the (de)buff and the spell that causes it
+	so the former is properly displayed on the latter. It won't pollute the presets because they are
+	created only for known and active spells.
+
 	Fully passive (de)buffs:
 	- Increased Damage (3%)
 	- Increased Critical Chance (5%)
 	- Increased Spell Power (10%)
 	- Physical Damage Taken (4%)
-	- Spell Crit Taken (5%)
 	]]
 
 	--- Buffs ---
@@ -357,6 +360,16 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 		"DRUID",       42231, -- Hurricane
 		"HUNTER",      90315  -- Tailspin (Fox)
 	)
+
+	-- Spell Crit Taken (5%)
+	SharedAuras(
+		"WARLOCK",   686, -- Shadow Bolt
+		"WARLOCK", 17800, -- Shadow and Flame
+		"MAGE",    22959, -- Critical Mass
+		"MAGE",     2948  -- Scorch
+	)
+
+	-- CC and tactical debuffs --
 
 	-- Crowd control (using Phanx's list)
 	SharedAuras(
@@ -725,7 +738,7 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 
 		-- Show combo points on Maim, Ferocious Bite, Savage Roar and Rip
 		Spells(22568, 22570, 1079):Aliases("COMBO_POINTS"):WithStack()
-		
+
 		-- Show combo points on Savage Roar
 		Spells(52610):OnSelf():Aliases("COMBO_POINTS"):WithStack()
 
@@ -806,12 +819,12 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 			 5277, -- Evasion
 			31224, -- Cloak of Shadows
 		)
-		
+
 		-- Show combo points on Kidney Shot, Rupture, Eviscerate
 		Spells(408, 1943, 2098):Aliases("COMBO_POINTS"):WithStack()
-		
+
 		-- Show combo points on Recuperate, Slice and Dice, Envenom
-		Spells(73651, 5171, 32645):OnSelf():Aliases("COMBO_POINTS"):WithStack()		
+		Spells(73651, 5171, 32645):OnSelf():Aliases("COMBO_POINTS"):WithStack()
 
 	end
 

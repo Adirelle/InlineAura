@@ -723,11 +723,11 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 		ShowSpecial("LUNAR_ENERGY", 5176) -- Wrath
 		ShowSpecial("SOLAR_ENERGY", 2912) -- Starfire
 
-		-- Kitty combo points
-		ShowSpecial("COMBO_POINTS",
-			22570, -- Maim
-			22568  -- Ferocious Bite
-		)
+		-- Show combo points on Maim, Ferocious Bite, Savage Roar and Rip
+		Spells(22568, 22570, 1079):Aliases("COMBO_POINTS"):WithStack()
+		
+		-- Show combo points on Savage Roar
+		Spells(52610):OnSelf():Aliases("COMBO_POINTS"):WithStack()
 
 		SelfBuffs(
 				768, -- Cat Form
@@ -803,18 +803,15 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 	------------------------------------------------------------------------------
 
 		SelfBuffs(
-			 5171, -- Slice and Dice
 			 5277, -- Evasion
 			31224, -- Cloak of Shadows
-			32645, -- Envenom
-			73651  -- Recuperate
 		)
-
-		-- Combo points
-		ShowSpecial("COMBO_POINTS",
-				408, -- Kidney Shot
-			 2098  -- Eviscerate
-		)
+		
+		-- Show combo points on Kidney Shot, Rupture, Eviscerate
+		Spells(408, 1943, 2098):Aliases("COMBO_POINTS"):WithStack()
+		
+		-- Show combo points on Recuperate, Slice and Dice, Envenom
+		Spells(73651, 5171, 32645):OnSelf():Aliases("COMBO_POINTS"):WithStack()		
 
 	end
 

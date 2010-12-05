@@ -67,6 +67,7 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 
 	local comboPoints = addon:NewStateModule("ComboPoints")
 	comboPoints.keywords = { "COMBO_POINTS" }
+	comboPoints.auraType = "regular"
 	comboPoints.specialTarget = "target"
 
 	function comboPoints:PostEnable()

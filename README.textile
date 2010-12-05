@@ -1,4 +1,4 @@
-Inline Aura displays aura information directly inside action buttons. It is heavily inspired from two addons writen by Tuller: OmniCC and the Buff module of Dominos.
+Inline Aura displays aura information directly inside action buttons. It is heavily inspired from two addons writen by Tuller: OmniCC and the former Buff module of Dominos.
 
 *Note:* the v1.5 branch is now pretty stable and I will only release bugfixes and minor configuration changes. I recommend sticking with it if you do not want to deal with bugs. To do so you can tell your Curse Client to only install releases (instead of beta or alpha).
 
@@ -37,4 +37,7 @@ You can submit bugs or suggestions using the "WowAce ticket system":http://www.w
 
 *A word about bug reports:* please check existing tickets before submitting new ones. Moreover, reports like "it doesn't work" without any error message are useless. Please ensure you have enabled Lua error display or installed a error catching addon, like the "BugGrabber":http://wow.curse.com/downloads/wow-addons/details/bug-grabber.aspx + "BugSack":http://wow.curse.com/downloads/wow-addons/details/bugsack.aspx couple, Swatter (shipped with any Norganna's addon) or "ImprovedErrorFrame":http://www.wowinterface.com/downloads/info4333-ImprovedErrorFrame.html and add any error message related to Inline Aura in your bug report.
 
+h2. Acknowledgements
+
+I would like to thanks Tuller for the original idea and Avitus, Contrebasse, Gaff3, Moozhe, brotherhobbes and a lot of other people for the testing and usefull feedbacks.
 

@@ -41,6 +41,7 @@ L["ABOVE25"] = "Above 25% health"
 L["ABOVE35"] = "Above 35% health"
 L["ABOVE80"] = "Above 80% health"
 L["DISPELLABLE"] = "(De)buff you can dispell"
+L["INTERRUPTIBLE"] = "Interruptible spellcast"
 
 --@noloc[[
 -- Locales from GlobalStrings.lua

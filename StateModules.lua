@@ -331,3 +331,43 @@ function dispellState:Test(_, unit)
 	end
 end
 
+------------------------------------------------------------------------------
+-- Interrupt
+------------------------------------------------------------------------------
+
+local interruptState = addon:NewStateModule("Interrupt")
+interruptState.specialTarget = "foe"
+interruptState.keywords = { "INTERRUPTIBLE" }
+
+function interruptState:PostEnable()
+	self:RegisterEvent('UNIT_SPELLCAST_CHANNEL_START', "SpellCastChanged")
+	self:RegisterEvent('UNIT_SPELLCAST_CHANNEL_STOP', "SpellCastChanged")
+	self:RegisterEvent('UNIT_SPELLCAST_START', "SpellCastChanged")
+	self:RegisterEvent('UNIT_SPELLCAST_STOP', "SpellCastChanged")
+	self:RegisterEvent('UNIT_SPELLCAST_NOT_INTERRUPTIBLE', "SpellCastChanged")
+	self:RegisterEvent('UNIT_SPELLCAST_INTERRUPTIBLE', "SpellCastChanged")
+end
+
+function interruptState:SpellCastChanged(event, unit)
+	if self:CanTestUnit(unit) then
+		self:Debug('SpellCastChanged', event, unit)
+		return addon:AuraChanged(unit)
+	end
+end
+
+function interruptState:Test(_, unit, _, _, spell)
+	local start, duration, enable = GetSpellCooldown(spell)
+	if enable == 1 and (duration or 0) > 1.5 then
+		self:Debug(spell, 'is in cooldown')
+		return
+	end
+	local name, _, _, _, _, endTime, _, _, notInterruptible = UnitCastingInfo(unit)
+	if not name then
+		name, _, _, _, _, endTime, _, notInterruptible = UnitChannelInfo(unit)
+	end
+	self:Debug('Casting/channelling', name, endTime, notInterruptible)
+	if name and endTime and not notInterruptible then
+		return false, nil, true, endTime/1000, true, "glowing"
+	end
+end
+

@@ -245,7 +245,7 @@ if healthThresholds then
 	healthState.states = {}
 	healthState.keywords = keywords
 
-	function healthState:OnEnable()
+	function healthState:PostEnable()
 		self:RegisterEvent('UNIT_HEALTH')
 		self:RegisterEvent('UNIT_HEALTH_MAX', 'UNIT_HEALTH')
 		wipe(self.states)

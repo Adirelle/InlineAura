@@ -507,6 +507,12 @@ local function AnalyzeAction(action, param)
 	local module
 	if auraType == "special" then
 		module = specific.special and stateKeywords[specific.special]
+		if not module then
+			--@debug@
+			dprint("Unknown module for", specific.special)
+			--@end-debug@
+			return
+		end
 	else
 		module = stateSpellHooks[id]
 	end

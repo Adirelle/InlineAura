@@ -503,6 +503,27 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 		72143  -- Enrage (Shambling Horror)
 	):Glowing()
 
+	-- Interrupts
+	SpellsByClass(
+		"DEATHKNIGHT", 47528, -- Mind Freeze
+		"DEATHKNIGHT", 47476, -- Strangulate
+		"DEATHKNIGHT", 91802, -- Shambling Rush (Ghoul)
+		"DRUID",       80964, -- Skull Bash (bear)
+		"DRUID",       80965, -- Skull Bash (cat)
+		"DRUID",       78675, -- Solar Beam
+		"HUNTER",      34490, -- Silencing Shot
+		"HUNTER",      50479, -- Nether Shock (Nether Ray)
+		"HUNTER",      26090, -- Pummel (Gorilla)
+		"HUNTER",      50318, -- Serenity Dust (Moth)
+		"PALADIN",     85285, -- Rebuke
+		"PRIEST",      15487, -- Silence
+		"ROGUE",        1766, -- Kick
+		"SHAMAN",      57994, -- Wind Shear
+		"WARLOCK",     19647, -- Spell Lock (Felhunter)
+		"WARRIOR",        71, -- Shield Bash
+		"WARRIOR",      6552  -- Pummel
+	):ShowSpecial('INTERRUPTIBLE'):Glowing()
+
 	------------------------------------------------------------------------------
 	-- Profession tracking
 	------------------------------------------------------------------------------

@@ -46,7 +46,7 @@ if playerClass == "WARLOCK" or playerClass == "PALADIN" then
 
 	function powerState:Test(aura)
 		local power = UnitPower("player", SPELL_POWER)
-		return true, power, false, nil, power == MAX_POWER, "glowing"
+		return true, power, false, nil, power == MAX_POWER, true
 	end
 
 	function powerState:UNIT_POWER(event, unit, type)
@@ -367,7 +367,7 @@ function interruptState:Test(_, unit, _, _, spell)
 	end
 	self:Debug('Casting/channelling', name, endTime, notInterruptible)
 	if name and endTime and not notInterruptible then
-		return false, nil, true, endTime/1000, true, "glowing"
+		return false, nil, true, endTime/1000, true, true
 	end
 end
 

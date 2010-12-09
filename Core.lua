@@ -360,6 +360,9 @@ local function GetAuraToDisplay(spell, target, specific)
 			local module = stateKeywords[specific.special]
 			if module and module:CanTestUnit(target, specific.special, spell) then
 				hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = module:Test(specific.special, target, true, true, spell)
+				if hasHighlight and highlight then
+					highlight = specific.highlight or "glowing"
+				end
 			end
 
 		else
@@ -378,9 +381,15 @@ local function GetAuraToDisplay(spell, target, specific)
 				-- No alias: simple test
 				hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = CheckAura(spell, target, onlyMyBuffs, onlyMyDebuffs)
 			end
+
+			if hasHighlight and highlight == true then
+				highlight = "glowing"
+			end
 		end
 
-		if not hasHighlight then highlight = nil end
+		if not hasHighlight then
+			highlight = nil
+		end
 
 		local prevHighlight = highlight
 		if specific.highlight == "none" then

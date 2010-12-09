@@ -821,6 +821,7 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 			84963  -- Inquisition
 		)
 
+		SelfTalentProc(86150, 86698, 86659, 86669) -- Guardian of Ancient Kings and its 3 variants
 		SelfTalentProc(635, 94686) -- Holy Light => Crusader
 
 		GroupBuffs( 7294) -- Retribution Aura

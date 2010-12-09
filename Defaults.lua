@@ -515,6 +515,7 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 		"HUNTER",      50479, -- Nether Shock (Nether Ray)
 		"HUNTER",      26090, -- Pummel (Gorilla)
 		"HUNTER",      50318, -- Serenity Dust (Moth)
+		"MAGE",         2139, -- Counterspell
 		"PALADIN",     85285, -- Rebuke
 		"PRIEST",      15487, -- Silence
 		"ROGUE",        1766, -- Kick

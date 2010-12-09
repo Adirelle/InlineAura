@@ -978,6 +978,9 @@ local addonSupport = {
 	Bartender4 = function(self)
 		self:RegisterButtons("BT4Button", 120) -- should not be necessary
 	end,
+	tullaRange = function(self)
+		hooksecurefunc(tullaRange, "SetButtonColor", self.UpdateButtonUsable_Hook)
+	end,
 }
 addonSupport.CooldownCount = addonSupport.OmniCC
 addonSupport.tullaCC = addonSupport.OmniCC

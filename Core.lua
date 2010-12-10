@@ -211,7 +211,9 @@ function statePrototype:OnInitialize()
 	for i, keyword in pairs(self.keywords) do
 		addon.allKeywords[keyword] = self
 	end
-	dprint(self, 'initialized')
+	if self.PostInitialize then
+		self:PostInitialize()
+	end
 end
 
 function statePrototype:OnEnable()

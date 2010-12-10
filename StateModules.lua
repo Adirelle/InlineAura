@@ -183,29 +183,38 @@ if playerClass == "SHAMAN" then
 		16190, -- Mana Tide Totem
 	}
 
-	local function GetSpellNames(id, ...)
-		if id then
-			return GetSpellInfo(id), GetSpellNames(...)
-		end
-	end
-	
 	local totemState = addon:NewStateModule("Totems")
 	totemState.keywords = { "TOTEM" }
-	totemState.spellHooks = { GetSpellNames(unpack(TOTEMS)) }
+
+	function totemState:PostInitialize()
+		self:SetEnabledState(false)
+		self:RegisterEvent('SPELLS_CHANGED')
+	end
+
+	function totemState:SPELLS_CHANGED()
+		self:UnregisterEvent('SPELLS_CHANGED')
+		local spellHooks = {}
+		for i, id in pairs(TOTEM) do
+			tinsert(spellHooks, (GetSpellInfo(id)))
+		end
+		self.spellHooks = spellHooks
+		self:Enable()
+	end
 
 	function totemState:PostEnable()
 		self:RegisterEvent('PLAYER_TOTEM_UPDATE')
+		self:PLAYER_TOTEM_UPDATE()
 	end
 
 	function totemState:PLAYER_TOTEM_UPDATE()
 		addon:AuraChanged("player")
 	end
 
-	function totemState:Test(spell)
-		spell = strlower(spell)
+	function totemState:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
+		aura = strlower(aura)
 		for index = 1, 4 do
 			local haveTotem, name, startTime, duration = GetTotemInfo(index)
-			if haveTotem and name and strlower(name) == spell then
+			if haveTotem and name and strlower(name) == aura then
 				return false, nil, startTime and duration, startTime + duration, true, "BuffMine"
 			end
 		end

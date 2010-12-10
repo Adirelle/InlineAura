@@ -194,7 +194,7 @@ if playerClass == "SHAMAN" then
 	function totemState:SPELLS_CHANGED()
 		self:UnregisterEvent('SPELLS_CHANGED')
 		local spellHooks = {}
-		for i, id in pairs(TOTEM) do
+		for i, id in pairs(TOTEMS) do
 			tinsert(spellHooks, (GetSpellInfo(id)))
 		end
 		self.spellHooks = spellHooks

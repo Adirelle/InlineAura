@@ -539,7 +539,9 @@ local function AnalyzeAction(action, param)
 
 	-- Solve special aura types ASAP
 	if auraType == "special" then
-		return spell, module.specialTarget, specific
+		if module.specialTarget ~= "regular" then
+			return spell, module.specialTarget, specific
+		end
 	elseif auraType == "self" then
 		return spell, "player", specific
 	elseif auraType == "pet" then
@@ -571,7 +573,7 @@ local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
 
-	local spell, taget, specific, targetHint
+	local spell, target, specific, targetHint
 	if state.action == "macro" then
 		local macroAction, macroParam = GetMacroAction(state.param)
 		spell, targetHint, specific = AnalyzeAction(macroAction, macroParam)
@@ -580,19 +582,18 @@ local function UpdateButtonAura(self, force)
 			force = true
 		end
 		if targetHint == "friend" or targetHint == "foe" then
-			target = GuessMacroTarget(state.param) or targetHint
-		else
-			target = targetHint
+			target = GuessMacroTarget(state.param)
 		end
 	else
 		spell, targetHint, specific = state.spell, state.targetHint, state.specific
 	end
 
-	-- Find actual units for these
-	if targetHint == "friend" or targetHint == "foe" then
-		target = FilterEmpty(SecureButton_GetModifiedUnit(self)) or GuessSpellTarget(targetHint == "friend")
-	else
-		target = targetHint
+	if not target then
+		if targetHint == "friend" or targetHint == "foe" then
+			target = FilterEmpty(SecureButton_GetModifiedUnit(self)) or GuessSpellTarget(targetHint == "friend")
+		else
+			target = targetHint
+		end
 	end
 
 	-- Get the GUID

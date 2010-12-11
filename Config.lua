@@ -24,7 +24,7 @@ local addon = LibStub('AceAddon-3.0'):GetAddon('InlineAura')
 if not addon then return end
 
 local L = addon.L
-local SPELL_DEFAULTS = addon.DEFAULT_OPTIONS.profile.spells
+local PRESETS = addon.PRESETS
 
 -----------------------------------------------------------------------------
 -- Default option handler
@@ -368,7 +368,7 @@ end
 local spellList = {}
 
 local function HasSpellPreset(name)
-	return name and not not SPELL_DEFAULTS[name]
+	return name and not not PRESETS[name]
 end
 
 local function IsSpellInList(name)
@@ -406,21 +406,12 @@ local function MergeSpellbook(spellbook, minIndex, maxIndex)
 	end
 end
 
-local function MergeSettings(settings, noDefaults)
-	for key in pairs(settings) do
-		if not spellList[key] then
-			local allow = true
-			if noDefaults then
-				local _, status = addon:GetSpellSettings(key)
-				allow = status ~= (HasSpellPreset(key) and "preset" or "global")
-			end
-			if allow then
-				if GetSpellInfo(key) then
-					AddEntry("spell", key)
-				elseif GetItemInfo(key) then
-					AddEntry("item", key)
-				end
-			end
+local function AddSpellOrItem(key)
+	if not spellList[key] then
+		if GetSpellInfo(key) then
+			AddEntry("spell", key)
+		elseif GetItemInfo(key) then
+			AddEntry("item", key)
 		end
 	end
 end
@@ -461,10 +452,16 @@ function spellSpecificHandler:GetSpellList()
 		MergeSpellbook(BOOKTYPE_PET, 1, math.huge)
 	end
 	if pref.modified then
-		MergeSettings(addon.db.profile.spells, true)
+		for key, status in pairs(addon.db.profile.spellStatuses) do
+			if status ~= (PRESETS[key] and "preset" or "global") then
+				AddSpellOrItem(key)
+			end
+		end
 	end
 	if pref.preset then
-		MergeSettings(SPELL_DEFAULTS)
+		for key in pairs(PRESETS) do
+			AddSpellOrItem(key)
+		end
 	end
 	spellSpecificHandler:ListUpdated()
 	return spellList
@@ -543,17 +540,23 @@ function spellSpecificHandler:GetStatus()
 end
 
 function spellSpecificHandler:SetStatus(_, status)
-	addon.db.profile.spells[self.name].status = status
+	if status == "user" and PRESETS[self.name] and not rawget(addon.db.profile.spells, self.name) then
+		copy(PRESETS[self.name], addon.db.profile.spells[self.name])
+	end
+	addon.db.profile.spellStatuses[self.name] = status
 	addon:RequireUpdate(true)
 	self:SelectSpell(self.name)
 end
 
 function spellSpecificHandler:Reset()
 	if self:IsReadOnly() then return end
-	local settings = addon.db.profile.spells[self.name]
-	wipe(settings)
-	copy(SPELL_DEFAULTS[self.name] or SPELL_DEFAULTS['**'], settings)
-	settings.status = "user"
+	wipe(self.db)
+	if PRESETS[self.name] then
+		copy(PRESETS[self.name], self.db)
+	else
+		self.db.auraType = "regular"
+		self.db.highlight = "border"
+	end
 	addon:RequireUpdate(true)
 end
 

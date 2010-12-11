@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 -- Per class defaults
 ------------------------------------------------------------------------------
 
-function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
+function InlineAura_LoadDefaults(self, presets, statuses)
 
 	local _, class = UnitClass('player')
 	local version = "@file-hash@/@project-version@"
@@ -53,16 +53,16 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 
 		local function GetSpell(id, level)
 			local name = GetSpellName(id, (level or 0) + 2)
-			if not SPELL_DEFAULTS[name] then
-				SPELL_DEFAULTS[name] = {
+			if not presets[name] then
+				presets[name] = {
 					id = id,
-					status = 'preset',
 					auraType = 'regular',
 					highlight = 'border',
 					hideStack = true,
 				}
+				statuses[name] = 'preset'
 			end
-			return SPELL_DEFAULTS[name], name
+			return presets[name], name
 		end
 
 		function Spells(...)
@@ -881,7 +881,7 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 	end
 
 	-- Cleanup
-	for name, spell in pairs(SPELL_DEFAULTS) do
+	for name, spell in pairs(presets) do
 		spell.id = nil
 		if spell.aliases and #(spell.aliases) > 0 then
 			spell.aliases = { unpack(spell.aliases) }

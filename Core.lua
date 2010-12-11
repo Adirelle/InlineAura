@@ -104,10 +104,12 @@ local DEFAULT_OPTIONS = {
 		colorStack        = { 1.0, 1.0, 0.0, 1.0 },
 		spells = {
 			['**'] = {
-				status = 'global',
 				auraType = 'regular',
 				highlight = 'border',
 			},
+		},
+		spellStatuses = {
+			['*'] = 'global'
 		},
 		enabledUnits = {
 			player = true,
@@ -123,7 +125,9 @@ local DEFAULT_OPTIONS = {
 		},
 	},
 }
-addon.DEFAULT_OPTIONS = DEFAULT_OPTIONS
+
+local PRESETS = {}
+addon.PRESETS = PRESETS
 
 -- Events only needed if the unit is enabled
 local UNIT_EVENTS = {
@@ -425,12 +429,11 @@ end
 ------------------------------------------------------------------------------
 
 function addon:GetSpellSettings(id)
-	local settings = rawget(db.profile.spells, id)
-	local status = settings and settings.status or "global"
+	local status = db.profile.spellStatuses[id]
 	if status == "preset" then
-		return DEFAULT_OPTIONS.profile.spells[id], status
+		return PRESETS[id], status
 	elseif status == "user" then
-		return settings, status
+		return db.profile.spells[id], status
 	else
 		return nil, status
 	end
@@ -1045,7 +1048,7 @@ function addon:LoadSpellDefaults(event)
 	end
 
 	-- Insert spell defaults
-	safecall(InlineAura_LoadDefaults, self, DEFAULT_OPTIONS.profile.spells)
+	safecall(InlineAura_LoadDefaults, self, PRESETS, DEFAULT_OPTIONS.profile.spellStatuses)
 
 	-- Register updated defaults
 	if self.db then
@@ -1063,7 +1066,7 @@ function addon:LoadSpellDefaults(event)
 	self:UpgradeProfile()
 end
 
-local SV_VERSION = 1
+local SV_VERSION = 2
 
 -- Mark new profiles with the database version
 function addon:NewProfile()
@@ -1076,47 +1079,70 @@ function addon:UpgradeProfile()
 	if not self.defaultsLoaded then return end
 
 	-- Upgrade only if needed
-	if (db.profile.version or 0) < SV_VERSION then
+	local version = db.profile.version or 0
+	if version < SV_VERSION then
 
-		for name, spell in pairs(db.profile.spells) do
-			if type(spell) == "table" then
-				if spell.disabled then
-					spell.status = "ignore"
-					spell.disabled = nil
-				else
-					local units = spell.unitsToScan
-					spell.unitsToScan = nil
-					if type(units) == "table" then
-						local auraType = spell.auraType
-						if auraType == "buff" then
-							if units.pet then
-								spell.auraType = "pet"
-							elseif units.player and not units.target and not units.focus then
-								spell.auraType = "self"
-							else
+		-- 0 => 1
+		if version < 1 then
+			for name, spell in pairs(db.profile.spells) do
+				if type(spell) == "table" then
+					if spell.disabled then
+						spell.status = "ignore"
+						spell.disabled = nil
+					else
+						local units = spell.unitsToScan
+						spell.unitsToScan = nil
+						if type(units) == "table" then
+							local auraType = spell.auraType
+							if auraType == "buff" then
+								if units.pet then
+									spell.auraType = "pet"
+								elseif units.player and not units.target and not units.focus then
+									spell.auraType = "self"
+								else
+									spell.auraType = "regular"
+								end
+							elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
 								spell.auraType = "regular"
 							end
-						elseif auraType == "debuff" or auraType == "enemy" or auraType == "friend" then
-							spell.auraType = "regular"
+						elseif not units then
+							if auraType == "special" and not spell.special and spell.aliases then
+								spell.special = spell.aliases[1]
+								spell.aliases = nil
+							end
 						end
-					elseif not units then
-						if auraType == "special" and not spell.special and spell.aliases then
-							spell.special = spell.aliases[1]
-							spell.aliases = nil
+						if spell.alternateColor then
+							spell.highlight = "glowing"
+							spell.alternateColor = nil
 						end
 					end
-					if spell.alternateColor then
-						spell.highlight = "glowing"
-						spell.alternateColor = nil
-					end
+				else
+					db.profile.spells[name] = nil
+					db.profile.spellStatuses[name] = "global"
 				end
-			else
-				db.profile.spells[name] = { status = "global" }
+			end
+		end
+
+		-- 1 => 2
+		if version < 2 then
+			for name, spell in pairs(db.profile.spells) do
+				local status = rawget(spell, 'status')
+				if status then
+					db.profile.spellStatuses[name] = status
+					spell.status = nil
+				end
 			end
 		end
 
 		-- Do not forget to "tag" the upgraded profile
 		db.profile.version = SV_VERSION
+	end
+
+	-- Clean unused settings
+	for name in pairs(db.profile.spells) do
+		if db.profile.spellStatuses[name] ~= "user" then
+			db.profile.spells[name] = nil
+		end
 	end
 
 	-- And update all

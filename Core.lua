@@ -191,13 +191,11 @@ end
 
 local stateModules = {}
 local stateKeywords = {}
-local stateSpellHooks = {}
 
 local statePrototype = {}
 statePrototype.auraType = "special"
 statePrototype.specialTarget = "player"
 statePrototype.keywords = {}
-statePrototype.spellHooks = {}
 
 if AdiDebug then
 	AdiDebug:Embed(statePrototype, "InlineAura")
@@ -206,8 +204,8 @@ else
 end
 
 addon.allKeywords = {}
+
 function statePrototype:OnInitialize()
-	--self:SetEnabledState(not not next(self.spellHooks))
 	for i, keyword in pairs(self.keywords) do
 		addon.allKeywords[keyword] = self
 	end
@@ -220,9 +218,6 @@ function statePrototype:OnEnable()
 	for i, keyword in pairs(self.keywords) do
 		stateKeywords[keyword] = self
 	end
-	for i, spell in pairs(self.spellHooks) do
-		stateSpellHooks[spell] = self
-	end
 	if self.PostEnable then
 		self:PostEnable()
 	end
@@ -231,9 +226,6 @@ end
 function statePrototype:OnDisable()
 	for i, keyword in pairs(self.keywords) do
 		stateKeywords[keyword] = nil
-	end
-	for i, spell in pairs(self.spellHooks) do
-		stateSpellHooks[spell] = nil
 	end
 end
 
@@ -297,11 +289,11 @@ local function AuraLookup(unit, helpfulFilter, harmfulFilter, ...)
 	local spell = ...
 	for i = 1, select('#', ...) do
 		local aura = select(i, ...)
-		local stateModule = stateKeywords[aura] or stateSpellHooks[aura]
-		if stateModule and stateModule:CanTestUnit(unit, aura, spell) then
-			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority = stateModule:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
+		local module = stateKeywords[aura]
+		if module and module:CanTestUnit(unit, aura, spell) then
+			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority = module:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
 			if not newPriority then newPriority = 30 end
-			dprint("AuraLookup", aura, stateModule, "=>", hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight)
+			dprint("AuraLookup", aura, module, "=>", hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight)
 		else
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority = CheckAura(aura, unit, onlyMyBuffs, onlyMyDebuffs)
 			if not newPriority then newPriority = 0 end
@@ -524,8 +516,6 @@ local function AnalyzeAction(action, param)
 			--@end-debug@
 			return
 		end
-	else
-		module = stateSpellHooks[id]
 	end
 	if module then
 		auraType = module.auraType

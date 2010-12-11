@@ -648,6 +648,34 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 
 		Spells(370, 51886):Aliases("DISPELLABLE") -- Purge and Cleanse Spirit
 
+		-- Totems
+		Spells(
+			 8075, -- Strength of Earth Totem
+			 3599, -- Searing Totem
+			 8227, -- Flametongue Totem
+			 2484, -- Earthbind Totem
+			 5394, -- Healing Stream Totem
+			 8512, -- Windfury Totem
+			 8190, -- Magma Totem
+			 8177, -- Grounding Totem
+			 5675, -- Mana Spring Totem
+			 3738, -- Wrath of Air Totem
+			 8071, -- Stoneskin Totem
+			 8143, -- Tremor Totem
+			 2062, -- Earth Elemental Totem
+			 5730, -- Stoneclaw Totem
+			 8184, -- Elemental Resistance Totem
+			 2894, -- Fire Elemental Totem
+			87718, -- Totem of Tranquil Mind
+			16190  -- Mana Tide Totem
+		):Aliases("TOTEM"):OnSelf()
+
+		-- Some totems grants a (de)buff with a different name
+		Spells(8075):Aliases(8076) -- Strength of Earth Totem => Strength of Earth
+		Spells(5675):Aliases(5677) -- Mana Spring Totem => Mana Spring
+		Spells(16190):Aliases(16191) -- Mana Tide Totem => Mana Tide
+		Spells(8177):Aliases(8178) -- Grounding Totem => Grounding Totem Effect
+
 	------------------------------------------------------------------------------
 	elseif class == 'WARLOCK' then
 	------------------------------------------------------------------------------

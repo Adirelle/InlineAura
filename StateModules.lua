@@ -162,44 +162,8 @@ end
 
 if playerClass == "SHAMAN" then
 
-	local TOTEMS = {
-		 8075, -- Strength of Earth Totem
-		 3599, -- Searing Totem
-		 8227, -- Flametongue Totem
-		 2484, -- Earthbind Totem
-		 5394, -- Healing Stream Totem
-		 8512, -- Windfury Totem
-		 8190, -- Magma Totem
-		 8177, -- Grounding Totem
-		 5675, -- Mana Spring Totem
-		 3738, -- Wrath of Air Totem
-		 8071, -- Stoneskin Totem
-		 8143, -- Tremor Totem
-		 2062, -- Earth Elemental Totem
-		 5730, -- Stoneclaw Totem
-		 8184, -- Elemental Resistance Totem
-		 2894, -- Fire Elemental Totem
-		87718, -- Totem of Tranquil Mind
-		16190, -- Mana Tide Totem
-	}
-
 	local totemState = addon:NewStateModule("Totems")
 	totemState.keywords = { "TOTEM" }
-
-	function totemState:PostInitialize()
-		self:SetEnabledState(false)
-		self:RegisterEvent('SPELLS_CHANGED')
-	end
-
-	function totemState:SPELLS_CHANGED()
-		self:UnregisterEvent('SPELLS_CHANGED')
-		local spellHooks = {}
-		for i, id in pairs(TOTEMS) do
-			tinsert(spellHooks, (GetSpellInfo(id)))
-		end
-		self.spellHooks = spellHooks
-		self:Enable()
-	end
 
 	function totemState:PostEnable()
 		self:RegisterEvent('PLAYER_TOTEM_UPDATE')
@@ -211,10 +175,10 @@ if playerClass == "SHAMAN" then
 	end
 
 	function totemState:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
-		aura = strlower(aura)
+		spell = strlower(spell)
 		for index = 1, 4 do
 			local haveTotem, name, startTime, duration = GetTotemInfo(index)
-			if haveTotem and name and strlower(name) == aura then
+			if haveTotem and name and strlower(name) == spell then
 				return false, nil, startTime and duration, startTime + duration, true, "BuffMine"
 			end
 		end

@@ -440,6 +440,7 @@ function InlineAura_LoadDefaults(self, SPELL_DEFAULTS)
 		"SHAMAN",       3600, -- Earthbind
 		"SHAMAN",       8034, -- Frostbrand Attack
 		"SHAMAN",       8056, -- Frost Shock
+		"SHAMAN",       8178, -- Grounding Totem Effect
 		"WARLOCK",     18118, -- Aftermath
 		"WARLOCK",     18223, -- Curse of Exhaustion
 		"WARIROR",      1715, -- Piercing Howl

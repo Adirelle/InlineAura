@@ -34,6 +34,8 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		local name
 		if type(id) == "string" and self.allKeywords[id] and noStrict then
 			name = id
+		elseif strmatch(id, "^item:%d+$") then
+			name = GetItemInfo(id)
 		else
 			name = GetSpellInfo(id)
 		end
@@ -534,6 +536,13 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		2383, -- Find Herbs
 		2580  -- Find Minerals
 	)
+
+	------------------------------------------------------------------------------
+	-- Alchemist Flask
+	------------------------------------------------------------------------------
+
+	-- Flask of Enhancement have 3 different effects depending on the enhanced stat
+	Spells("item:58149"):Aliases(79639, 79640, 79638):OnSelf()
 
 	------------------------------------------------------------------------------
 	if class == 'HUNTER' then

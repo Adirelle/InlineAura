@@ -32,19 +32,36 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 	-- Get the spell name, throwing error if not found
 	local function GetSpellName(id, level, noStrict)
 		local name
-		if type(id) == "string" and self.allKeywords[id] and noStrict then
-			name = id
-		elseif strmatch(id, "^item:%d+$") then
-			name = GetItemInfo(id)
-		else
-			name = GetSpellInfo(id)
+		local input = id
+		if type(id) == "string" then
+			id = strtrim(id)
+			if strmatch(id, "%s*#.*$") then
+				id = gsub(id, "%s*#.*$", "")
+				id = tonumber(id) or id
+			end
+		end
+		if type(id) == "number" then
+			-- Numeric spell id
+			name = GetSpellInfo(tonumber(id))
+		elseif type(id) == "string" then
+			if strmatch(id, "^item:%d+") then
+				-- "item:itemId" form
+				name = GetItemInfo(id)
+				if not name then
+					-- May be missing from the item cache, don't warn the user
+					return
+				end
+			elseif self.allKeywords[id] and noStrict then
+				-- Keyword
+				name = id
+			end
 		end
 		if name then
 			return name
-		elseif not reported[id] then
+		elseif not reported[input] then
 			local source = debugstack((level or 0)+2, 1,0):match(":(%d+)")
-			geterrorhandler()(format("Wrong spell id. Please report this error with the following information: id=%s, class=%s, version=%s, line=%s", tostringall(id, class, version, source)))
-			reported[id] = true
+			geterrorhandler()(format("Wrong spell id. Please report this error with the following information: id=%s, class=%s, version=%s, line=%s", tostringall(input, class, version, source)))
+			reported[input] = true
 		end
 	end
 
@@ -55,16 +72,18 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 
 		local function GetSpell(id, level)
 			local name = GetSpellName(id, (level or 0) + 2)
-			if not presets[name] then
-				presets[name] = {
-					id = id,
-					auraType = 'regular',
-					highlight = 'border',
-					hideStack = true,
-				}
-				statuses[name] = 'preset'
+			if name then
+				if not presets[name] then
+					presets[name] = {
+						id = id,
+						auraType = 'regular',
+						highlight = 'border',
+						hideStack = true,
+					}
+					statuses[name] = 'preset'
+				end
+				return presets[name], name
 			end
-			return presets[name], name
 		end
 
 		function Spells(...)
@@ -72,8 +91,11 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 			wipe(obj.ids)
 			for i = 1, select('#', ...) do
 				local id = select(i, ...)
-				obj.spells[id] = GetSpell(id)
-				tinsert(obj.ids, id)
+				local data = GetSpell(id)
+				if data then
+					obj.spells[id] = data
+					tinsert(obj.ids, id)
+				end
 			end
 			return obj
 		end
@@ -83,10 +105,12 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 			wipe(obj.ids)
 			for i = 1, select('#', ...), 2 do
 				local spellClass, id = select(i, ...)
-				if (spellClass == class or IsSpellKnown(id)) and not IsPassiveSpell(id) then
-					obj.spells[id] = GetSpell(id)
+				if GetSpellName(id, 1) then
+					if (spellClass == class or IsSpellKnown(id)) and not IsPassiveSpell(id) then
+						obj.spells[id] = GetSpell(id)
+					end
+					tinsert(obj.ids, id)
 				end
-				tinsert(obj.ids, id)
 			end
 			return obj
 		end
@@ -134,12 +158,14 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 				local id = select(i, ...)
 				if id ~= spell.id then
 					local name = GetSpellName(id, 1, true)
-					if not spell.aliases then
-						spell.aliases = {}
-					end
-					if not spell.aliases[name] then
-						tinsert(spell.aliases, name)
-						spell.aliases[name] = true
+					if name then
+						if not spell.aliases then
+							spell.aliases = {}
+						end
+						if not spell.aliases[name] then
+							tinsert(spell.aliases, name)
+							spell.aliases[name] = true
+						end
 					end
 				end
 			end

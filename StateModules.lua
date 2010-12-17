@@ -275,32 +275,22 @@ end
 -- Dispell
 ------------------------------------------------------------------------------
 
+local LibDispellable = LibStub('LibDispellable-1.0')
+
 local dispellState = addon:NewStateModule("Dispell")
 dispellState.auraType = "regular"
 dispellState.keywords = {"DISPELLABLE"}
 
-function dispellState:Test(_, unit)
-	local selectFilter, magicOnly
-	if UnitIsDebuffable(unit) then
-		selectFilter, magicOnly = "HELPFUL", true
-	elseif UnitIsBuffable(unit) then
-		selectFilter, magicOnly = "HARMFUL|RAID", nil
-	else
-		return
-	end
-	local i = 1
+function dispellState:Test(_, unit, _, _, spell)
+	local offensive = UnitIsDebuffable(unit)
 	local maxExpirationTime
-	repeat
-		local name, _, _, _, debuffType, duration, expirationTime = UnitAura(unit, i, selectFilter)
-		if name and expirationTime and (not magicOnly or debuffType == "Magic") then
-			if not maxExpirationTime or expirationTime > maxExpirationTime then
-				maxExpirationTime = expirationTime
-			end
+	for i, spellID, name, _, _, _, _, _, expirationTime in LibDispellable:IterateDispellableAuras(unit, offensive) do
+		if GetSpellInfo(spellID) == spell and expirationTime and (not maxExpirationTime or expirationTime > maxExpirationTime) then
+			maxExpirationTime = expirationTime
 		end
-		i = i + 1
-	until not name
+	end
 	if maxExpirationTime then
-		return false, nil, true, maxExpirationTime, true, GetBorderHighlight(magicOnly, false)
+		return false, nil, true, maxExpirationTime, true, GetBorderHighlight(offensive, false)
 	end
 end
 

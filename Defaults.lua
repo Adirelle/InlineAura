@@ -516,22 +516,6 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		"WARRIOR", 23694  -- Improved Hamstring
 	)
 
-	-- (En)rage removers
-	SpellsByClass(
-		"DRUID",   2908, -- Soothe
-		"HUNTER", 19801, -- Tranquilizing Shot
-		"ROGUE",   5938  -- Shiv
-	):Aliases(
-		-- Note: chances are "Enrage" catchs a bunch of enrage effects
-		12292, -- Death Wish (Warrior)
-		18499, -- Berserker Rage (Warrior)
-		76691, -- Vengeance (all tanks)
-		12880, -- Enrage (Warrior)
-		57516, -- Enrage (Warrior)
-		5229,  -- Enrage (Druid)
-		72143  -- Enrage (Shambling Horror)
-	):Glowing()
-
 	-- Interrupts
 	SpellsByClass(
 		"DEATHKNIGHT", 47528, -- Mind Freeze
@@ -853,7 +837,7 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
 		Aliases(93402,  8921) -- ... and conversely
 
-		Spells(2782):Aliases("DISPELLABLE") -- Remove Corruption
+		Spells(2782, 2908):Aliases("DISPELLABLE") -- Remove Corruption, Soothe
 
 	------------------------------------------------------------------------------
 	elseif class == 'PALADIN' then
@@ -912,6 +896,8 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 
 		-- Show combo points on Recuperate, Slice and Dice, Envenom
 		Spells(73651, 5171, 32645):OnSelf():Aliases("COMBO_POINTS"):WithStack()
+
+		Spells(5938):Aliases("DISPELLABLE") -- Shiv
 
 	end
 

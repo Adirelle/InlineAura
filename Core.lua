@@ -286,7 +286,7 @@ local function CheckAura(aura, unit, onlyMyBuffs, onlyMyDebuffs)
 	end
 end
 
-local function AuraLookup(unit, helpfulFilter, harmfulFilter, ...)
+local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 	local hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight
 	local hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority
 	local priority = 0

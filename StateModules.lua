@@ -346,6 +346,6 @@ function interruptState:Test(_, unit, _, _, spell)
 	self:Debug('Casting/channelling', name, endTime, notInterruptible)
 	if name and endTime and not notInterruptible then
 		local pref = self.db.profile
-		return false, nil, pref.highlight.countdown, endTime/1000, pref.highlight, true
+		return false, nil, pref.countdown, endTime/1000, pref.highlight, true
 	end
 end

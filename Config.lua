@@ -626,6 +626,20 @@ function spellSpecificHandler:Get(info, subKey)
 	end
 end
 
+function spellSpecificHandler:GetTristate(info)
+	return tostring(self:Get(info))
+end
+
+function spellSpecificHandler:SetTristate(info, value)
+	if value == "nil" then
+		self:Set(info, nil)
+	else
+		self:Set(info, value == "true")
+	end
+end
+
+local tristateValues = { ["true"] = L['Yes'], ["false"] = L['No'], ["nil"] = L['Use global setting'] }
+
 -- Aura type handling
 
 local auraTypeList = {
@@ -855,25 +869,31 @@ local spellOptions = {
 		},
 		onlyMine = {
 			name = L['Only show mine'],
-			desc = L["Only display the (de)buff if it has been applied by yourself, your pet or your vehicle."].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
-			type = 'toggle',
-			tristate = true,
+			desc = L["Only display the (de)buff if it has been applied by yourself, your pet or your vehicle."],
+			type = 'select',
+			get = 'GetTristate',
+			set = 'SetTristate',
+			values = tristateValues,
 			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
 			order = 65,
 		},
 		hideCountdown = {
 			name = L['No countdown'],
-			desc = L['Hide the countdown text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
-			type = 'toggle',
-			tristate = true,
+			desc = L['Hide the countdown text for this spell.'],
+			type = 'select',
+			get = 'GetTristate',
+			set = 'SetTristate',
+			values = tristateValues,
 			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
 			order = 90,
 		},
 		hideStack = {
 			name = L['No application count'],
-			desc = L['Hide the application count text for this spell.'].."\n"..L['The grey mark means "use global settings" while an empty box and the yellow mark enforce specific settings.'],
-			type = 'toggle',
-			tristate = true,
+			desc = L['Hide the application count text for this spell.'],
+			type = 'select',
+			get = 'GetTristate',
+			set = 'SetTristate',
+			values = tristateValues,
 			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
 			order = 100,
 		},

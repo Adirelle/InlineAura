@@ -258,7 +258,7 @@ local options = {
 					type = 'select',
 					order = 33,
 					values = {
-						[""] = L['None'],
+						[""] = NONE,
 						OUTLINE = L['Outline'],
 						THICKOUTLINE = L['Thick outline'],
 					},
@@ -346,7 +346,7 @@ local SPELLBOOK_FORMAT = SPELLBOOK..': %s'
 
 local STATUS_COLORS = { ignore = "ff7744", preset = "00ffff", user = "44ff44", global = "cccccc" }
 local STATUS_LABELS = {
-	global = format('|cff%s%s|r', STATUS_COLORS.global, L['None']),
+	global = format('|cff%s%s|r', STATUS_COLORS.global, NONE),
 	preset = format('|cff%s%s|r', STATUS_COLORS.preset, L['Preset']),
 	user = format('|cff%s%s|r', STATUS_COLORS.user, L['User-defined']),
 	ignore = format('|cff%s%s|r', STATUS_COLORS.ignore, L['Ignored']),
@@ -638,7 +638,7 @@ function spellSpecificHandler:SetTristate(info, value)
 	end
 end
 
-local tristateValues = { ["true"] = L['Yes'], ["false"] = L['No'], ["nil"] = L['Use global setting'] }
+local tristateValues = { ["true"] = YES, ["false"] = NO, ["nil"] = L['Use global setting'] }
 
 -- Aura type handling
 
@@ -647,7 +647,7 @@ local auraTypeList = {
 	self = L['Self'],
 }
 function spellSpecificHandler:GetAuraTypeList(_, value)
-	auraTypeList.pet = isPetClass and L['Pet'] or nil
+	auraTypeList.pet = isPetClass and PET or nil
 	auraTypeList.special = next(addon.allKeywords) and L['Special'] or nil
 	return auraTypeList
 end
@@ -838,7 +838,7 @@ local spellOptions = {
 				L["Select the type of (de)buff of this spell. This is used to select the unit to watch for this spell."],
 				L["Regular"], L["watch hostile units for harmful spells and friendly units for helpful spells."],
 				L["Self"], L["watch your (de)buffs in any case."],
-				L["Pet"], L["watch pet (de)buffs in any case."],
+				PET, L["watch pet (de)buffs in any case."],
 				L["Special"], L["display special values that are not (de)buffs."]
 			),
 			type = 'select',
@@ -906,14 +906,14 @@ local spellOptions = {
 			name = L['Effect'],
 			desc = BuildSelectDesc(
 				L['Inline Aura can highlight the action button when the (de)buff is found.'],
-				L['None'], L['Do not highlight the button.'],
+				NONE, L['Do not highlight the button.'],
 				L['Dim'], L['Dim the button when the (de)buff is NOT found (reversed logic).'],
 				L['Colored border'], L['Display a colored border. Its color depends on the kind and owner of the (de)buff.'],
 				L['Glowing animation'], L['Display the Blizzard shiny, animated border.']
 			),
 			type = 'select',
 			values = {
-				none = L['None'],
+				none = NONE,
 				dim = L['Dim'],
 				border = L['Colored border'],
 				glowing = L['Glowing animation'],

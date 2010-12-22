@@ -779,6 +779,8 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 
 		PetBuffs(63560):WithStack() -- Dark Transformation
 
+		Spells(49998):Aliases(77535):OnSelf() -- Blood Shield (thanks to twistdshade)
+
 	------------------------------------------------------------------------------
 	elseif class == 'PRIEST' then
 	------------------------------------------------------------------------------

@@ -213,6 +213,15 @@ function statePrototype:OnInitialize()
 	for i, keyword in pairs(self.keywords) do
 		addon.allKeywords[keyword] = self
 	end
+	local features, defaults = self.features, self.defaults
+	self.db = addon.db:RegisterNamespace(self.moduleName, { profile = {
+		enabled = true,
+		countdown = features and features.countdown and true or nil,
+		stacks = features and features.stacks and true or nil,
+		highlight = features and features.highlight and true or nil,
+		highlightThreshold = features and features.highlightThreshold and (defaults and defaults.highlightThreshold or features.highlightMaxThreshold or 1) or nil,
+	}})
+	self:SetEnabledState(self.db.profile.enabled)
 	if self.PostInitialize then
 		self:PostInitialize()
 	end
@@ -263,6 +272,10 @@ function addon:NewStateModule(name, ...)
 	stateModules[name] = special
 	dprint("New state module:", name)
 	return special
+end
+
+function addon:IterateStateModules()
+	return next, stateModules
 end
 
 ------------------------------------------------------------------------------
@@ -384,7 +397,7 @@ local function GetAuraToDisplay(spell, target, specific)
 				highlight = "glowing"
 			end
 		end
-
+		
 		if not hasHighlight then
 			highlight = nil
 		end
@@ -408,7 +421,7 @@ local function GetAuraToDisplay(spell, target, specific)
 				-- Invert if the user asked for it
 				show, hide = hide, show
 			end
-			-- Select the state that actually match the result from AuraLookup
+			-- Select the state that actually matches the result from AuraLookup
 			if highlight then
 				highlight = show
 			else

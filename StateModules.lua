@@ -28,9 +28,9 @@ local GetBorderHighlight = addon.GetBorderHighlight
 ------------------------------------------------------------------------------
 
 if playerClass == "WARLOCK" or playerClass == "PALADIN" then
-	local POWER_TYPE, SPELL_POWER
+	local POWER_TYPE, SPELL_POWER, MAX_POWER
 	if playerClass == "WARLOCK"  then
-		POWER_TYPE, MAX_POWER = "SOUL_SHARDS", 10
+		POWER_TYPE, MAX_POWER = "SOUL_SHARDS", 3
 	else
 		POWER_TYPE, MAX_POWER = "HOLY_POWER", MAX_HOLY_POWER
 	end
@@ -39,14 +39,21 @@ if playerClass == "WARLOCK" or playerClass == "PALADIN" then
 
 	local powerState = addon:NewStateModule(POWER_TYPE)
 	powerState.keywords = { POWER_TYPE }
+	powerState.features = { stacks = true, highlight = true, highlightThreshold = true, highlightMaxThreshold = MAX_POWER }
+	if playerClass == "WARLOCK"  then
+		powerState.defaults = { highlightThreshold = 1 }
+	else
+		powerState.defaults = { highlightThreshold = MAX_POWER }
+	end
 
 	function powerState:PostEnable()
 		self:RegisterEvent("UNIT_POWER")
 	end
 
 	function powerState:Test(aura)
+		local pref = self.db.profile
 		local power = UnitPower("player", SPELL_POWER)
-		return true, power, false, nil, power == MAX_POWER, true
+		return pref.stacks, power, false, nil, pref.highlight and power >= pref.highlightThreshold, true
 	end
 
 	function powerState:UNIT_POWER(event, unit, type)
@@ -65,18 +72,21 @@ if playerClass == "ROGUE" or playerClass == "DRUID" then
 	local GetComboPoints = GetComboPoints
 	local MAX_COMBO_POINTS = MAX_COMBO_POINTS
 
-	local comboPoints = addon:NewStateModule("ComboPoints")
+	local comboPoints = addon:NewStateModule("COMBO_POINTS")
 	comboPoints.keywords = { "COMBO_POINTS" }
 	comboPoints.auraType = "regular"
 	comboPoints.specialTarget = "target"
+	comboPoints.features = { stacks = true, highlight = true, highlightThreshold = true, highlightMaxThreshold = MAX_COMBO_POINTS }
+	comboPoints.defaults = { highlightThreshold = MAX_COMBO_POINTS }
 
 	function comboPoints:PostEnable()
 		self:RegisterEvent('UNIT_COMBO_POINTS')
 	end
 
 	function comboPoints:Test(_, unit)
+		local pref = self.db.profile
 		local points = GetComboPoints("player", "target")
-		return true, points, false, nil, points == MAX_COMBO_POINTS, "glowing"
+		return pref.stacks, points, false, nil, pref.highlight and points >= pref.highlightThreshold, true
 	end
 
 	function comboPoints:UNIT_COMBO_POINTS(_, unit)
@@ -101,7 +111,7 @@ if playerClass == "DRUID" then
 
 	local isMoonkin, direction, power
 
-	local eclipseState = addon:NewStateModule("Eclipse")
+	local eclipseState = addon:NewStateModule("Eclipse energy") -- L['Eclipse energy']
 	eclipseState.keywords = { "LUNAR_ENERGY", "SOLAR_ENERGY" }
 
 	function eclipseState:PostEnable()
@@ -162,8 +172,9 @@ end
 
 if playerClass == "SHAMAN" then
 
-	local totemState = addon:NewStateModule("Totems")
+	local totemState = addon:NewStateModule("Totem timers") -- L['Totem timers']
 	totemState.keywords = { "TOTEM" }
+	totemState.features = { countdown = true, highlight = true }
 
 	function totemState:PostEnable()
 		self:RegisterEvent('PLAYER_TOTEM_UPDATE')
@@ -179,7 +190,8 @@ if playerClass == "SHAMAN" then
 		for index = 1, 4 do
 			local haveTotem, name, startTime, duration = GetTotemInfo(index)
 			if haveTotem and name and strlower(name) == spell then
-				return false, nil, startTime and duration, startTime + duration, true, "BuffMine"
+				local pref = self.db.profile
+				return false, nil, pref.countdown and startTime and duration, startTime + duration, pref.highlight, "BuffMine"
 			end
 		end
 	end
@@ -213,7 +225,7 @@ if healthThresholds then
 		tinsert(keywords, "ABOVE"..threshold)
 	end
 
-	local healthState = addon:NewStateModule("Health")
+	local healthState = addon:NewStateModule("Health threshold") --L['Health threshold']
 	healthState.auraType = "regular"
 	healthState.states = {}
 	healthState.keywords = keywords
@@ -265,7 +277,7 @@ if healthThresholds then
 		local state = self:GetState(unit)
 		if state then
 			self:Debug('Test(', condition, unit, '): below:', below, below and state <= below, "above:", above, above and state >= above)
-			return false, nil, false, nil, (below and state <= below) or (above and state >= above), "glowing"
+			return false, nil, false, nil, (below and state <= below) or (above and state >= above), true
 		end
 	end
 
@@ -277,9 +289,10 @@ end
 
 local LibDispellable = LibStub('LibDispellable-1.0')
 
-local dispellState = addon:NewStateModule("Dispell")
+local dispellState = addon:NewStateModule("Dispel") -- L['Dispel']
 dispellState.auraType = "regular"
 dispellState.keywords = {"DISPELLABLE"}
+dispellState.features = { countdown = true, highlight = true }
 
 function dispellState:Test(_, unit, _, _, spell)
 	local offensive = UnitIsDebuffable(unit)
@@ -290,7 +303,8 @@ function dispellState:Test(_, unit, _, _, spell)
 		end
 	end
 	if maxExpirationTime then
-		return false, nil, true, maxExpirationTime, true, GetBorderHighlight(offensive, false)
+		local pref = self.db.profile
+		return false, nil, pref.countdown, maxExpirationTime, pref.highlight, GetBorderHighlight(offensive, false)
 	end
 end
 
@@ -298,9 +312,10 @@ end
 -- Interrupt
 ------------------------------------------------------------------------------
 
-local interruptState = addon:NewStateModule("Interrupt")
+local interruptState = addon:NewStateModule("Interrupt") -- L['Interrupt']
 interruptState.specialTarget = "foe"
 interruptState.keywords = { "INTERRUPTIBLE" }
+interruptState.features = { countdown = true, highlight = true }
 
 function interruptState:PostEnable()
 	self:RegisterEvent('UNIT_SPELLCAST_CHANNEL_START', "SpellCastChanged")
@@ -330,7 +345,7 @@ function interruptState:Test(_, unit, _, _, spell)
 	end
 	self:Debug('Casting/channelling', name, endTime, notInterruptible)
 	if name and endTime and not notInterruptible then
-		return false, nil, true, endTime/1000, true, true
+		local pref = self.db.profile
+		return false, nil, pref.highlight.countdown, endTime/1000, pref.highlight, true
 	end
 end
-

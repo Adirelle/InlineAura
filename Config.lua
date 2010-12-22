@@ -357,8 +357,12 @@ local STATUS_LABELS = {
 local keywordList = {}
 function spellSpecificHandler:GetKeywordList()
 	wipe(keywordList)
-	for keyword in pairs(addon.allKeywords) do
-		keywordList[keyword] = L[keyword]
+	for keyword, module in pairs(addon.allKeywords) do
+		local text = L[keyword]
+		if not module:IsEnabled() then
+			text = "|cff777777"..text.."|r"
+		end
+		keywordList[keyword] = text
 	end
 	return keywordList
 end
@@ -748,7 +752,7 @@ end
 -- The spell options themselves
 
 local spellOptions = {
-	name = L['Spell specific settings'],
+	name = L['Spells'],
 	type = 'group',
 	handler = spellSpecificHandler,
 	get = 'Get',
@@ -907,6 +911,147 @@ local spellOptions = {
 }
 
 -----------------------------------------------------------------------------
+-- Module options
+-----------------------------------------------------------------------------
+
+local moduleHandler = {}
+local moduleOptions = {
+	name = L['Modules'],
+	type = 'group',
+	handler = moduleHandler,
+	get = 'Get',
+	set = 'Set',
+	args = {
+		current = {
+			name = L['Current module'],
+			type = 'select',
+			order = 10,
+			values = 'GetModuleList',
+			get = 'GetCurrent',
+			set = 'SetCurrent',
+		},
+		options = {
+			name = L['Module settings'],
+			type = 'group',
+			inline = true,
+			hidden = 'HasNoCurrent',
+			order = 20,
+			args = {
+				enabled = {
+					name = L['Enabled'],
+					desc = L['Should the module be used ?'],
+					type = 'toggle',
+					order = 10,
+					get = 'IsEnabled',
+					set = 'SetEnabled',
+				},
+				countdown = {
+					name = L['Show countdown'],
+					desc = L['Should the countdown provided by this module be displayed ?'],
+					type = 'toggle',
+					order = 20,
+					disabled = 'IsDisabled',
+					hidden = 'HasNotFeature',
+				},
+				stacks = {
+					name = L['Show stack count'],
+					desc = L['Should the stack count provided by this module be displayed ?'],
+					type = 'toggle',
+					order = 30,
+					disabled = 'IsDisabled',
+					hidden = 'HasNotFeature',
+				},
+				highlight = {
+					name = L['Highlight'],
+					desc = L['Should this module highlight the button ?'],
+					type = 'toggle',
+					order = 40,
+					disabled = 'IsDisabled',
+					hidden = 'HasNotFeature',
+				},
+				highlightThreshold = {
+					name = L['Highlight threshold'],
+					desc = L['This module only cause highlighting if the stack count is equal or above this threshold.'],
+					type = 'range',
+					min = 1,
+					step = 1,
+					order = 40,
+					disabled = 'IsHighlightThresholdDisabled',
+				},
+				_keywords = {
+					name = function(info) return info.handler:GetKeywordList() end,
+					type = 'description',
+					order = -1,
+				},
+			},
+		},
+	},
+}
+
+do
+	local t = {}
+	function moduleHandler:GetModuleList()
+		wipe(t)
+		for name, module in addon:IterateStateModules() do
+			if module.db.profile.enabled then
+				t[name] =  L[name]
+			else
+				t[name] = format("|cff777777%s|r", L[name])
+			end
+		end
+		return t
+	end
+end
+
+function moduleHandler:GetCurrent() return self.name end
+function moduleHandler:HasNoCurrent() return not self.name end
+
+function moduleHandler:SetCurrent(_, name)
+	self.name = name
+	local module = addon:GetModule(name)
+	self.current = module
+	local threshold = moduleOptions.args.options.args.highlightThreshold
+	if module.features and module.features.highlight and module.features.highlightThreshold then
+		threshold.max = module.features.highlightMaxThreshold or 100
+		threshold.hidden = false
+	else
+		threshold.hidden = true
+	end
+end
+
+function moduleHandler:GetKeywordList()
+	return self.current and format(L["This module provides the following keyword(s) for use as an alias: %s."], table.concat(self.current.keywords, ", ")) or ""
+end
+
+function moduleHandler:IsEnabled() return self.current and self.current.db.profile.enabled end
+function moduleHandler:IsDisabled() return not self:IsEnabled() end
+
+function moduleHandler:SetEnabled(_, value)
+	if not self.current then return end
+	self.current.db.profile.enabled = value
+	if value then
+		self.current:Enable()
+	else
+		self.current:Disable()
+	end
+	addon:RequireUpdate(true)
+end
+
+function moduleHandler:IsHighlightThresholdDisabled()
+	return self:IsDisabled() or (self.current and not self.current.db.profile.highlight)
+end
+
+function moduleHandler:HasNotFeature(info) return not (self.current and self.current.features and self.current.features[info[#info]]) end
+function moduleHandler:Get(info) return self.current and self.current.db.profile[info[#info]] end
+
+function moduleHandler:Set(info, value)
+	if not self.current then return end
+	self.current.db.profile[info[#info]] = value
+	addon:RequireUpdate(true)
+end
+
+
+-----------------------------------------------------------------------------
 -- Setup
 -----------------------------------------------------------------------------
 
@@ -920,6 +1065,9 @@ AceConfig:RegisterOptionsTable('InlineAura-main', options)
 -- Register spell specific options
 AceConfig:RegisterOptionsTable('InlineAura-spells', spellOptions)
 
+-- Register module options
+AceConfig:RegisterOptionsTable('InlineAura-modules', moduleOptions)
+
 -- Register profile options
 local dbOptions = LibStub('AceDBOptions-3.0'):GetOptionsTable(addon.db)
 LibStub('LibDualSpec-1.0'):EnhanceOptions(dbOptions, addon.db)
@@ -928,7 +1076,8 @@ AceConfig:RegisterOptionsTable('InlineAura-profiles', dbOptions)
 -- Create Blizzard AddOn option frames
 local mainTitle = L['Inline Aura']
 local mainPanel = AceConfigDialog:AddToBlizOptions('InlineAura-main', mainTitle)
-spellPanel = AceConfigDialog:AddToBlizOptions('InlineAura-spells', L['Spell specific settings'], mainTitle)
+spellPanel = AceConfigDialog:AddToBlizOptions('InlineAura-spells', L['Spells'], mainTitle)
+AceConfigDialog:AddToBlizOptions('InlineAura-modules', L['Modules'], mainTitle)
 AceConfigDialog:AddToBlizOptions('InlineAura-profiles', L['Profiles'], mainTitle)
 
 -- Update selected spell on database change

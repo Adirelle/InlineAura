@@ -338,7 +338,7 @@ local spellPanel
 local spellSpecificHandler = {}
 
 local _, playerClass = UnitClass("player")
-local isPetClass = (playerClass == "WARLOCK" or playerclass == "MAGE" or playerClass == "DEATHKNIGHT" or playerClass == "HUNTER")
+local isPetClass = (playerClass == "WARLOCK" or playerClass == "MAGE" or playerClass == "DEATHKNIGHT" or playerClass == "HUNTER")
 
 -- Constants
 
@@ -757,10 +757,10 @@ function spellSpecificHandler:ValidateAliases(info, value)
 	end
 	if #invalids > 0 then
 		ShowErrorMessage(format(L["Invalid spell names:\n%s."], table.concat(invalids, "\n")))
+		return false
 	else
 		return true
 	end
-	return valid
 end
 
 -- The spell options themselves

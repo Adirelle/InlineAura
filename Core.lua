@@ -1119,7 +1119,7 @@ function addon:UpgradeProfile()
 								spell.auraType = "regular"
 							end
 						elseif not units then
-							if auraType == "special" and not spell.special and spell.aliases then
+							if spell.auraType == "special" and not spell.special and spell.aliases then
 								spell.special = spell.aliases[1]
 								spell.aliases = nil
 							end

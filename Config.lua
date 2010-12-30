@@ -1115,5 +1115,5 @@ spellPanel:SetScript('OnEvent', function(self)
 end)
 spellPanel:RegisterEvent('SPELLS_CHANGED')
 spellPanel:RegisterEvent('UPDATE_MACROS')
-spellPanel:RegisterEvent('ACTIONBAR_SLOT_CHANGED')
+spellPanel:RegisterEvent('ACTIONBAR_HIDEGRID')
 

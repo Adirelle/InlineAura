@@ -661,49 +661,59 @@ end
 
 -- Spell name validation
 
--- Convert to lowercase, trim leading and trailing spaces, and convert Unicode non-breaking space to simple space
-local function normalize(name)
-	return gsub(strtrim(strlower(name)), "\194\160", " ")
-end
+local ValidateName
+do
+	local cache = {}
 
-local id = 0
-local function doValidateName(value)
-	if addon.allKeywords[value] then
-		return value, 'keyword'
+	-- Convert to lowercase, trim leading and trailing spaces, and convert Unicode non-breaking space to simple space
+	local function normalize(name)
+		return gsub(strtrim(strlower(name)), "\194\160", " ")
 	end
-	local spellId = tonumber(strmatch('spell:(%d+)', value))
-	if spellId then
-		return GetSpellInfo(spellId), 'spell'
-	end
-	local knownSpell = GetSpellInfo(value)
-	if knownSpell then
-		return knownSpell, 'spell'
-	end
-	value = normalize(value)
-	while id < 100000 do -- Arbitrary high spell id
-		local name = GetSpellInfo(id)
-		id = id + 1
-		if name and normalize(name) == value then
-			return name, 'spell'
+
+	local id = 0
+	local function LookupName(value, normalizedValue)
+		if addon.allKeywords[value] then
+			return value, 'keyword'
+		end
+		local spellId = tonumber(strmatch('spell:(%d+)', value))
+		if spellId then
+			return GetSpellInfo(spellId), 'spell'
+		end
+		local knownSpell = GetSpellInfo(value)
+		if knownSpell then
+			return knownSpell, 'spell'
+		end
+		while id < 100000 do -- Arbitrary high spell id
+			id = id + 1
+			local name = GetSpellInfo(id)
+			if name then
+				local normalizedName = normalize(name)
+				if normalizedName == normalizedValue then
+					return name, 'spell'
+				else
+					cache[normalizedName] = name..'|spell'
+				end
+			end
 		end
 	end
-end
 
-local validNames = setmetatable({}, {
-	__mode = 'kv',
-	__index = function(self, key)
-		local name, type = doValidateName(key)
-		local result = name and strjoin('|', name, type) or false
-		self[key] = result
-		return result
+	local function ResolveName(name, normalizedName)
+		local realName, nameType = LookupName(name, normalizedName)
+		if realName and nameType then
+			cache[normalizedName] = strjoin('|', realName, nameType)
+		end
+		return realName, nameType
 	end
-})
 
-local function ValidateName(name)
-	if type(name) == "string" then
-		local info = validNames[name]
-		if info then
-			return strsplit('|', info)
+	function ValidateName(name)
+		if type(name) == "string" then
+			local normalizedName = normalize(name)
+			local info = cache[normalizedName]
+			if info then
+				return strsplit('|', info)
+			else
+				return ResolveName(name, normalizedName)
+			end
 		end
 	end
 end

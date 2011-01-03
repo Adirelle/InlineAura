@@ -785,6 +785,7 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		-- Contributed by brotherhobbes
 		SelfBuffs(
 				588, -- Inner Fire
+			73413, -- Inner Will
 			15286, -- Vampiric Embrace
 			47585  -- Dispersion
 		)

@@ -1200,11 +1200,13 @@ function addon:OnEnable()
 
 		local UpdateButtonState_Hook = addon.UpdateButtonState_Hook
 		local UpdateButtonUsable_Hook = addon.UpdateButtonUsable_Hook
+		local UpdateButtonCooldown_Hook = addon.UpdateButtonCooldown_Hook
 
 		-- Secure hooks
 		hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
 		hooksecurefunc('ActionButton_UpdateState', function(...) return safecall(UpdateButtonState_Hook, ...) end)
 		hooksecurefunc('ActionButton_UpdateUsable', function(...) return safecall(UpdateButtonUsable_Hook, ...) end)
+		hooksecurefunc('ActionButton_UpdateCooldown', function(...) return safecall(UpdateButtonCooldown_Hook, ...) end)
 		hooksecurefunc('ActionButton_Update', function(...) return safecall(ActionButton_Update_Hook, ...) end)
 
 		-- Raw hooks (hopefully not breaking anything)

@@ -368,9 +368,17 @@ local ActionButton_HideOverlayGlow = ActionButton_HideOverlayGlow
 local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow
 
 local function IsGlowing(state)
-	return state.highlight == "glowing"
-		or (state.spellId and IsSpellOverlayed(state.spellId))
-		or (state.action == "macro" and overlayedSpells[state.spell])
+	if (state.spellId and IsSpellOverlayed(state.spellId))
+		or (state.action == "macro" and overlayedSpells[state.spell]) then
+		return true
+	elseif state.highlight == "glowing" then
+		local usable, noPower = IsUsableSpell(state.spell)
+		if usable or noPower then
+			local start, duration, enable = GetSpellCooldown(state.spell)
+			dprint('IsGlowing', state.spell, '=>', start, duration, enable)
+			return enable == 0 or start == 0 or duration <= 1.5
+		end
+	end
 end
 
 function addon.ActionButton_HideOverlayGlow_Hook(button)
@@ -419,6 +427,9 @@ function addon.UpdateButtonState_Hook(button)
 		button:SetChecked(true)
 		return SetVertexColor(texture, unpack(color))
 	else
+		if state.highlight == "glowing" then
+			addon.ActionButton_UpdateOverlayGlow_Hook(button)
+		end
 		return texture:SetVertexColor(1, 1, 1)
 	end
 end
@@ -433,3 +444,9 @@ function addon.UpdateButtonUsable_Hook(button)
 	end
 end
 
+function addon.UpdateButtonCooldown_Hook(button)
+	local state = buttons[button]
+	if state and state.highlight == "glowing" then
+		return addon.ActionButton_UpdateOverlayGlow_Hook(button)
+	end
+end

@@ -271,7 +271,6 @@ if healthThresholds then
 	end
 
 	function healthState:Test(condition, unit, onlyMyBuffs, onlyMyDebuffs, spell)
-		if not IsUsableSpell(spell) or (GetSpellCooldown(spell) or 0) ~= 0 then return end
 		local below = tonumber(strmatch(condition, '^BELOW(%d+)$'))
 		local above = tonumber(strmatch(condition, '^ABOVE(%d+)$'))
 		local state = self:GetState(unit)
@@ -334,11 +333,6 @@ function interruptState:SpellCastChanged(event, unit)
 end
 
 function interruptState:Test(_, unit, _, _, spell)
-	local start, duration, enable = GetSpellCooldown(spell)
-	if enable == 1 and (duration or 0) > 1.5 then
-		self:Debug(spell, 'is in cooldown')
-		return
-	end
 	local name, _, _, _, _, endTime, _, _, notInterruptible = UnitCastingInfo(unit)
 	if not name then
 		name, _, _, _, _, endTime, _, notInterruptible = UnitChannelInfo(unit)

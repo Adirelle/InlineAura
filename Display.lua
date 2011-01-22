@@ -177,12 +177,12 @@ end
 
 function countdownProto:_SetValue(value)
 	if not value then
+		self:Hide()
 		CancelTimer(self)
 		self.timeLeft = nil
-		return self:Hide()
 	else
+		self:Show()
 		self:OnUpdate(GetTime())
-		return self:Show()
 	end
 end
 
@@ -195,9 +195,7 @@ function countdownProto:OnUpdate(now)
 	local displayTime, delay = self:getCountdownText()
 	self:SetText(displayTime)
 	self:UpdateFont()
-	if delay then
-		return ScheduleTimer(self, min(delay, timeLeft))
-	end
+	ScheduleTimer(self, min(delay, timeLeft))
 end
 
 -- Countdown formatting
@@ -212,10 +210,10 @@ function countdownProto:GetPreciseCountdownText()
 		return format("%d:%02d", floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
 	elseif timeLeft >= self.decimalThreshold then
 		return tostring(floor(timeLeft)), timeLeft % 1
-	elseif timeLeft >= 0 then
+	elseif timeLeft > 0 then
 		return format("%.1f", floor(timeLeft*10)/10), 0
 	else
-		return "0"
+		return "0", 0
 	end
 end
 
@@ -228,7 +226,7 @@ function countdownProto:GetImpreciseCountdownText()
 	elseif timeLeft > 0 then
 		return tostring(floor(timeLeft)), timeLeft % 1
 	else
-		return "0"
+		return "0", 0
 	end
 end
 

@@ -37,7 +37,11 @@ local L = addon.L
 local db
 
 local auraChanged = {}
-local unitGUIDs = {}
+local tokenChanged = {}
+
+local tokenGUIDs = {}
+local tokenUnits = {}
+
 local needUpdate = false
 local configUpdated = false
 
@@ -112,9 +116,6 @@ local DEFAULT_OPTIONS = {
 			['*'] = 'global'
 		},
 		enabledUnits = {
-			player = true,
-			pet = true,
-			target = true,
 			focus = true,
 			mouseover = false,
 		},
@@ -473,18 +474,6 @@ local function GuessMacroTarget(index)
 	end
 end
 
-local function GuessSpellTarget(helpful)
-	if IsModifiedClick("SELFCAST") then
-		return "player"
-	elseif IsModifiedClick("FOCUSCAST") then
-		return "focus"
-	elseif helpful and not UnitIsBuffable("target") and (addon.db.profile.emulateAutoSelfCast or GetCVarBool("autoSelfCast")) then
-		return "player"
-	else
-		return "target"
-	end
-end
-
 local function ApplyVehicleModifier(unit)
 	if UnitHasVehicleUI("player") then
 		if unit == "player" then
@@ -587,19 +576,10 @@ local function UpdateButtonAura(self, force)
 			state.spell, state.targetHint, state.specific = spell, targetHint, specific
 			force = true
 		end
-		if targetHint == "friend" or targetHint == "foe" then
-			target = GuessMacroTarget(state.param)
-		end
+		target = (targetHint == "friend" or targetHint == "foe") and GuessMacroTarget(state.param) or tokenUnits[targetHint]
 	else
 		spell, targetHint, specific = state.spell, state.targetHint, state.specific
-	end
-
-	if not target then
-		if targetHint == "friend" or targetHint == "foe" then
-			target = FilterEmpty(SecureButton_GetModifiedUnit(self)) or GuessSpellTarget(targetHint == "friend")
-		else
-			target = targetHint
-		end
+		target = (targetHint == "friend" or targetHint == "foe") and FilterEmpty(SecureButton_GetModifiedUnit(self)) or tokenUnits[targetHint]
 	end
 
 	-- Get the GUID
@@ -663,10 +643,11 @@ local function UpdateAction_Hook(self, forceUpdate)
 		state.spellId = (action == "spell") and tonumber(param)
 	end
 	if forceUpdate or action ~= state.action or param ~= state.param then
-		state.action, state.param = action, param
-		activeButtons[self] = (action and param and state) or nil
+		state.action, state.param = action, param		
+		local targetHint = "*"
 		if action ~= "macro" then
-			local spell, targetHint, specific = AnalyzeAction(action, param)
+			local spell, specific
+			spell, targetHint, specific = AnalyzeAction(action, param)
 			if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
 				state.spell, state.targetHint, state.specific = spell, targetHint, specific
 				forceUpdate = true
@@ -680,6 +661,7 @@ local function UpdateAction_Hook(self, forceUpdate)
 			self:Debug("UpdateAction_Hook: action changed =>", action, param)
 			--@end-debug@
 		end
+		activeButtons[self] = action and param and targetHint or nil
 		return UpdateButtonAura(self, forceUpdate)
 	end
 end
@@ -772,15 +754,14 @@ local function UpdateConfig()
 	addon:UpdateWidgets()
 end
 
-local mouseoverUnit
 local function UpdateMouseover(elapsed)
 	-- Track mouseover changes, since most events aren't fired for mouseover
-	if unitGUIDs['mouseover'] ~= UnitGUID('mouseover') then
+	if tokenGUIDs['mouseover'] ~= UnitGUID('mouseover') then
 		addon:UPDATE_MOUSEOVER_UNIT("OnUpdate-changed")
-	elseif not mouseoverUnit then
+	elseif tokenUnits['mouseover'] == 'mouseover' then
 		addon.mouseoverTimer = addon.mouseoverTimer + elapsed
 		if addon.mouseoverTimer > 0.5 then
-			addon:UPDATE_MOUSEOVER_UNIT("OnUpdate-timer")
+			addon:AuraChanged('mouseover')
 		end
 	end
 end
@@ -798,9 +779,15 @@ local function UpdateButtons()
 		for button in pairs(buttons) do
 			UpdateAction_Hook(button, true)
 		end
-	else
-		for button in pairs(activeButtons) do
+	elseif needUpdate then
+		for button, hint in pairs(activeButtons) do
 			UpdateButtonAura(button, needUpdate)
+		end
+	else
+		for button, hint in pairs(activeButtons) do
+			if hint == "*" or tokenChanged[hint] or auraChanged[tokenGUIDs[hint]] then
+				UpdateButtonAura(button, needUpdate)
+			end
 		end
 	end
 end
@@ -812,7 +799,7 @@ function addon:OnUpdate(elapsed)
 	end
 
 	-- Watch for mouseover aura if we can't get UNIT_AURA events
-	if unitGUIDs['mouseover'] then
+	if tokenGUIDs['mouseover'] then
 		safecall(UpdateMouseover, elapsed)
 	end
 
@@ -823,10 +810,11 @@ function addon:OnUpdate(elapsed)
 	end
 
 	-- Update buttons
-	if next(auraChanged) or needUpdate or configUpdated then
+	if next(auraChanged) or next(tokenChanged) or needUpdate or configUpdated then
 		safecall(UpdateButtons)
 		needUpdate, configUpdated = false, false
 		wipe(auraChanged)
+		wipe(tokenChanged)
 	end
 
 end
@@ -846,58 +834,29 @@ function addon:RegisterButtons(prefix, count)
 end
 
 ------------------------------------------------------------------------------
--- Event handling
+-- Tokens and GUIDs handling
 ------------------------------------------------------------------------------
 
-function addon:AuraChanged(unit)
-	local oldGUID = unitGUIDs[unit]
-	local realUnit = ApplyVehicleModifier(unit)
-	local guid = realUnit and db.profile.enabledUnits[unit] and UnitGUID(realUnit)
-	if oldGUID and not guid then
-		auraChanged[oldGUID] = true
+function addon:UpdateToken(token, unitHint)	
+	local guid, unit
+	if unitHint ~= "none" then
+		unit = ApplyVehicleModifier(unitHint or token)
+		guid = unit and UnitGUID(unit)
 	end
-	if guid then
-		auraChanged[guid] = true
-	end
-	unitGUIDs[unit] = guid
-	if guid and UnitIsUnit(unit, 'mouseover') then
-		--@debug@
-		dprint('AuraChanged:', unit, 'is mouseover')
-		--@end-debug@
-		self.mouseoverTimer = 0
-	end
-end
-
-function addon:UNIT_ENTERED_VEHICLE(event, unit)
-	if unit == 'player' then
-		return self:AuraChanged("player")
-	end
-end
-
-function addon:UNIT_AURA(event, unit)
-	return self:AuraChanged(unit)
-end
-
-function addon:UNIT_PET(event, unit)
-	if unit == 'player' then
-		return self:AuraChanged("pet")
-	end
-end
-
-function addon:PLAYER_ENTERING_WORLD(event)
-	for unit, enabled in pairs(db.profile.enabledUnits) do
-		if enabled then
-			self:AuraChanged(unit)
+	tokenUnits[token] = unit
+	local oldGUID = tokenGUIDs[token]
+	if guid ~= oldGUID then
+		if guid then
+			auraChanged[guid] = true
+		elseif oldGUID then
+			auraChanged[oldGUID] = true
 		end
+		--@debug@
+		dprint(token, "changed:", oldGUID, "=>", guid)
+		--@end-debug@
+		tokenGUIDs[token] = guid
+		tokenChanged[token] = true
 	end
-end
-
-function addon:PLAYER_FOCUS_CHANGED(event)
-	return self:AuraChanged("focus")
-end
-
-function addon:PLAYER_TARGET_CHANGED(event)
-	return self:AuraChanged("target")
 end
 
 local function GetUnitForMouseover()
@@ -928,34 +887,91 @@ local function GetUnitForMouseover()
 	elseif UnitIsUnit("mouseover", "focus") then
 		return "focus"
 	end
+	return "mouseover"
 end
+
+function addon:UpdateTokens(which)
+	if which == "all" then
+		self:UpdateToken("player")
+	end
+	if which == "all" or which == "pet" then
+		self:UpdateToken("pet")
+	end
+	if which == "all" or which == "focus" then
+		self:UpdateToken("focus", db.profile.enabledUnits.focus and "focus" or "none")
+	end
+	if which == "all" or which == "target" or which == "focus" then
+		local target = "target"
+		if IsModifiedClick("SELFCAST") then
+			target = "player"
+		elseif IsModifiedClick("FOCUSCAST") then
+			target = "focus"
+		end
+		self:UpdateToken("target", target)
+		self:UpdateToken("friend", (UnitIsBuffable(target) and target) or ((addon.db.profile.emulateAutoSelfCast or GetCVarBool("autoSelfCast")) and "player") or "none")
+		self:UpdateToken("foe", UnitIsDebuffable(target) and target or "none")
+	end
+	self:UpdateToken("mouseover", db.profile.enabledUnits.mouseover and GetUnitForMouseover() or "none")
+end
+
+function addon:AuraChanged(unit)
+	local guid = tokenGUIDs[unit]
+	if guid then
+		--@debug@
+		if not auraChanged[guid] then
+			dprint(unit, "aura changed", guid)
+		end
+		--@end-debug@
+		auraChanged[guid] = true
+		if UnitIsUnit(unit, "mouseover") then
+			self.mouseoverTimer = 0
+		end
+	end
+end
+
+------------------------------------------------------------------------------
+-- Event handling
+------------------------------------------------------------------------------
+
+function addon:UNIT_AURA(event, unit)
+	self:AuraChanged(unit)
+end
+
+function addon:UNIT_PET(event, unit)
+	if unit == "player" then
+		self:UpdateTokens("pet")
+	end
+end
+addon.UNIT_ENTERED_VEHICLE = addon.UNIT_PET
+
+function addon:PLAYER_ENTERING_WORLD(event)
+	self:UpdateTokens("all")
+end
+
+function addon:PLAYER_FOCUS_CHANGED(event)
+	self:UpdateTokens("focus")
+end
+
+function addon:PLAYER_TARGET_CHANGED(event)
+	self:UpdateTokens("target")
+end
+addon.MODIFIER_STATE_CHANGED = addon.PLAYER_TARGET_CHANGED
 
 function addon:UPDATE_MOUSEOVER_UNIT(event)
-	--@debug@
-	dprint('UPDATE_MOUSEOVER_UNIT', event)
-	--@end-debug@
-	mouseoverUnit = GetUnitForMouseover()
-	return self:AuraChanged("mouseover")
-end
-
-function addon:MODIFIER_STATE_CHANGED(event)
-	return self:RequireUpdate()
+	self:UpdateTokens("mouseover")	
 end
 
 function addon:CVAR_UPDATE(event, name)
 	if name == 'AUTO_SELF_CAST_TEXT' then
-		--@debug@
-		dprint('CVAR_UPDATE', event)
-		--@end-debug@
 		return self:RequireUpdate(true)
 	end
 end
 
-function addon:UPDATE_BINDINGS(event, name)
+function addon:UPDATE_BINDINGS(event)
 	return self:RequireUpdate(true)
 end
 
-function addon:UPDATE_MACROS(event, name)
+function addon:UPDATE_MACROS(event)
 	return self:RequireUpdate(true)
 end
 
@@ -968,7 +984,8 @@ function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
 	if overlayedSpells[name] ~= enable then
 		addon.dprint("Spell glowing", name, '=>', enable)
 		overlayedSpells[name] = enable
-		for button, state in pairs(activeButtons) do
+		for button in pairs(activeButtons) do
+			local state = buttons[button]
 			if state.action == "macro" and state.spell == name then
 				self.ActionButton_UpdateOverlayGlow_Hook(button)
 			end

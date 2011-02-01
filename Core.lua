@@ -1234,8 +1234,15 @@ function addon:OnEnable()
 		_G.ActionButton_UpdateOverlayGlow_Hook = addon.ActionButton_UpdateOverlayGlow_Hook
 
 		-- Our bucket thingy
+		local delay = 0
 		updateFrame = CreateFrame("Frame")
-		updateFrame:SetScript('OnUpdate', function(_, elapsed) return self:OnUpdate(elapsed) end)
+		updateFrame:SetScript('OnUpdate', function(_, elapsed) 
+			delay = delay + elapsed
+			if delay >= 0.09 then
+				self:OnUpdate(delay) 
+				delay = 0
+			end
+		end)
 
 		-- standard buttons
 		self:RegisterButtons("ActionButton", 12)

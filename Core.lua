@@ -717,6 +717,9 @@ local function InitializeButton(self)
 	elseif not self.Debug then
 		self.Debug = NOOP
 	end
+	if AdiProfiler then
+		AdiProfiler:RegisterFrame(self, "ia:ActionButton")
+	end
 	if self.__LAB_Version then
 		self.__IA_GetAction = LAB_GetAction
 		self.__IA_Update = LAB_Update
@@ -1269,3 +1272,28 @@ end
 
 -- InterfaceOptionsFrame spy
 CreateFrame("Frame", nil, InterfaceOptionsFrameAddOns):SetScript('OnShow', LoadConfigGUI)
+
+------------------------------------------------------------------------------
+-- Profiling stuff
+------------------------------------------------------------------------------
+
+if AdiProfiler then
+	-- "Interesting functions" 
+	AdiProfiler:RegisterFunction(CheckAura, "ia:CheckAura")
+	AdiProfiler:RegisterFunction(AuraLookup, "ia:AuraLookup")
+	AdiProfiler:RegisterFunction(UpdateButtons, "ia:UpdateButtons")
+	AdiProfiler:RegisterFunction(UpdateButtonAura, "ia:UpdateButtonAura")
+	AdiProfiler:RegisterFunction(GetMacroAction, "ia:GetMacroAction")
+	AdiProfiler:RegisterFunction(AnalyzeAction, "ia:AnalyzeAction")
+	AdiProfiler:RegisterFunction(GuessMacroTarget, "ia:GuessMacroTarget")
+	AdiProfiler:RegisterFunction(FilterEmpty, "ia:FilterEmpty")
+	AdiProfiler:RegisterFunction(SecureButton_GetModifiedUnit, "ia:SecureButton_GetModifiedUnit")
+	AdiProfiler:RegisterFunction(UnitIsDebuffable, "ia:UnitIsDebuffable")
+	AdiProfiler:RegisterFunction(UnitIsBuffable, "ia:UnitIsBuffable")
+	AdiProfiler:RegisterFunction(UnitIsDebuffable, "ia:UnitIsDebuffable")
+	AdiProfiler:RegisterFunction(GetAuraToDisplay, "ia:GetAuraToDisplay")
+	AdiProfiler:RegisterFunction(UnitIsDebuffable, "ia:UnitIsDebuffable")
+
+	-- Hooks
+	AdiProfiler:RegisterFunction(UpdateAction_Hook, "ia:UpdateAction_Hook")
+end

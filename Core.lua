@@ -1307,9 +1307,9 @@ if AdiProfiler then
 	AdiProfiler:RegisterFunction(SecureButton_GetModifiedUnit, "ia:SecureButton_GetModifiedUnit")
 	AdiProfiler:RegisterFunction(UnitIsDebuffable, "ia:UnitIsDebuffable")
 	AdiProfiler:RegisterFunction(UnitIsBuffable, "ia:UnitIsBuffable")
-	AdiProfiler:RegisterFunction(UnitIsDebuffable, "ia:UnitIsDebuffable")
 	AdiProfiler:RegisterFunction(GetAuraToDisplay, "ia:GetAuraToDisplay")
-	AdiProfiler:RegisterFunction(UnitIsDebuffable, "ia:UnitIsDebuffable")
+	AdiProfiler:RegisterFunction(addon.UpdateTokens, "ia:UpdateTokens")
+	AdiProfiler:RegisterFunction(addon.UpdateToken, "ia:UpdateToken")
 
 	-- Hooks
 	AdiProfiler:RegisterFunction(UpdateAction_Hook, "ia:UpdateAction_Hook")

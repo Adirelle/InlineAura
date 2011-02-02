@@ -465,9 +465,15 @@ local function FindMacroOptions(...)
 	end
 end
 
-local function GuessMacroTarget(index)
+local macroOptionsMemo = setmetatable({}, {__index = function(self, index)
 	local body = assert(GetMacroBody(index), format("Can't find macro body for %q", index))
 	local options = FindMacroOptions(strsplit("\n", body))
+	self[index] = options or false
+	return options
+end})
+
+local function GuessMacroTarget(index)
+	local options = macroOptionsMemo[index]
 	if options then
 		local action, target = SecureCmdOptionParse(options)
 		return FilterEmpty(action) and FilterEmpty(target)
@@ -972,6 +978,7 @@ function addon:UPDATE_BINDINGS(event)
 end
 
 function addon:UPDATE_MACROS(event)
+	wipe(macroOptionsMemo)
 	return self:RequireUpdate(true)
 end
 

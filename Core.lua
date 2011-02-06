@@ -786,7 +786,7 @@ local function UpdateButtons()
 			UpdateAction_Hook(button, true)
 		end
 	elseif needUpdate then
-		for button, hint in pairs(activeButtons) do
+		for button in pairs(activeButtons) do
 			UpdateButtonAura(button, needUpdate)
 		end
 	else
@@ -816,7 +816,7 @@ function addon:OnUpdate(elapsed)
 	end
 
 	-- Update buttons
-	if next(auraChanged) or next(tokenChanged) or needUpdate or configUpdated then
+	if needUpdate or configUpdated or next(auraChanged) or next(tokenChanged) then
 		safecall(UpdateButtons)
 		needUpdate, configUpdated = false, false
 		wipe(auraChanged)
@@ -852,11 +852,6 @@ function addon:UpdateToken(token, unitHint)
 	tokenUnits[token] = unit
 	local oldGUID = tokenGUIDs[token]
 	if guid ~= oldGUID then
-		if guid then
-			auraChanged[guid] = true
-		elseif oldGUID then
-			auraChanged[oldGUID] = true
-		end
 		--@debug@
 		dprint(token, "changed:", oldGUID, "=>", guid)
 		--@end-debug@
@@ -921,7 +916,7 @@ function addon:UpdateTokens(which)
 end
 
 function addon:AuraChanged(unit)
-	local guid = tokenGUIDs[unit]
+	local guid = tokenGUIDs[unit] or UnitGUID(unit)
 	if guid then
 		--@debug@
 		if not auraChanged[guid] then

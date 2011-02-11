@@ -455,11 +455,26 @@ end
 
 local function FilterEmpty(v) if v and strtrim(tostring(v)) ~= "" and v ~= 0 then return v end end
 
+local optionPrefixes = {
+	['#showtooltip'] = true,
+	['#show'] = true,
+}
+for _, cmd in pairs({"CAST", "CASTRANDOM", "CASTSEQUENCE", "USE", "USERANDOM"}) do
+	for i = 1, 16 do
+		local alias = _G["SLASH_"..cmd..i]
+		if alias then
+			optionPrefixes[alias] = true
+		else
+			break
+		end
+	end
+end
+
 local function FindMacroOptions(...)
 	for i = 1, select('#', ...) do
 		local line = select(i, ...)
 		local prefix, suffix = strsplit(" ", strtrim(line), 2)
-		if suffix and (prefix == '#show' or prefix == '#showtooltip' or strsub(prefix, 1, 1) ~= "#") then
+		if prefix and suffix and optionPrefixes[strtrim(strlower(prefix))] then
 			return suffix
 		end
 	end

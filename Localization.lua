@@ -29,22 +29,27 @@ local L = setmetatable({}, {__index = function(self, key)
 end})
 addon.L = L
 
--- Hard-coded locales
+-- Hard-coded locales using keywords
 L["COMBO_POINTS"] = "Combo points"
 L["SOUL_SHARDS"] = "Soul shards"
-L["BELOW20"] = "Below 20% health"
-L["BELOW25"] = "Below 25% health"
-L["BELOW35"] = "Below 35% health"
-L["BELOW80"] = "Below 80% health"
-L["ABOVE20"] = "Above 20% health"
-L["ABOVE25"] = "Above 25% health"
-L["ABOVE35"] = "Above 35% health"
-L["ABOVE80"] = "Above 80% health"
+L["BELOWxx"] = "Below %d%% %s"
+L["ABOVExx"] = "Above %d%% %s"
 L["DISPELLABLE"] = "(De)buff you can dispell"
 L["INTERRUPTIBLE"] = "Interruptible spellcast"
 
 --@noloc[[
--- Locales from GlobalStrings.lua
+-- Using locales from GlobalStrings.lua
+do
+	for _, value in pairs{ 20, 25, 35, 80 } do
+		L["BELOW"..value] = format(L["BELOWxx"], value, HEALTH)
+		L["ABOVE"..value] = format(L["ABOVExx"], value, HEALTH)
+	end
+	local power = strlower(_G[select(2, UnitPowerType("player"))])
+	for _, value in pairs{ 40, 60, 80 } do
+		L["PWBELOW"..value] = format(L["BELOWxx"], value, power)
+		L["PWABOVE"..value] = format(L["ABOVExx"], value, power)
+	end
+end
 L["LUNAR_ENERGY"] = BALANCE_NEGATIVE_ENERGY
 L["SOLAR_ENERGY"] = BALANCE_POSITIVE_ENERGY
 L["HOLY_POWER"] = HOLY_POWER

@@ -258,22 +258,19 @@ if healthThresholds then
 				local pct = 100 * current / maxHealth
 				for i, threshold in ipairs(healthThresholds) do
 					if pct <= threshold then
-						healthState:Debug('GetState(', unit, '):', current, maxHealth, '=>', pct)
 						return threshold
 					end
 				end
-				healthState:Debug('GetState(', unit, '):', current, maxHealth, '=>', 100)
 				return 100
 			end
 		end
-		healthState:Debug('GetState(', unit, '):', current, maxHealth, '=>', nil)
 	end
 
 	function healthState:UNIT_HEALTH(event, unit)
 		local newState = self:GetState(unit)
 		if newState ~= self.states[unit] then
 			--@debug@
-			self:Debug('event, unit', self.states[unit], '=>', newState)
+			self:Debug(event, unit, ':', self.states[unit], '=>', newState)
 			--@end-debug@
 			self.states[unit] = newState
 			addon:AuraChanged(unit)
@@ -363,4 +360,85 @@ function interruptState:Test(_, unit, _, _, spell)
 		local pref = self.db.profile
 		return false, nil, pref.countdown, endTime/1000, pref.highlight, true
 	end
+end
+
+------------------------------------------------------------------------------
+-- Power state
+------------------------------------------------------------------------------
+
+local powerThresholds
+if playerClass == "WARRIOR" or playerClass == "HUNTER" then
+	powerThresholds = { 60 }
+elseif playerClass == "MAGE" then
+	powerThresholds = { 40 }
+elseif playerClass == "DRUID" then
+	powerThresholds = { 80 }
+end
+
+if powerThresholds then
+
+	local keywords = {}
+	local tests = {}
+	for i, threshold in ipairs(powerThresholds) do
+		tinsert(keywords, "PWBELOW"..threshold)
+		tinsert(keywords, "PWABOVE"..threshold)
+		local threshold = threshold
+		tests["PWBELOW"..threshold] = function(value) return value <= threshold end
+		tests["PWABOVE"..threshold] = function(value) return value >= threshold end
+	end
+
+	local powerState = addon:NewStateModule("Power threshold") --L['Power threshold']
+	powerState.auraType = "self"
+	powerState.keywords = keywords
+	powerState.features = {  highlight = true }
+
+	function powerState:PostEnable()
+		self:RegisterEvent('UNIT_POWER')
+		self:RegisterEvent('UNIT_POWER_MAX', 'UNIT_POWER')
+		self:RegisterEvent('UNIT_DISPLAYPOWER')
+		self:UNIT_DISPLAYPOWER('PostEnable', 'player')
+	end
+
+	function powerState:GetState()
+		local current, maxpower = UnitPower("player", self.powerIndex), UnitPowerMax("player", self.powerIndex)
+		if maxpower > 0 then
+			local pct = 100 * current / maxpower
+			for i, threshold in ipairs(powerThresholds) do
+				if pct <= threshold then
+					return threshold
+				end
+			end
+			return 100
+		end
+	end
+	
+	function powerState:UNIT_DISPLAYPOWER(event, unit)
+		if unit == "player" then
+			self.powerIndex, self.powerType = UnitPowerType("player")
+			return self:UNIT_POWER(event, "player", self.powerType)
+		end
+	end
+
+	function powerState:UNIT_POWER(event, unit, powerType)
+		if unit == "player" and powerType == self.powerType then
+			local newState = self:GetState()
+			if newState ~= self.state then
+				--@debug@			
+				self:Debug(event, ':', self.state, '=>', newState)
+				--@end-debug@
+				self.state = newState
+				addon:AuraChanged("player")
+			end
+		end
+	end
+
+	function powerState:CanTestUnit(unit)
+		return unit == "player"
+	end
+
+	function powerState:Test(condition, unit, onlyMyBuffs, onlyMyDebuffs, spell)
+		local test = tests[condition]
+		return false, nil, false, nil, test and test(self.state), "border"
+	end
+
 end

@@ -44,7 +44,8 @@ do
 		L["BELOW"..value] = format(L["BELOWxx"], value, HEALTH)
 		L["ABOVE"..value] = format(L["ABOVExx"], value, HEALTH)
 	end
-	local power = strlower(_G[select(2, UnitPowerType("player"))])
+	local _, powerToken = UnitPowerType("player")
+	local power = strlower(_G[powerToken] or powerToken)
 	for _, value in pairs{ 40, 60, 80 } do
 		L["PWBELOW"..value] = format(L["BELOWxx"], value, power)
 		L["PWABOVE"..value] = format(L["ABOVExx"], value, power)

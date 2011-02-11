@@ -529,7 +529,7 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		"HUNTER",      26090, -- Pummel (Gorilla)
 		"HUNTER",      50318, -- Serenity Dust (Moth)
 		"MAGE",         2139, -- Counterspell
-		"PALADIN",     85285, -- Rebuke
+		"PALADIN",     96231, -- Rebuke
 		"PRIEST",      15487, -- Silence
 		"ROGUE",        1766, -- Kick
 		"SHAMAN",      57994, -- Wind Shear

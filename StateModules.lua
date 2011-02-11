@@ -231,9 +231,13 @@ end
 if healthThresholds then
 
 	local keywords = {}
+	local tests = {}
 	for i, threshold in ipairs(healthThresholds) do
 		tinsert(keywords, "BELOW"..threshold)
 		tinsert(keywords, "ABOVE"..threshold)
+		local threshold = threshold
+		tests["BELOW"..threshold] = function(value) return value <= threshold end
+		tests["ABOVE"..threshold] = function(value) return value >= threshold end
 	end
 
 	local healthState = addon:NewStateModule("Health threshold") --L['Health threshold']
@@ -268,7 +272,9 @@ if healthThresholds then
 	function healthState:UNIT_HEALTH(event, unit)
 		local newState = self:GetState(unit)
 		if newState ~= self.states[unit] then
+			--@debug@
 			self:Debug('event, unit', self.states[unit], '=>', newState)
+			--@end-debug@
 			self.states[unit] = newState
 			addon:AuraChanged(unit)
 		end
@@ -283,12 +289,15 @@ if healthThresholds then
 	end
 
 	function healthState:Test(condition, unit, onlyMyBuffs, onlyMyDebuffs, spell)
-		local below = tonumber(strmatch(condition, '^BELOW(%d+)$'))
-		local above = tonumber(strmatch(condition, '^ABOVE(%d+)$'))
-		local state = self:GetState(unit)
-		if state then
-			self:Debug('Test(', condition, unit, '): below:', below, below and state <= below, "above:", above, above and state >= above)
-			return false, nil, false, nil, (below and state <= below) or (above and state >= above), true
+		local test = tests[condition]
+		if test then
+			local state = self:GetState(unit)
+			if state then
+				--@debug@
+				self:Debug('Test(', condition, unit, '):', test(state))
+				--@end-debug@
+				return false, nil, false, nil, test(state), true
+			end
 		end
 	end
 

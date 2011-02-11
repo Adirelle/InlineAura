@@ -852,11 +852,6 @@ function addon:UpdateToken(token, unitHint)
 	tokenUnits[token] = unit
 	local oldGUID = tokenGUIDs[token]
 	if guid ~= oldGUID then
-		if guid then
-			auraChanged[guid] = true
-		elseif oldGUID then
-			auraChanged[oldGUID] = true
-		end
 		--@debug@
 		dprint(token, "changed:", oldGUID, "=>", guid)
 		--@end-debug@

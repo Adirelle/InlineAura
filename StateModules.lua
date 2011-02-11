@@ -23,6 +23,17 @@ local UnitIsBuffable = addon.UnitIsBuffable
 local UnitIsDebuffable = addon.UnitIsDebuffable
 local GetBorderHighlight = addon.GetBorderHighlight
 
+local interestingUnits = setmetatable({
+	player = true,
+	pet = true,
+	target = true
+}, { __index = function(t, unit) 
+	if unit == "focus" or unit == "mouseover" then
+		return addon.db.profile.enabledUnits[unit] 
+	end
+	t[unit] = false
+end })
+
 ------------------------------------------------------------------------------
 -- Warlocks' Soul Shards and Paladins' Holy Power
 ------------------------------------------------------------------------------
@@ -231,32 +242,33 @@ if healthThresholds then
 	healthState.keywords = keywords
 
 	function healthState:PostEnable()
-		self:RegisterEvent('UNIT_HEALTH')
+		self:RegisterEvent('UNIT_HEALTH_FREQUENT', 'UNIT_HEALTH')
 		self:RegisterEvent('UNIT_HEALTH_MAX', 'UNIT_HEALTH')
 		wipe(self.states)
 	end
 
 	function healthState:GetState(unit)
-		if unit and UnitExists(unit) and not UnitIsDeadOrGhost(unit) and addon.db.profile.enabledUnits[unit] then
-			local current, max = UnitHealth(unit), UnitHealthMax(unit)
-			if max > 0 then
-				local pct = 100 * current / max
+		if unit and interestingUnits[unit] and UnitExists(unit) and not UnitIsDeadOrGhost(unit) then
+			local current, maxHealth = UnitHealth(unit), UnitHealthMax(unit)
+			if maxHealth > 0 then
+				local pct = 100 * current / maxHealth
 				for i, threshold in ipairs(healthThresholds) do
 					if pct <= threshold then
-						healthState:Debug('GetState(', unit, '):', pct)
+						healthState:Debug('GetState(', unit, '):', current, maxHealth, '=>', pct)
 						return threshold
 					end
 				end
-				healthState:Debug('GetState(', unit, '):', 100)
+				healthState:Debug('GetState(', unit, '):', current, maxHealth, '=>', 100)
 				return 100
 			end
 		end
-		healthState:Debug('GetState(', unit, '):', nil)
+		healthState:Debug('GetState(', unit, '):', current, maxHealth, '=>', nil)
 	end
 
 	function healthState:UNIT_HEALTH(event, unit)
 		local newState = self:GetState(unit)
 		if newState ~= self.states[unit] then
+			self:Debug('event, unit', self.states[unit], '=>', newState)
 			self.states[unit] = newState
 			addon:AuraChanged(unit)
 		end
@@ -326,7 +338,7 @@ function interruptState:PostEnable()
 end
 
 function interruptState:SpellCastChanged(event, unit)
-	if self:CanTestUnit(unit) then
+	if interestingUnits[unit] and self:CanTestUnit(unit) then
 		self:Debug('SpellCastChanged', event, unit)
 		return addon:AuraChanged(unit)
 	end

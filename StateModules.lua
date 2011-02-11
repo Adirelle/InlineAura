@@ -23,6 +23,17 @@ local UnitIsBuffable = addon.UnitIsBuffable
 local UnitIsDebuffable = addon.UnitIsDebuffable
 local GetBorderHighlight = addon.GetBorderHighlight
 
+local interestingUnits = setmetatable({
+	player = true,
+	pet = true,
+	target = true
+}, { __index = function(t, unit) 
+	if unit == "focus" or unit == "mouseover" then
+		return addon.db.profile.enabledUnits[unit] 
+	end
+	t[unit] = false
+end })
+
 ------------------------------------------------------------------------------
 -- Warlocks' Soul Shards and Paladins' Holy Power
 ------------------------------------------------------------------------------
@@ -220,9 +231,13 @@ end
 if healthThresholds then
 
 	local keywords = {}
+	local tests = {}
 	for i, threshold in ipairs(healthThresholds) do
 		tinsert(keywords, "BELOW"..threshold)
 		tinsert(keywords, "ABOVE"..threshold)
+		local threshold = threshold
+		tests["BELOW"..threshold] = function(value) return value <= threshold end
+		tests["ABOVE"..threshold] = function(value) return value >= threshold end
 	end
 
 	local healthState = addon:NewStateModule("Health threshold") --L['Health threshold']
@@ -231,32 +246,32 @@ if healthThresholds then
 	healthState.keywords = keywords
 
 	function healthState:PostEnable()
-		self:RegisterEvent('UNIT_HEALTH')
+		self:RegisterEvent('UNIT_HEALTH_FREQUENT', 'UNIT_HEALTH')
 		self:RegisterEvent('UNIT_HEALTH_MAX', 'UNIT_HEALTH')
 		wipe(self.states)
 	end
 
 	function healthState:GetState(unit)
-		if unit and UnitExists(unit) and not UnitIsDeadOrGhost(unit) and addon.db.profile.enabledUnits[unit] then
-			local current, max = UnitHealth(unit), UnitHealthMax(unit)
-			if max > 0 then
-				local pct = 100 * current / max
+		if unit and interestingUnits[unit] and UnitExists(unit) and not UnitIsDeadOrGhost(unit) then
+			local current, maxHealth = UnitHealth(unit), UnitHealthMax(unit)
+			if maxHealth > 0 then
+				local pct = 100 * current / maxHealth
 				for i, threshold in ipairs(healthThresholds) do
 					if pct <= threshold then
-						healthState:Debug('GetState(', unit, '):', pct)
 						return threshold
 					end
 				end
-				healthState:Debug('GetState(', unit, '):', 100)
 				return 100
 			end
 		end
-		healthState:Debug('GetState(', unit, '):', nil)
 	end
 
 	function healthState:UNIT_HEALTH(event, unit)
 		local newState = self:GetState(unit)
 		if newState ~= self.states[unit] then
+			--@debug@
+			self:Debug(event, unit, ':', self.states[unit], '=>', newState)
+			--@end-debug@
 			self.states[unit] = newState
 			addon:AuraChanged(unit)
 		end
@@ -271,12 +286,15 @@ if healthThresholds then
 	end
 
 	function healthState:Test(condition, unit, onlyMyBuffs, onlyMyDebuffs, spell)
-		local below = tonumber(strmatch(condition, '^BELOW(%d+)$'))
-		local above = tonumber(strmatch(condition, '^ABOVE(%d+)$'))
-		local state = self:GetState(unit)
-		if state then
-			self:Debug('Test(', condition, unit, '): below:', below, below and state <= below, "above:", above, above and state >= above)
-			return false, nil, false, nil, (below and state <= below) or (above and state >= above), true
+		local test = tests[condition]
+		if test then
+			local state = self:GetState(unit)
+			if state then
+				--@debug@
+				self:Debug('Test(', condition, unit, '):', test(state))
+				--@end-debug@
+				return false, nil, false, nil, test(state), true
+			end
 		end
 	end
 
@@ -326,7 +344,7 @@ function interruptState:PostEnable()
 end
 
 function interruptState:SpellCastChanged(event, unit)
-	if self:CanTestUnit(unit) then
+	if interestingUnits[unit] and self:CanTestUnit(unit) then
 		self:Debug('SpellCastChanged', event, unit)
 		return addon:AuraChanged(unit)
 	end
@@ -342,4 +360,85 @@ function interruptState:Test(_, unit, _, _, spell)
 		local pref = self.db.profile
 		return false, nil, pref.countdown, endTime/1000, pref.highlight, true
 	end
+end
+
+------------------------------------------------------------------------------
+-- Power state
+------------------------------------------------------------------------------
+
+local powerThresholds
+if playerClass == "WARRIOR" or playerClass == "HUNTER" then
+	powerThresholds = { 60 }
+elseif playerClass == "MAGE" then
+	powerThresholds = { 40 }
+elseif playerClass == "DRUID" then
+	powerThresholds = { 80 }
+end
+
+if powerThresholds then
+
+	local keywords = {}
+	local tests = {}
+	for i, threshold in ipairs(powerThresholds) do
+		tinsert(keywords, "PWBELOW"..threshold)
+		tinsert(keywords, "PWABOVE"..threshold)
+		local threshold = threshold
+		tests["PWBELOW"..threshold] = function(value) return value <= threshold end
+		tests["PWABOVE"..threshold] = function(value) return value >= threshold end
+	end
+
+	local powerState = addon:NewStateModule("Power threshold") --L['Power threshold']
+	powerState.auraType = "self"
+	powerState.keywords = keywords
+	powerState.features = {  highlight = true }
+
+	function powerState:PostEnable()
+		self:RegisterEvent('UNIT_POWER')
+		self:RegisterEvent('UNIT_POWER_MAX', 'UNIT_POWER')
+		self:RegisterEvent('UNIT_DISPLAYPOWER')
+		self:UNIT_DISPLAYPOWER('PostEnable', 'player')
+	end
+
+	function powerState:GetState()
+		local current, maxpower = UnitPower("player", self.powerIndex), UnitPowerMax("player", self.powerIndex)
+		if maxpower > 0 then
+			local pct = 100 * current / maxpower
+			for i, threshold in ipairs(powerThresholds) do
+				if pct <= threshold then
+					return threshold
+				end
+			end
+			return 100
+		end
+	end
+	
+	function powerState:UNIT_DISPLAYPOWER(event, unit)
+		if unit == "player" then
+			self.powerIndex, self.powerType = UnitPowerType("player")
+			return self:UNIT_POWER(event, "player", self.powerType)
+		end
+	end
+
+	function powerState:UNIT_POWER(event, unit, powerType)
+		if unit == "player" and powerType == self.powerType then
+			local newState = self:GetState()
+			if newState ~= self.state then
+				--@debug@			
+				self:Debug(event, ':', self.state, '=>', newState)
+				--@end-debug@
+				self.state = newState
+				addon:AuraChanged("player")
+			end
+		end
+	end
+
+	function powerState:CanTestUnit(unit)
+		return unit == "player"
+	end
+
+	function powerState:Test(condition, unit, onlyMyBuffs, onlyMyDebuffs, spell)
+		local test = tests[condition]
+		return false, nil, false, nil, test and test(self.state), "border"
+	end
+
 end

@@ -455,11 +455,26 @@ end
 
 local function FilterEmpty(v) if v and strtrim(tostring(v)) ~= "" and v ~= 0 then return v end end
 
+local optionPrefixes = {
+	['#showtooltip'] = true,
+	['#show'] = true,
+}
+for _, cmd in pairs({"CAST", "CASTRANDOM", "CASTSEQUENCE", "USE", "USERANDOM"}) do
+	for i = 1, 16 do
+		local alias = _G["SLASH_"..cmd..i]
+		if alias then
+			optionPrefixes[alias] = true
+		else
+			break
+		end
+	end
+end
+
 local function FindMacroOptions(...)
 	for i = 1, select('#', ...) do
 		local line = select(i, ...)
 		local prefix, suffix = strsplit(" ", strtrim(line), 2)
-		if suffix and (prefix == '#show' or prefix == '#showtooltip' or strsub(prefix, 1, 1) ~= "#") then
+		if prefix and suffix and optionPrefixes[strtrim(strlower(prefix))] then
 			return suffix
 		end
 	end
@@ -574,18 +589,17 @@ local function UpdateButtonAura(self, force)
 	local state = buttons[self]
 	if not state then return end
 
-	local spell, target, specific, targetHint
-	if state.action == "macro" then
-		local macroAction, macroParam = GetMacroAction(state.param)
-		spell, targetHint, specific = AnalyzeAction(macroAction, macroParam)
-		if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
-			state.spell, state.targetHint, state.specific = spell, targetHint, specific
-			force = true
+	local spell, targetHint, specific = state.spell, state.targetHint, state.specific
+	local target
+	if targetHint == "friend" or targetHint == "foe" then
+		if state.action == "macro" then
+			target = GuessMacroTarget(state.param)
+		else
+			target = FilterEmpty(SecureButton_GetModifiedUnit(self))
 		end
-		target = (targetHint == "friend" or targetHint == "foe") and GuessMacroTarget(state.param) or tokenUnits[targetHint]
-	else
-		spell, targetHint, specific = state.spell, state.targetHint, state.specific
-		target = (targetHint == "friend" or targetHint == "foe") and FilterEmpty(SecureButton_GetModifiedUnit(self)) or tokenUnits[targetHint]
+	end
+	if not target then
+		target = tokenUnits[targetHint]
 	end
 
 	-- Get the GUID
@@ -648,26 +662,29 @@ local function UpdateAction_Hook(self, forceUpdate)
 		end
 		state.spellId = (action == "spell") and tonumber(param)
 	end
-	if forceUpdate or action ~= state.action or param ~= state.param then
-		state.action, state.param = action, param		
-		local targetHint = "*"
-		if action ~= "macro" then
-			local spell, specific
-			spell, targetHint, specific = AnalyzeAction(action, param)
-			if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
-				state.spell, state.targetHint, state.specific = spell, targetHint, specific
-				forceUpdate = true
+	if forceUpdate or action == "macro" or action ~= state.action or param ~= state.param then
+		state.action, state.param = action, param, action
+		local spell, targetHint, specific, active
+		if action and param then
+			if action == "macro" then
+				local macroAction, macroParam = GetMacroAction(param)
+				if macroAction and macroParam then
+					spell, targetHint, specific = AnalyzeAction(macroAction, macroParam)
+					active = "*"
+				end
+			else
+				spell, targetHint, specific = AnalyzeAction(action, param)
+				active = targetHint
 			end
-			--@debug@
-			self:Debug("UpdateAction_Hook: action changed =>", action, param, "static:", spell, targetHint, specific, forceUpdate and "| forcing update")
-			--@end-debug@
-		else
-			forceUpdate = true
-			--@debug@
-			self:Debug("UpdateAction_Hook: action changed =>", action, param)
-			--@end-debug@
 		end
-		activeButtons[self] = action and param and targetHint or nil
+		activeButtons[self] = active
+		if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
+			state.spell, state.targetHint, state.specific = spell, targetHint, specific
+			forceUpdate = true
+		end
+		--@debug@
+		self:Debug("UpdateAction_Hook: action changed =>", action, param, "static:", spell, targetHint, specific, forceUpdate and "| forcing update")
+		--@end-debug@
 		return UpdateButtonAura(self, forceUpdate)
 	end
 end

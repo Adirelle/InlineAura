@@ -37,7 +37,16 @@ You can submit bugs or suggestions using the "WowAce ticket system":http://www.w
 
 *A word about bug reports:* please check existing tickets before submitting new ones. Moreover, reports like "it doesn't work" without any error message are useless. Please ensure you have enabled Lua error display or installed a error catching addon, like the "BugGrabber":http://wow.curse.com/downloads/wow-addons/details/bug-grabber.aspx + "BugSack":http://wow.curse.com/downloads/wow-addons/details/bugsack.aspx couple, Swatter (shipped with any Norganna's addon) or "ImprovedErrorFrame":http://www.wowinterface.com/downloads/info4333-ImprovedErrorFrame.html and add any error message related to Inline Aura in your bug report.
 
+h3. Known issues and limitations
+
+* Inline Aura does not work with non-standard action buttons, like those created by Macaroon.
+* Inline Aura taints ActionButton_HideOverlayGlow and ActionButton_UpdateOverlayGlow. This is required in order to prevent the glowing effect from flickering and should not cause major issues.
+* Inline Aura uses spell names instead of numerical spell IDs since not all Blizzard API works with spell IDs. Sometimes it may detect the wrong spell. 
+* Inline Aura cannot display different (de)buffs with different settings (e.g. different highlight effect or text position) in the same button.
+* Moreover all buttons use the same text position settings.
+* Inline Aura may have issue with some ButtonFacade skins. This depends on the skins and there is no way to fix them in Inline Aura.
+
 h2. Acknowledgements
 
-I would like to thanks Tuller for the original idea and Avitus, Contrebasse, Gaff3, Moozhe, brotherhobbes and a lot of other people for the testing and usefull feedbacks.
+I would like to thanks Tuller for the original idea and Avitus, Contrebasse, Gaff3, Moozhe, brotherhobbes and a lot of other people for testing and useful feedback.
 

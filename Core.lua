@@ -1250,7 +1250,7 @@ function addon:OnEnable()
 
 		-- Raw hooks (hopefully not breaking anything)
 		_G.ActionButton_HideOverlayGlow = addon.ActionButton_HideOverlayGlow_Hook
-		_G.ActionButton_UpdateOverlayGlow_Hook = addon.ActionButton_UpdateOverlayGlow_Hook
+		_G.ActionButton_UpdateOverlayGlow = addon.ActionButton_UpdateOverlayGlow_Hook
 
 		-- Our bucket thingy
 		local delay = 0

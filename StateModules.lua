@@ -27,9 +27,9 @@ local interestingUnits = setmetatable({
 	player = true,
 	pet = true,
 	target = true
-}, { __index = function(t, unit) 
+}, { __index = function(t, unit)
 	if unit == "focus" or unit == "mouseover" then
-		return addon.db.profile.enabledUnits[unit] 
+		return addon.db.profile.enabledUnits[unit]
 	end
 	t[unit] = false
 end })
@@ -411,7 +411,7 @@ if powerThresholds then
 			return 100
 		end
 	end
-	
+
 	function powerState:UNIT_DISPLAYPOWER(event, unit)
 		if unit == "player" then
 			self.powerIndex, self.powerType = UnitPowerType("player")
@@ -423,7 +423,7 @@ if powerThresholds then
 		if unit == "player" and powerType == self.powerType then
 			local newState = self:GetState()
 			if newState ~= self.state then
-				--@debug@			
+				--@debug@
 				self:Debug(event, ':', self.state, '=>', newState)
 				--@end-debug@
 				self.state = newState

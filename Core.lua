@@ -698,7 +698,7 @@ local function Blizzard_GetAction(self)
 end
 
 local function Blizzard_Update(self)
-	addon.ActionButton_UpdateOverlayGlow_Hook(self)
+	ActionButton_UpdateOverlayGlow(self)
 	ActionButton_UpdateState(self)
 	ActionButton_UpdateUsable(self)
 end
@@ -708,7 +708,7 @@ local function LAB_GetAction(self)
 end
 
 local function LAB_Update(self)
-	addon.ActionButton_UpdateOverlayGlow_Hook(self)
+	ActionButton_UpdateOverlayGlow(self)
 	return self:UpdateAction(true)
 end
 
@@ -1006,7 +1006,7 @@ function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
 		for button in pairs(activeButtons) do
 			local state = buttons[button]
 			if state.action == "macro" and state.spell == name then
-				self.ActionButton_UpdateOverlayGlow_Hook(button)
+				ActionButton_UpdateOverlayGlow(button)
 			end
 		end
 	end
@@ -1237,9 +1237,9 @@ function addon:OnEnable()
 			self:UpgradeProfile()
 		end
 
-		local UpdateButtonState_Hook = addon.UpdateButtonState_Hook
-		local UpdateButtonUsable_Hook = addon.UpdateButtonUsable_Hook
-		local UpdateButtonCooldown_Hook = addon.UpdateButtonCooldown_Hook
+		local UpdateButtonState_Hook = self.UpdateButtonState_Hook
+		local UpdateButtonUsable_Hook = self.UpdateButtonUsable_Hook
+		local UpdateButtonCooldown_Hook = self.UpdateButtonCooldown_Hook
 
 		-- Secure hooks
 		hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
@@ -1247,10 +1247,7 @@ function addon:OnEnable()
 		hooksecurefunc('ActionButton_UpdateUsable', function(...) return safecall(UpdateButtonUsable_Hook, ...) end)
 		hooksecurefunc('ActionButton_UpdateCooldown', function(...) return safecall(UpdateButtonCooldown_Hook, ...) end)
 		hooksecurefunc('ActionButton_Update', function(...) return safecall(ActionButton_Update_Hook, ...) end)
-
-		-- Raw hooks (hopefully not breaking anything)
-		_G.ActionButton_HideOverlayGlow = addon.ActionButton_HideOverlayGlow_Hook
-		_G.ActionButton_UpdateOverlayGlow = addon.ActionButton_UpdateOverlayGlow_Hook
+		hooksecurefunc("ActionButton_HideOverlayGlow", self.ActionButton_HideOverlayGlow_Hook)
 
 		-- Our bucket thingy
 		local delay = 0

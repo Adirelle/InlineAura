@@ -370,27 +370,44 @@ local function IsGlowing(state)
 		or (state.action == "macro" and overlayedSpells[state.spell]) then
 		return true
 	elseif state.highlight == "glowing" then
-		local usable, noPower = IsUsableSpell(state.spell)
-		if usable or noPower then
-			local start, duration, enable = GetSpellCooldown(state.spell)
-			dprint('IsGlowing', state.spell, '=>', start, duration, enable)
+ 		local usable, noPower = IsUsableSpell(state.spell)
+ 		if usable or noPower then
+ 			local start, duration, enable = GetSpellCooldown(state.spell)
 			return enable == 0 or start == 0 or duration <= 1.5
+		end
+	end
+end
+
+local FixOverlayAnimation
+do
+	local fixedOverlays = {}
+	function FixOverlayAnimation(overlay)
+		if overlay and not fixedOverlays[overlay] then
+			overlay.animIn:SetScript('OnStop', overlay.animIn:GetScript('OnFinished'))
+			fixedOverlays[overlay] = true
 		end
 	end
 end
 
 function addon.ActionButton_HideOverlayGlow_Hook(button)
 	local state = buttons[button]
-	if state then
-		if not IsGlowing(state) then
-			ActionButton_HideOverlayGlow(button)
+	if state and IsGlowing(state) then
+		if button.overlay then
+			if button.overlay.animOut:IsPlaying() then
+				button.overlay.animOut:Stop()
+			end
+		else
+			ActionButton_ShowOverlayGlow(button)
 		end
-	else
-		ActionButton_HideOverlayGlow(button)
+		-- Small hack to prevent ugly glitches
+		local animIn = button.overlay.animIn
+		if not animIn:IsPlaying() then
+			animIn:GetScript('OnFinished')(animIn)
+		end
 	end
 end
 
-function addon.ActionButton_UpdateOverlayGlow_Hook(button)
+function addon:UpdateOverlayGlow(button)
 	local state = buttons[button]
 	if state then
 		if IsGlowing(state) then
@@ -399,7 +416,7 @@ function addon.ActionButton_UpdateOverlayGlow_Hook(button)
 			ActionButton_HideOverlayGlow(button)
 		end
 	else
-		ActionButton_UpdateOverlayGlow(button)
+		return ActionButton_UpdateOverlayGlow(button)
 	end
 end
 
@@ -425,9 +442,7 @@ function addon.UpdateButtonState_Hook(button)
 		button:SetChecked(true)
 		return SetVertexColor(texture, unpack(color))
 	else
-		if state.highlight == "glowing" then
-			addon.ActionButton_UpdateOverlayGlow_Hook(button)
-		end
+		addon:UpdateOverlayGlow(button)
 		return texture:SetVertexColor(1, 1, 1)
 	end
 end
@@ -443,8 +458,8 @@ function addon.UpdateButtonUsable_Hook(button)
 end
 
 function addon.UpdateButtonCooldown_Hook(button)
-	local state = buttons[button]
-	if state and state.highlight == "glowing" then
-		return addon.ActionButton_UpdateOverlayGlow_Hook(button)
+	if buttons[button] then
+		return addon:UpdateOverlayGlow(button)
 	end
 end
+

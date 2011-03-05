@@ -512,7 +512,8 @@ local function AnalyzeAction(action, param)
 	if not action or not param then return end
 	local item, spell
 	if action == "item" then
-		item, spell = GetItemInfo(param), GetItemSpell(param)
+		item = GetItemInfo(param)
+		spell = GetItemSpell(item) or item
 	elseif action == "spell" then
 		spell = GetSpellInfo(param)
 	end
@@ -656,9 +657,6 @@ local function UpdateAction_Hook(self, forceUpdate)
 			else
 				action, param = nil, nil
 			end
-		end
-		if action == "item" and param and not GetItemSpell(GetItemInfo(param) or param) then
-			action, param = nil, nil
 		end
 		state.spellId = (action == "spell") and tonumber(param)
 	end

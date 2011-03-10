@@ -38,6 +38,8 @@ externals:
     tag: latest
   libs/LibDispellable-1.0:
     url: git://git.wowace.com/wow/libdispellable-1-0/mainline.git
+  libs/BugGrabber:
+    url: svn://svn.wowace.com/wow/bug-grabber/mainline/trunk
 
 move-folders:
   InlineAura/InlineAura_Config: InlineAura_Config

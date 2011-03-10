@@ -164,29 +164,9 @@ local GetBorderHighlight = addon.GetBorderHighlight
 
 local safecall
 do
-	local pcall, geterrorhandler, _ERRORMESSAGE = pcall, geterrorhandler, _ERRORMESSAGE
-	local reported = {}
-
-	local function safecall_inner(ok, ...)
-		if not ok then
-			local msg = ...
-			local handler = geterrorhandler()
-			if handler == _ERRORMESSAGE then
-				if not reported[msg] then
-					reported[msg] = true
-					print('|cffff0000addon error report:|r', msg)
-				end
-			else
-				handler(msg)
-			end
-		else
-			return ...
-		end
-	end
-
-	function safecall(...)
-		return safecall_inner(pcall(...))
-	end
+	local pcall, geterrorhandler = pcall, geterrorhandler
+	local function safecall_inner(ok, msg, ...) if not ok then geterrorhandler()(msg) else return msg, ... end end
+	safecall = function(...) return safecall_inner(pcall(...)) end
 	addon.safecall = safecall
 end
 

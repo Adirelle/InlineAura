@@ -957,6 +957,10 @@ function addon:UPDATE_MOUSEOVER_UNIT(event)
 	self:UpdateTokens("mouseover")	
 end
 
+function addon:UNIT_FACTION(event, unit)
+	self:UpdateTokens(unit)	
+end
+
 function addon:CVAR_UPDATE(event, name)
 	if name == 'AUTO_SELF_CAST_TEXT' then
 		return self:RequireUpdate(true)
@@ -1259,6 +1263,8 @@ function addon:OnEnable()
 	self:RegisterEvent('PLAYER_ENTERING_WORLD')
 	self:RegisterEvent('UNIT_ENTERED_VEHICLE')
 	self:RegisterEvent('UNIT_EXITED_VEHICLE', 'UNIT_ENTERED_VEHICLE')
+	self:RegisterEvent('UNIT_FACTION')
+	self:RegisterEvent('UNIT_TARGETABLE_CHANGED', 'UNIT_FACTION')
 	self:RegisterEvent('MODIFIER_STATE_CHANGED')
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')

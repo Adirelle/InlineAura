@@ -265,6 +265,7 @@ if healthThresholds then
 						return threshold
 					end
 				end
+				return 100				
 			end
 		end
 	end
@@ -415,6 +416,7 @@ if powerThresholds then
 					return threshold
 				end
 			end
+			return 100
 		end
 	end
 

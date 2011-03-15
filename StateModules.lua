@@ -237,7 +237,7 @@ if healthThresholds then
 		tinsert(keywords, "ABOVE"..threshold)
 		local threshold = threshold
 		tests["BELOW"..threshold] = function(value) return value <= threshold end
-		tests["ABOVE"..threshold] = function(value) return value >= threshold end
+		tests["ABOVE"..threshold] = function(value) return value > threshold end
 	end
 
 	local healthState = addon:NewStateModule("Health threshold") --L['Health threshold']
@@ -254,14 +254,17 @@ if healthThresholds then
 	function healthState:GetState(unit)
 		if unit and interestingUnits[unit] and UnitExists(unit) and not UnitIsDeadOrGhost(unit) then
 			local current, maxHealth = UnitHealth(unit), UnitHealthMax(unit)
-			if maxHealth > 0 then
+			if current == 0 or maxHealth == 0 then
+				return 0
+			elseif current == maxHealth then
+				return 100
+			else
 				local pct = 100 * current / maxHealth
 				for i, threshold in ipairs(healthThresholds) do
 					if pct <= threshold then
 						return threshold
 					end
 				end
-				return 100
 			end
 		end
 	end
@@ -384,7 +387,7 @@ if powerThresholds then
 		tinsert(keywords, "PWABOVE"..threshold)
 		local threshold = threshold
 		tests["PWBELOW"..threshold] = function(value) return value <= threshold end
-		tests["PWABOVE"..threshold] = function(value) return value >= threshold end
+		tests["PWABOVE"..threshold] = function(value) return value > threshold end
 	end
 
 	local powerState = addon:NewStateModule("Power threshold") --L['Power threshold']
@@ -401,14 +404,17 @@ if powerThresholds then
 
 	function powerState:GetState()
 		local current, maxpower = UnitPower("player", self.powerIndex), UnitPowerMax("player", self.powerIndex)
-		if maxpower > 0 then
+		if current == 0 or maxpower == 0 then
+			return 0
+		elseif current == maxpower then
+			return 100
+		else
 			local pct = 100 * current / maxpower
 			for i, threshold in ipairs(powerThresholds) do
 				if pct <= threshold then
 					return threshold
 				end
 			end
-			return 100
 		end
 	end
 

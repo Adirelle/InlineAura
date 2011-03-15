@@ -254,9 +254,9 @@ if healthThresholds then
 	function healthState:GetState(unit)
 		if unit and interestingUnits[unit] and UnitExists(unit) and not UnitIsDeadOrGhost(unit) then
 			local current, maxHealth = UnitHealth(unit), UnitHealthMax(unit)
-			if current == 0 or maxHealth == 0 then
+			if current <= 0 or maxHealth == 0 then
 				return 0
-			elseif current == maxHealth then
+			elseif current >= maxHealth then
 				return 100
 			else
 				local pct = 100 * current / maxHealth
@@ -404,9 +404,9 @@ if powerThresholds then
 
 	function powerState:GetState()
 		local current, maxpower = UnitPower("player", self.powerIndex), UnitPowerMax("player", self.powerIndex)
-		if current == 0 or maxpower == 0 then
+		if current <= 0 or maxpower == 0 then
 			return 0
-		elseif current == maxpower then
+		elseif current >= maxpower then
 			return 100
 		else
 			local pct = 100 * current / maxpower

@@ -159,18 +159,6 @@ local UnitIsDebuffable = addon.UnitIsDebuffable
 local GetBorderHighlight = addon.GetBorderHighlight
 
 ------------------------------------------------------------------------------
--- Safecall
-------------------------------------------------------------------------------
-
-local safecall
-do
-	local pcall, geterrorhandler = pcall, geterrorhandler
-	local function safecall_inner(ok, msg, ...) if not ok then geterrorhandler()(msg) else return msg, ... end end
-	safecall = function(...) return safecall_inner(pcall(...)) end
-	addon.safecall = safecall
-end
-
-------------------------------------------------------------------------------
 -- State plugins
 ------------------------------------------------------------------------------
 
@@ -796,23 +784,23 @@ end
 function addon:OnUpdate(elapsed)
 	-- Configuration has been updated
 	if configUpdated then
-		safecall(UpdateConfig)
+		UpdateConfig()
 	end
 
 	-- Watch for mouseover aura if we can't get UNIT_AURA events
 	if tokenGUIDs['mouseover'] then
-		safecall(UpdateMouseover, elapsed)
+		UpdateMouseover(elapsed)
 	end
 
 	-- Handle new buttons
 	if next(newButtons) then
-		safecall(InitializeNewButtons)
+		InitializeNewButtons()
 		wipe(newButtons)
 	end
 
 	-- Update buttons
 	if needUpdate or configUpdated or next(auraChanged) or next(tokenChanged) then
-		safecall(UpdateButtons)
+		UpdateButtons()
 		needUpdate, configUpdated = false, false
 		wipe(auraChanged)
 		wipe(tokenChanged)
@@ -1082,7 +1070,7 @@ function addon:LoadSpellDefaults(event)
 	end
 
 	-- Insert spell defaults
-	safecall(InlineAura_LoadDefaults, self, PRESETS, DEFAULT_OPTIONS.profile.spellStatuses)
+	InlineAura_LoadDefaults(self, PRESETS, DEFAULT_OPTIONS.profile.spellStatuses)
 
 	-- Register updated defaults
 	if self.db then
@@ -1219,16 +1207,12 @@ function addon:OnEnable()
 			self:UpgradeProfile()
 		end
 
-		local UpdateButtonState_Hook = self.UpdateButtonState_Hook
-		local UpdateButtonUsable_Hook = self.UpdateButtonUsable_Hook
-		local UpdateButtonCooldown_Hook = self.UpdateButtonCooldown_Hook
-
 		-- Secure hooks
 		hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
-		hooksecurefunc('ActionButton_UpdateState', function(...) return safecall(UpdateButtonState_Hook, ...) end)
-		hooksecurefunc('ActionButton_UpdateUsable', function(...) return safecall(UpdateButtonUsable_Hook, ...) end)
-		hooksecurefunc('ActionButton_UpdateCooldown', function(...) return safecall(UpdateButtonCooldown_Hook, ...) end)
-		hooksecurefunc('ActionButton_Update', function(...) return safecall(ActionButton_Update_Hook, ...) end)
+		hooksecurefunc('ActionButton_UpdateState', self.UpdateButtonState_Hook)
+		hooksecurefunc('ActionButton_UpdateUsable', self.UpdateButtonUsable_Hook)
+		hooksecurefunc('ActionButton_UpdateCooldown', self.UpdateButtonCooldown_Hook)
+		hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
 		hooksecurefunc("ActionButton_HideOverlayGlow", self.ActionButton_HideOverlayGlow_Hook)
 
 		-- Our bucket thingy
@@ -1284,7 +1268,7 @@ end
 ------------------------------------------------------------------------------
 
 local function LoadConfigGUI()
-	safecall(LoadAddOn, 'InlineAura_Config')
+	LoadAddOn('InlineAura_Config')
 end
 
 -- Chat command line

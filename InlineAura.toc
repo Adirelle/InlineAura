@@ -14,12 +14,11 @@
 ## X-LoadOn-Always: delayed
 
 ## SavedVariables: InlineAuraDB
-## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0, LibDispellable-1.0, InlineAura_Defaults, ButtonFacade, Bartender4, Dominos, OmniCC, CooldownCount, tullaCC, tullaRange, LibActionButton-1.0, AdiDebug, AdiProfiler
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0, LibDispellable-1.0, InlineAura_Defaults, ButtonFacade, Bartender4, Dominos, OmniCC, CooldownCount, tullaCC, tullaRange, LibActionButton-1.0, AdiDebug, AdiProfiler, BugGrabber, !Swatter
 
 #@no-lib-strip@
 libs\LibStub\LibStub.lua
 libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
-libs\BugGrabber\load.xml
 libs\AceDB-3.0\AceDB-3.0.xml
 libs\AceAddon-3.0\AceAddon-3.0.xml
 libs\AceEvent-3.0\AceEvent-3.0.xml

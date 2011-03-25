@@ -1191,6 +1191,12 @@ local updateFrame
 function addon:OnEnable()
 
 	if self.firstEnable then
+		--@alpha@
+		if geterrorhandler() == _ERRORMESSAGE then
+			print("|cffff0000InlineAura: you are testing an alpha version of Inline Aura without a proper error handler. Please install one like BugGrabber or Swatter prior to reporting any issue.|r")
+		end
+		--@end-alpha@
+	
 		self.firstEnable = nil
 
 		-- Retrieve default spell configuration

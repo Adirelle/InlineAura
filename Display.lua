@@ -24,7 +24,6 @@ local addonName, addon = ...
 
 local L = addon.L
 local dprint = addon.dprint
-local safecall = addon.safecall
 local buttons = addon.buttons
 local overlayedSpells = addon.overlayedSpells
 
@@ -86,7 +85,7 @@ do
 				if when <= now then
 					bucket[target] = nil
 					targets[target] = nil
-					safecall(target.OnUpdate, target, now)
+					target:OnUpdate(now)
 				end
 			end
 		end

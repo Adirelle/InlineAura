@@ -216,6 +216,7 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 	- Increased Critical Chance (5%)
 	- Increased Spell Power (10%)
 	- Physical Damage Taken (4%)
+	- Spell Crit Taken (5%)
 	]]
 
 	--- Buffs ---
@@ -538,6 +539,22 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		"WARRIOR",      6552  -- Pummel
 	):ShowSpecial('INTERRUPTIBLE'):Glowing()
 
+	-- (En)rage removers
+	SpellsByClass(
+		"DRUID",   2908, -- Soothe
+		"HUNTER", 19801, -- Tranquilizing Shot
+		"ROGUE",   5938  -- Shiv
+	):Aliases(
+		-- Note: chances are "Enrage" catchs a bunch of enrage effects
+		12292, -- Death Wish (Warrior)
+		18499, -- Berserker Rage (Warrior)
+		76691, -- Vengeance (all tanks)
+		12880, -- Enrage (Warrior)
+		57516, -- Enrage (Warrior)
+		5229,  -- Enrage (Druid)
+		72143  -- Enrage (Shambling Horror)
+	):Glowing()
+
 	------------------------------------------------------------------------------
 	-- Profession tracking
 	------------------------------------------------------------------------------
@@ -635,6 +652,12 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 
 		-- Raging Blow => Death Wish, Berserker Rage, Enrage
 		Spells(85288):Aliases(12292, 18499, 12880):OnSelf()
+
+		-- Shattering Throw => Divine Shield, Hand of Protection
+		Spells(64382):Aliases(642, 1022):Glowing()
+
+		-- Pummel => Rude Interruption
+		Spells(6552):Aliases(86662, 86663):OnSelf()
 
 		-- Shattering Throw => Divine Shield, Hand of Protection
 		Spells(64382):Aliases(642, 1022):Glowing()
@@ -870,6 +893,7 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		)
 
 		SelfTalentProc(86150, 86698, 86659, 86669) -- Guardian of Ancient Kings and its 3 variants
+
 		SelfTalentProc(635, 94686) -- Holy Light => Crusader
 
 		GroupBuffs( 7294) -- Retribution Aura

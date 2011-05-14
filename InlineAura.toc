@@ -1,4 +1,4 @@
-## Interface: 40000
+## Interface: 40100
 
 ## Title: Inline Aura
 ## Notes: Display aura information inside action buttons

@@ -578,8 +578,8 @@ function InlineAura_LoadDefaults(self)
 		-- Raging Blow => Death Wish, Berserker Rage, Enrage
 		Spells(85288):Aliases(12292, 18499, 12880):OnSelf()
 
-		-- Pummel & Shield Bash => Rude Interruption
-		Spells(6552, 72):Aliases(86662, 86663):OnSelf()
+		-- Pummel => Rude Interruption
+		Spells(6552):Aliases(86662, 86663):OnSelf()
 
 		-- Shattering Throw => Divine Shield, Hand of Protection
 		Spells(64382):Aliases(642, 1022):Glowing()

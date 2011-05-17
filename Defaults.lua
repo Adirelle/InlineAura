@@ -535,7 +535,6 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		"ROGUE",        1766, -- Kick
 		"SHAMAN",      57994, -- Wind Shear
 		"WARLOCK",     19647, -- Spell Lock (Felhunter)
-		"WARRIOR",        71, -- Shield Bash
 		"WARRIOR",      6552  -- Pummel
 	):ShowSpecial('INTERRUPTIBLE'):Glowing()
 

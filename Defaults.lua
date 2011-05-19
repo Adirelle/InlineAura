@@ -655,9 +655,6 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		-- Shattering Throw => Divine Shield, Hand of Protection
 		Spells(64382):Aliases(642, 1022):Glowing()
 
-		-- Pummel => Rude Interruption
-		Spells(6552):Aliases(86662, 86663):OnSelf()
-
 		-- Shattering Throw => Divine Shield, Hand of Protection
 		Spells(64382):Aliases(642, 1022):Glowing()
 

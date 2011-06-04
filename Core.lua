@@ -366,7 +366,7 @@ local function GetAuraToDisplay(spell, target, specific)
 				highlight = "glowing"
 			end
 		end
-		
+
 		if not hasHighlight then
 			highlight = nil
 		end
@@ -826,7 +826,7 @@ end
 -- Tokens and GUIDs handling
 ------------------------------------------------------------------------------
 
-function addon:UpdateToken(token, unitHint)	
+function addon:UpdateToken(token, unitHint)
 	local guid, unit
 	if unitHint ~= "none" then
 		unit = ApplyVehicleModifier(unitHint or token)
@@ -942,11 +942,11 @@ end
 addon.MODIFIER_STATE_CHANGED = addon.PLAYER_TARGET_CHANGED
 
 function addon:UPDATE_MOUSEOVER_UNIT(event)
-	self:UpdateTokens("mouseover")	
+	self:UpdateTokens("mouseover")
 end
 
 function addon:UNIT_FACTION(event, unit)
-	self:UpdateTokens(unit)	
+	self:UpdateTokens(unit)
 end
 
 function addon:CVAR_UPDATE(event, name)
@@ -1224,10 +1224,10 @@ function addon:OnEnable()
 		-- Our bucket thingy
 		local delay = 0
 		updateFrame = CreateFrame("Frame")
-		updateFrame:SetScript('OnUpdate', function(_, elapsed) 
+		updateFrame:SetScript('OnUpdate', function(_, elapsed)
 			delay = delay + elapsed
 			if delay >= 0.09 then
-				self:OnUpdate(delay) 
+				self:OnUpdate(delay)
 				delay = 0
 			end
 		end)
@@ -1292,7 +1292,7 @@ CreateFrame("Frame", nil, InterfaceOptionsFrameAddOns):SetScript('OnShow', LoadC
 ------------------------------------------------------------------------------
 
 if AdiProfiler then
-	-- "Interesting functions" 
+	-- "Interesting functions"
 	AdiProfiler:RegisterFunction(CheckAura, "ia:CheckAura")
 	AdiProfiler:RegisterFunction(AuraLookup, "ia:AuraLookup")
 	AdiProfiler:RegisterFunction(UpdateButtons, "ia:UpdateButtons")

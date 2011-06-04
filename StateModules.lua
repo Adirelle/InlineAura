@@ -265,7 +265,7 @@ if healthThresholds then
 						return threshold
 					end
 				end
-				return 100				
+				return 100
 			end
 		end
 	end

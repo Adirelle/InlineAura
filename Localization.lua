@@ -364,7 +364,7 @@ L["Application count position"] = "Zählerposition"
 L["Application text color"] = "Textfarbe der Anwendung"
 L["BELOWxx"] = "Unter %d%% %s"
 L[ [=[Behave as if the interface option "Auto self cast" was enabled, e.g. test helpful spells on yourself when you are not targeting a friendly unit.
-Note: this enables the old Inline Aura behavior with friendly spells.]=] ] = [=[Verhaltet sich als ob die Interfaceoption "Automatischer Selbstzauber" aktiviert ist. Es testet Zauber an sich selbst, wenn man nicht eine befreundete Einheit im Target hat. 
+Note: this enables the old Inline Aura behavior with friendly spells.]=] ] = [=[Verhaltet sich als ob die Interfaceoption "Automatischer Selbstzauber" aktiviert ist. Es testet Zauber an sich selbst, wenn man nicht eine befreundete Einheit im Target hat.
 Notiz: Es aktiviert das alte Inline aura verhalten von freundlichen Zaubern.]=]
 L["Border highlight colors"] = "Randfarbe"
 L["Bottom"] = "Unten"

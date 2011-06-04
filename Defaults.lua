@@ -20,7 +20,34 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 -- Per class defaults
 ------------------------------------------------------------------------------
 
+-- GLOBALS: InlineAura_LoadDefaults
 function InlineAura_LoadDefaults(self, presets, statuses)
+
+	-- Make often-used globals local
+	--<GLOBALS
+	local _G = _G
+	local debugstack = _G.debugstack
+	local format = _G.format
+	local geterrorhandler = _G.geterrorhandler
+	local GetItemInfo = _G.GetItemInfo
+	local GetSpellInfo = _G.GetSpellInfo
+	local gsub = _G.gsub
+	local IsPassiveSpell = _G.IsPassiveSpell
+	local IsSpellKnown = _G.IsSpellKnown
+	local pairs = _G.pairs
+	local select = _G.select
+	local setmetatable = _G.setmetatable
+	local strmatch = _G.strmatch
+	local strtrim = _G.strtrim
+	local tinsert = _G.tinsert
+	local tonumber = _G.tonumber
+	local tostringall = _G.tostringall
+	local type = _G.type
+	local UnitClass = _G.UnitClass
+	local UnitFactionGroup = _G.UnitFactionGroup
+	local unpack = _G.unpack
+	local wipe = _G.wipe
+	--GLOBALS>
 
 	local _, class = UnitClass('player')
 	local version = "@file-hash@/@project-version@"

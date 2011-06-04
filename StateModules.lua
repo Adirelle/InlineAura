@@ -23,6 +23,39 @@ local UnitIsBuffable = addon.UnitIsBuffable
 local UnitIsDebuffable = addon.UnitIsDebuffable
 local GetBorderHighlight = addon.GetBorderHighlight
 
+------------------------------------------------------------------------------
+-- Make often-used globals local
+------------------------------------------------------------------------------
+
+--<GLOBALS
+local _G = _G
+local ceil = _G.ceil
+local GetComboPoints = _G.GetComboPoints
+local GetEclipseDirection = _G.GetEclipseDirection
+local GetPrimaryTalentTree = _G.GetPrimaryTalentTree
+local GetSpellInfo = _G.GetSpellInfo
+local GetTotemInfo = _G.GetTotemInfo
+local ipairs = _G.ipairs
+local IsHelpfulSpell = _G.IsHelpfulSpell
+local MAX_COMBO_POINTS = _G.MAX_COMBO_POINTS
+local MAX_HOLY_POWER = _G.MAX_HOLY_POWER
+local setmetatable = _G.setmetatable
+local SPELL_POWER_ECLIPSE = _G.SPELL_POWER_ECLIPSE
+local strlower = _G.strlower
+local tinsert = _G.tinsert
+local UnitCastingInfo = _G.UnitCastingInfo
+local UnitChannelInfo = _G.UnitChannelInfo
+local UnitClass = _G.UnitClass
+local UnitExists = _G.UnitExists
+local UnitHealth = _G.UnitHealth
+local UnitHealthMax = _G.UnitHealthMax
+local UnitIsDeadOrGhost = _G.UnitIsDeadOrGhost
+local UnitPower = _G.UnitPower
+local UnitPowerMax = _G.UnitPowerMax
+local UnitPowerType = _G.UnitPowerType
+local wipe = _G.wipe
+--GLOBALS>
+
 local interestingUnits = setmetatable({
 	player = true,
 	pet = true,
@@ -80,9 +113,6 @@ end
 ------------------------------------------------------------------------------
 
 if playerClass == "ROGUE" or playerClass == "DRUID" then
-	local GetComboPoints = GetComboPoints
-	local MAX_COMBO_POINTS = MAX_COMBO_POINTS
-
 	local comboPoints = addon:NewStateModule("COMBO_POINTS")
 	comboPoints.keywords = { "COMBO_POINTS" }
 	comboPoints.auraType = "regular"
@@ -114,12 +144,6 @@ end
 ------------------------------------------------------------------------------
 
 if playerClass == "DRUID" then
-
-	local SPELL_POWER_ECLIPSE = SPELL_POWER_ECLIPSE
-	local UnitPower, UnitPowerMax = UnitPower, UnitPowerMax
-	local GetEclipseDirection = GetEclipseDirection
-	local GetPrimaryTalentTree = GetPrimaryTalentTree
-
 	local isMoonkin, direction, power
 
 	local eclipseState = addon:NewStateModule("Eclipse energy") -- L['Eclipse energy']
@@ -149,7 +173,7 @@ if playerClass == "DRUID" then
 
 	function eclipseState:UNIT_POWER(event, unit, type)
 		if unit == "player" and type == "ECLIPSE" then
-			local newPower = math.ceil(100 * UnitPower("player", SPELL_POWER_ECLIPSE) / UnitPowerMax("player", SPELL_POWER_ECLIPSE))
+			local newPower = ceil(100 * UnitPower("player", SPELL_POWER_ECLIPSE) / UnitPowerMax("player", SPELL_POWER_ECLIPSE))
 			if newPower ~= power then
 				power = newPower
 				addon:AuraChanged("player")

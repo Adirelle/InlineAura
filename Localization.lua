@@ -18,6 +18,25 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 local _, addon = ...
 
+------------------------------------------------------------------------------
+-- Make often-used globals local
+------------------------------------------------------------------------------
+
+--<GLOBALS
+local _G = _G
+local BALANCE_NEGATIVE_ENERGY = _G.BALANCE_NEGATIVE_ENERGY
+local BALANCE_POSITIVE_ENERGY = _G.BALANCE_POSITIVE_ENERGY
+local format = _G.format
+local GetLocale = _G.GetLocale
+local HEALTH = _G.HEALTH
+local HOLY_POWER = _G.HOLY_POWER
+local pairs = _G.pairs
+local setmetatable = _G.setmetatable
+local strlower = _G.strlower
+local tostring = _G.tostring
+local UnitPowerType = _G.UnitPowerType
+--GLOBALS>
+
 local locale = GetLocale()
 local L = setmetatable({}, {__index = function(self, key)
 	local value = tostring(key)

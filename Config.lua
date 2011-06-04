@@ -26,6 +26,54 @@ if not addon then return end
 local L = addon.L
 local PRESETS = addon.PRESETS
 
+------------------------------------------------------------------------------
+-- Make often-used globals local
+------------------------------------------------------------------------------
+
+--<GLOBALS
+local _G = _G
+local ACTIONBAR_LABEL = _G.ACTIONBAR_LABEL
+local BOOKTYPE_PET = _G.BOOKTYPE_PET
+local BOOKTYPE_SPELL = _G.BOOKTYPE_SPELL
+local COMBATLOG_FILTER_STRING_MY_PET = _G.COMBATLOG_FILTER_STRING_MY_PET
+local CreateFrame = _G.CreateFrame
+local format = _G.format
+local GetAddOnMetadata = _G.GetAddOnMetadata
+local GetItemInfo = _G.GetItemInfo
+local GetItemSpell = _G.GetItemSpell
+local GetMacroItem = _G.GetMacroItem
+local GetMacroSpell = _G.GetMacroSpell
+local GetNumSpellTabs = _G.GetNumSpellTabs
+local GetSpellInfo = _G.GetSpellInfo
+local GetSpellTabInfo = _G.GetSpellTabInfo
+local gsub = _G.gsub
+local huge = _G.math.huge
+local IsPassiveSpell = _G.IsPassiveSpell
+local next = _G.next
+local NO = _G.NO
+local NONE = _G.NONE
+local pairs = _G.pairs
+local PET = _G.PET
+local rawget = _G.rawget
+local select = _G.select
+local SPELLBOOK = _G.SPELLBOOK
+local strjoin = _G.strjoin
+local strlower = _G.strlower
+local strmatch = _G.strmatch
+local strsplit = _G.strsplit
+local strtrim = _G.strtrim
+local tconcat = _G.table.concat
+local tinsert = _G.tinsert
+local tonumber = _G.tonumber
+local tostring = _G.tostring
+local type = _G.type
+local UnitClass = _G.UnitClass
+local UnitExists = _G.UnitExists
+local unpack = _G.unpack
+local wipe = _G.wipe
+local YES = _G.YES
+--GLOBALS>
+
 -----------------------------------------------------------------------------
 -- Default option handler
 -----------------------------------------------------------------------------
@@ -227,6 +275,7 @@ local options = {
 					desc = L['Select the font to be used to display both countdown and application count.'],
 					type = 'select',
 					dialogControl = 'LSM30_Font',
+					-- GLOBALS: AceGUIWidgetLSMlists
 					values = AceGUIWidgetLSMlists.font,
 					order = 10,
 				},
@@ -453,7 +502,7 @@ function spellSpecificHandler:GetSpellList()
 		end
 	end
 	if pref.spellbook_pet then
-		MergeSpellbook(BOOKTYPE_PET, 1, math.huge)
+		MergeSpellbook(BOOKTYPE_PET, 1, huge)
 	end
 	if pref.modified then
 		for key, status in pairs(addon.db.profile.spellStatuses) do
@@ -656,7 +705,7 @@ end
 
 function spellSpecificHandler:GetAliases(info)
 	local aliases = self.db.aliases
-	return type(aliases) == 'table' and table.concat(aliases, "\n") or nil
+	return type(aliases) == 'table' and tconcat(aliases, "\n") or nil
 end
 
 -- Spell name validation
@@ -744,7 +793,7 @@ function spellSpecificHandler:SetAliases(info, value)
 		name = name:trim()
 		if name ~= "" then
 			local name = ValidateName(name)
-			table.insert(aliases, name)
+			tinsert(aliases, name)
 		end
 	end
 	if #aliases > 0 then
@@ -766,7 +815,7 @@ function spellSpecificHandler:ValidateAliases(info, value)
 		end
 	end
 	if #invalids > 0 then
-		ShowErrorMessage(format(L["Invalid spell names:\n%s."], table.concat(invalids, "\n")))
+		ShowErrorMessage(format(L["Invalid spell names:\n%s."], tconcat(invalids, "\n")))
 		return false
 	else
 		return true
@@ -1050,7 +1099,7 @@ function moduleHandler:SetCurrent(_, name)
 end
 
 function moduleHandler:GetKeywordList()
-	return self.current and format(L["This module provides the following keyword(s) for use as an alias: %s."], table.concat(self.current.keywords, ", ")) or ""
+	return self.current and format(L["This module provides the following keyword(s) for use as an alias: %s."], tconcat(self.current.keywords, ", ")) or ""
 end
 
 function moduleHandler:IsEnabled() return self.current and self.current.db.profile.enabled end

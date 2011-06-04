@@ -28,6 +28,35 @@ local buttons = addon.buttons
 local overlayedSpells = addon.overlayedSpells
 
 ------------------------------------------------------------------------------
+-- Make often-used globals local
+------------------------------------------------------------------------------
+
+--<GLOBALS
+local _G = _G
+local ActionButton_HideOverlayGlow = _G.ActionButton_HideOverlayGlow
+local ActionButton_ShowOverlayGlow = _G.ActionButton_ShowOverlayGlow
+local ActionButton_UpdateOverlayGlow = _G.ActionButton_UpdateOverlayGlow
+local assert = _G.assert
+local ceil = _G.ceil
+local CreateFrame = _G.CreateFrame
+local floor = _G.floor
+local format = _G.format
+local GetSpellCooldown = _G.GetSpellCooldown
+local GetTime = _G.GetTime
+local IsSpellOverlayed = _G.IsSpellOverlayed
+local IsUsableAction = _G.IsUsableAction
+local IsUsableSpell = _G.IsUsableSpell
+local min = _G.min
+local next = _G.next
+local pairs = _G.pairs
+local setmetatable = _G.setmetatable
+local strmatch = _G.strmatch
+local tostring = _G.tostring
+local type = _G.type
+local unpack = _G.unpack
+--GLOBALS>
+
+------------------------------------------------------------------------------
 -- LibSharedMedia
 ------------------------------------------------------------------------------
 local LSM = LibStub('LibSharedMedia-3.0')
@@ -317,7 +346,7 @@ end
 -- Visual feedback hooks
 ------------------------------------------------------------------------------
 
-function UpdateTextLayout(countdown, stack)
+local function UpdateTextLayout(countdown, stack)
 	if countdown and not countdown:IsShown() then
 		countdown = nil
 	end
@@ -358,11 +387,6 @@ function addon:UpdateWidgets()
 		UpdateTextLayout(overlay.countdown, overlay.stack)
 	end
 end
-
--- Keep unhooked functions
-local ActionButton_ShowOverlayGlow = ActionButton_ShowOverlayGlow
-local ActionButton_HideOverlayGlow = ActionButton_HideOverlayGlow
-local ActionButton_UpdateOverlayGlow = ActionButton_UpdateOverlayGlow
 
 local function IsGlowing(state)
 	if (state.spellId and IsSpellOverlayed(state.spellId))

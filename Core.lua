@@ -54,17 +54,66 @@ addon.buttons = buttons
 -- Make often-used globals local
 ------------------------------------------------------------------------------
 
-local UnitCanAssist, UnitCanAttack = UnitCanAssist, UnitCanAttack
-local UnitGUID, UnitIsUnit, UnitAura = UnitGUID, UnitIsUnit, UnitAura
-local IsHarmfulSpell, IsHelpfulSpell = IsHarmfulSpell, IsHelpfulSpell
-local unpack, type, pairs, rawget, next = unpack, type, pairs, rawget, next
-local strsplit, strtrim, strsub, select = strsplit, strtrim, strsub, select
-local format, ceil, floor, tostring, gsub = format, ceil, floor, tostring, gsub
-local GetTotemInfo, GetActionInfo, GetItemInfo = GetTotemInfo, GetActionInfo, GetItemInfo
-local GetNumTrackingTypes, GetTrackingInfo = GetNumTrackingTypes, GetTrackingInfo
-local SecureCmdOptionParse, GetMacroBody = SecureCmdOptionParse, GetMacroBody
-local GetCVarBool, SecureButton_GetModifiedUnit = GetCVarBool, SecureButton_GetModifiedUnit
-local GetMacroSpell, GetMacroItem, IsHelpfulItem = GetMacroSpell, GetMacroItem, IsHelpfulItem
+--GLOBALS: ActionButton_UpdateOverlayGlow ActionButton_UpdateState ActionButton_UpdateUsable
+--<GLOBALS
+local _G = _G
+local assert = _G.assert
+local CreateFrame = _G.CreateFrame
+local format = _G.format
+local GetActionInfo = _G.GetActionInfo
+local GetAddOnInfo = _G.GetAddOnInfo
+local GetCVarBool = _G.GetCVarBool
+local geterrorhandler = _G.geterrorhandler
+local GetItemInfo = _G.GetItemInfo
+local GetItemSpell = _G.GetItemSpell
+local GetMacroBody = _G.GetMacroBody
+local GetMacroItem = _G.GetMacroItem
+local GetMacroSpell = _G.GetMacroSpell
+local GetNumPartyMembers = _G.GetNumPartyMembers
+local GetNumRaidMembers = _G.GetNumRaidMembers
+local GetSpellInfo = _G.GetSpellInfo
+local hooksecurefunc = _G.hooksecurefunc
+local InterfaceOptionsFrameAddOns = _G.InterfaceOptionsFrameAddOns
+local InterfaceOptionsFrame_OpenToCategory = _G.InterfaceOptionsFrame_OpenToCategory
+local IsAddOnLoaded = _G.IsAddOnLoaded
+local IsHelpfulItem = _G.IsHelpfulItem
+local IsHelpfulSpell = _G.IsHelpfulSpell
+local IsLoggedIn = _G.IsLoggedIn
+local IsModifiedClick = _G.IsModifiedClick
+local issecurevariable = _G.issecurevariable
+local LoadAddOn = _G.LoadAddOn
+local next = _G.next
+local pairs = _G.pairs
+local print = _G.print
+local rawget = _G.rawget
+local SecureButton_GetModifiedUnit = _G.SecureButton_GetModifiedUnit
+local SecureCmdOptionParse = _G.SecureCmdOptionParse
+local select = _G.select
+local setmetatable = _G.setmetatable
+local SlashCmdList = _G.SlashCmdList
+local strjoin = _G.strjoin
+local strlower = _G.strlower
+local strmatch = _G.strmatch
+local strsplit = _G.strsplit
+local strtrim = _G.strtrim
+local tonumber = _G.tonumber
+local tostring = _G.tostring
+local type = _G.type
+local UnitBuff = _G.UnitBuff
+local UnitCanAssist = _G.UnitCanAssist
+local UnitCanAttack = _G.UnitCanAttack
+local UnitDebuff = _G.UnitDebuff
+local UnitExists = _G.UnitExists
+local UnitGUID = _G.UnitGUID
+local UnitHasVehicleUI = _G.UnitHasVehicleUI
+local UnitIsConnected = _G.UnitIsConnected
+local UnitIsDeadOrGhost = _G.UnitIsDeadOrGhost
+local UnitIsUnit = _G.UnitIsUnit
+local UnitIsVisible = _G.UnitIsVisible
+local unpack = _G.unpack
+local wipe = _G.wipe
+local _ERRORMESSAGE = _G._ERRORMESSAGE
+--GLOBALS>
 
 ------------------------------------------------------------------------------
 -- Libraries and helpers
@@ -988,6 +1037,7 @@ end
 local addonSupport = {
 	Dominos = function(self)
 		self:RegisterButtons("DominosActionButton", 120)
+		-- GLOBALS: Dominos
 		hooksecurefunc(Dominos.ActionButton, "Skin", ActionButton_OnLoad_Hook)
 	end,
 	OmniCC = function(self)
@@ -997,6 +1047,7 @@ local addonSupport = {
 		self:RegisterButtons("BT4Button", 120) -- should not be necessary
 	end,
 	tullaRange = function(self)
+		-- GLOBALS: tullaRange
 		hooksecurefunc(tullaRange, "SetButtonColor", self.UpdateButtonUsable_Hook)
 	end,
 }
@@ -1059,6 +1110,7 @@ end
 -- Initialization
 ------------------------------------------------------------------------------
 
+-- GLOBALS: InlineAura_LoadDefaults
 function addon:LoadSpellDefaults(event)
 	--@debug@
 	dprint('Loaded default settings on', event)
@@ -1079,7 +1131,7 @@ function addon:LoadSpellDefaults(event)
 
 	-- Clean up
 	self:UnregisterEvent('SPELLS_CHANGED')
-	addon_LoadDefaults = nil
+	InlineAura_LoadDefaults = nil
 
 	-- We have them
 	self.defaultsLoaded = true
@@ -1196,7 +1248,7 @@ function addon:OnEnable()
 			print("|cffff0000InlineAura: you are testing an alpha version of Inline Aura without a proper error handler. Please install one like BugGrabber or Swatter prior to reporting any issue.|r")
 		end
 		--@end-alpha@
-	
+
 		self.firstEnable = nil
 
 		-- Retrieve default spell configuration
@@ -1278,8 +1330,9 @@ local function LoadConfigGUI()
 end
 
 -- Chat command line
-SLASH_addon1 = "/InlineAura"
-function SlashCmdList.addon()
+-- GLOBALS: SLASH_INLINEAURA1
+SLASH_INLINEAURA1 = "/InlineAura"
+function SlashCmdList.INLINEAURA()
 	LoadConfigGUI()
 	InterfaceOptionsFrame_OpenToCategory(L['Inline Aura'])
 end

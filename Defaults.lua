@@ -565,22 +565,6 @@ function InlineAura_LoadDefaults(self, presets, statuses)
 		"WARRIOR",      6552  -- Pummel
 	):ShowSpecial('INTERRUPTIBLE'):Glowing()
 
-	-- (En)rage removers
-	SpellsByClass(
-		"DRUID",   2908, -- Soothe
-		"HUNTER", 19801, -- Tranquilizing Shot
-		"ROGUE",   5938  -- Shiv
-	):Aliases(
-		-- Note: chances are "Enrage" catchs a bunch of enrage effects
-		12292, -- Death Wish (Warrior)
-		18499, -- Berserker Rage (Warrior)
-		76691, -- Vengeance (all tanks)
-		12880, -- Enrage (Warrior)
-		57516, -- Enrage (Warrior)
-		5229,  -- Enrage (Druid)
-		72143  -- Enrage (Shambling Horror)
-	):Glowing()
-
 	------------------------------------------------------------------------------
 	-- Profession tracking
 	------------------------------------------------------------------------------

@@ -529,10 +529,10 @@ local function AnalyzeAction(action, param)
 	if not action or not param then return end
 	local item, spell
 	if action == "item" then
-		item = GetItemInfo(param)
+		item = GetItemInfo(param) or type(param) == "string" and param
 		spell = GetItemSpell(item) or item
 	elseif action == "spell" then
-		spell = GetSpellInfo(param)
+		spell = GetSpellInfo(param) or type(param) == "string" and param
 	end
 	if not spell then
 		return -- Nothing to handle

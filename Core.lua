@@ -1123,7 +1123,7 @@ function addon:LoadSpellDefaults(event)
 	end
 
 	-- Insert spell defaults
-	InlineAura_LoadDefaults(self, PRESETS, DEFAULT_OPTIONS.profile.spellStatuses)
+	self:LoadSettings(InlineAura_LoadDefaults, PRESETS, DEFAULT_OPTIONS.profile.spellStatuses)
 
 	-- Register updated defaults
 	if self.db then

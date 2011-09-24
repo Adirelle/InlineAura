@@ -31,4 +31,5 @@ Localization.lua
 Core.lua
 Display.lua
 StateModules.lua
+SettingsEnv.lua
 

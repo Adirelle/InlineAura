@@ -33,3 +33,6 @@ Display.lua
 StateModules.lua
 SettingsEnv.lua
 
+..\InlineAura_Custom\StateModules.lua
+..\InlineAura_Custom\Defaults.lua
+

@@ -1123,7 +1123,9 @@ function addon:LoadSpellDefaults(event)
 	end
 
 	-- Insert spell defaults
-	self:LoadSettings(InlineAura_LoadDefaults, PRESETS, DEFAULT_OPTIONS.profile.spellStatuses)
+	self:InitSettingsEnvironment(PRESETS, DEFAULT_OPTIONS.profile.spellStatuses)
+	self:LoadSettings(InlineAura_LoadDefaults)
+	self:LoadSettings(InlineAura_LoadCustomDefaults)
 
 	-- Register updated defaults
 	if self.db then
@@ -1253,7 +1255,7 @@ function addon:OnEnable()
 		self.firstEnable = nil
 
 		-- Retrieve default spell configuration
-		if InlineAura_LoadDefaults then
+		if InlineAura_LoadDefaults or InlineAura_LoadCustomDefaults then
 			if IsLoggedIn() then
 				-- Already logged in, spell data should be available
 				self:LoadSpellDefaults('OnEnable')

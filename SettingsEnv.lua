@@ -34,6 +34,7 @@ local geterrorhandler = _G.geterrorhandler
 local GetItemInfo = _G.GetItemInfo
 local GetSpellInfo = _G.GetSpellInfo
 local gsub = _G.gsub
+local setfenv = _G.setfenv
 local IsPassiveSpell = _G.IsPassiveSpell
 local IsSpellKnown = _G.IsSpellKnown
 local pairs = _G.pairs
@@ -61,13 +62,18 @@ local function BuildEnv(self, presets, statuses)
 
 	local function AddFuncs()
 
+		-- GLOBALS: class
 		_, class = UnitClass('player')
+
+		-- GLOBALS: version
 		version = "@file-hash@/@project-version@"
 		--@debug@
 		version = "developer"
 		--@end-debug@
+
 		local reported = {}
 
+		-- GLOBALS: GetSpellName
 		-- Get the spell name, throwing error if not found
 		function GetSpellName(id, level, noStrict)
 			local name
@@ -124,6 +130,7 @@ local function BuildEnv(self, presets, statuses)
 				end
 			end
 
+			-- GLOBALS: Spells
 			function Spells(...)
 				wipe(obj.spells)
 				wipe(obj.ids)
@@ -138,6 +145,7 @@ local function BuildEnv(self, presets, statuses)
 				return obj
 			end
 
+			-- GLOBALS: SpellsByClass
 			function SpellsByClass(...)
 				wipe(obj.spells)
 				wipe(obj.ids)
@@ -215,29 +223,49 @@ local function BuildEnv(self, presets, statuses)
 			end
 		end
 
+		-- GLOBALS: Aliases
 		-- Defines spell type and aliases
 		function Aliases(mainId, ...) return Spells(mainId):Aliases(...) end
 
+		-- GLOBALS: SelfBuffs
 		-- Defines buffs that only apply to the player
 		function SelfBuffs(...) return Spells(...):OnSelf():OnlyMine() end
 
+		-- GLOBALS: PetBuffs
 		-- Define pet buffs
 		function PetBuffs(...) return Spells(...):OnPet() end
 
+		-- GLOBALS: ShowSpecial
 		-- Add special display
 		function ShowSpecial(special, ...) return Spells(...):WithStack():Glowing():ShowSpecial(special) end
 
+		-- GLOBALS: SelfTalentProc
 		-- Defines auras that appear on the player and modify another spell
 		function SelfTalentProc(spellId, ...) return Spells(spellId):Aliases(...):OnSelf():OnlyMine():Glowing() end
 
+		-- GLOBALS: GroupBuffs
 		-- Declare a category of group-wide buffs
 		function GroupBuffs(...) return Spells(...):AreMutualAliases():OnSelf():ShowOthers() end
 
+		-- GLOBALS: GroupDebuffs
 		-- Declare a category of group-wide debuffs
 		function GroupDebuffs(...) return Spells(...):AreMutualAliases():ShowOthers() end
 
+		-- GLOBALS: SharedAuras
 		-- Declare (de)buffs that are brought by several classes
 		function SharedAuras(...) return SpellsByClass(...):AreMutualAliases():ShowOthers()	end
+
+		-- GLOBALS: __cleanup
+		function __cleanup()
+			for name, spell in pairs(presets) do
+				spell.id = nil
+				if spell.aliases and #(spell.aliases) > 0 then
+					spell.aliases = { unpack(spell.aliases) }
+				else
+					spell.aliases = nil
+				end
+			end
+		end
 
 	end
 
@@ -254,30 +282,21 @@ end
 
 local EnvMeta
 
-function addon:LoadSettings(f, presets, statuses)
+function addon:InitSettingsEnvironment(presets, statuses)
+	if EnvMeta then return end
+	EnvMeta = BuildEnv(addon, presets, statuses)
+	BuildEnv = nil
+end
+
+function addon:LoadSettings(f)
+	assert(EnvMeta)
 	if not f then return end
 
-	-- Lazy init
-	if not EnvMeta then
-		EnvMeta = BuildEnv(addon, presets, statuses)
-		BuildEnv = nil
-	end
-
-	-- Create a private environment et execute the function inside it
+	-- Create a private environment and execute the function inside it
 	local privateEnv = setmetatable({}, EnvMeta)
 	privateEnv._G = privateEnv
 	setfenv(f, privateEnv)
 	f()
-
-	-- Cleanup
-	for name, spell in pairs(presets) do
-		spell.id = nil
-		if spell.aliases and #(spell.aliases) > 0 then
-			spell.aliases = { unpack(spell.aliases) }
-		else
-			spell.aliases = nil
-		end
-	end
-
+	privateEnv.__cleanup()
 end
 

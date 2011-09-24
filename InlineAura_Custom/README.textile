@@ -1,0 +1,2 @@
+To create persistant default settings and state modules, copy this directory at the same level as the InlineAura one. You can then edit the files to your heart content. It will not be erased by subsequent updates.
+

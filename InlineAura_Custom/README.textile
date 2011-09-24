@@ -1,2 +1,110 @@
-To create persistant default settings and state modules, copy this directory at the same level as the InlineAura one. You can then edit the files to your heart content. It will not be erased by subsequent updates.
+To create persistent presets and state modules, copy this directory at the same level as the InlineAura one. You can then edit the files to your heart content. It will not be erased by subsequent updates.
+
+h1. Custom presets
+
+To create some custom presets, create/edit a file named Defaults.lua in the InlineAura_Custom directory.
+
+All presets should be contained in one function named 'InlineAura_LoadCustomDefaults'. A number of special functions and values are made available to easily define the presets.
+
+All presets works with numeric identifiers, like those you can see in wowhead spell URLs. For example, the warrior Charge have the spell identifier 100: http://www.wowhead.com/spell=100. You can also use the special form "item:XXX" where XXX is the numeric identifier of an item.
+
+If the same spell is referenced/updated several times, all presets are merged, unless they are opposed (e.g. WithStacks and NoStacks), in which case the latest takes precedence.
+
+You can take a look at the shipped presets in the InlineAura/Defaults.lua file.
+
+h2. Getting spell preset objets
+
+These two functions return objects that can be used to define or update the presets of several spells at once.
+
+h3. Spells(spell1, spell2, ...)
+
+Returns an object for all the spells listed.
+
+Examples:
+
+pre. Spells(100) -- Get the preset for charge
+
+pre. Spells(100, 133) -- Get the preset for charge and fire ball.
+
+h3. SpellByClass(class1, spell1, class2, spell2, ...)
+
+Returns an object for the spells listed only if the player 
+
+pre. SpellByClass('WARRIOR', 100, 'MAGE', 133) -- Return the preset for Charge if the current player is a warrior or Fireball is the current player is a Mage.
+
+h2. Preset methods
+
+The preset methods are used to actually define so settings on the preset object. Most of them are equivalent to in-game options.
+
+h3. :WithStack() / :NoStack()
+
+Enables/disables displaying the number of stacks.
+
+h3. :WithCountdown() / :NoCountdown()
+
+Enables/disables displaying the countdown.
+
+h3. :OnlyMine() / :ShowOthers()
+
+Disables/enables displaying spells of other players.
+
+Example:
+
+pre. Spells(86346):OnlyMine() -- Only shows MY Colossus Smash
+
+h3. :IsRegular() / :OnSelf() / :OnPet() / :ShowSpecial(keyword)
+
+Enable special behavior :
+
+* IsRegular: normal target resolution (depending on spell type, targets, macros, etc...)
+* OnSelf: only consider the player.
+* OnPet: only consider player's pet.
+* ShowSpecial: uses special keyword (i.e. state modules).
+
+Example:
+
+pre. Spells(136):OnPet() -- Looks for Mend Pet only on player's pet
+
+h3. :Glowing() / :ColoredBorder() / :NoHighlight()
+
+Selects the highlight method.
+
+Example:
+
+pre. Spells(53351):Aliases('BELOW20'):Glowing() -- Have Kill Shot (53351) glowing when target is below 20% health
+
+h3. :Aliases(spell1, spell2, ...)
+
+Looks for additionnal spells. Special keywords (e.g. "COMBO_POINTS") can also be used as aliases.
+
+Examples:
+
+pre. Spells(1499):Aliases(3355) -- Displays Freezing Trap Effect (3355) on Freezing Trap (1499)
+
+pre. Spells(19801):Aliases("DISPELLABLE") -- Displays foes' magic buffs on Tranquilizing Shot (19801)
+
+h3. :AreMutualAliases()
+
+All selected spells are aliases of each others.
+		
+h2. Shortcuts
+
+Convenient functions are defined to help with some common schemes. They are strictly equivalent to longer forms.
+
+|_. Shortcut|_. Long form|
+|Aliases(main, alias1, alias2, ...)|Spells(main):Aliases(alias1, alias2, ...)|
+|SelfBuffs(spell1, spell2, ...)|Spells(spell1, spell2, ...):OnSelf():OnlyMine()|
+|PetBuffs(spell1, spell2, ...)|Spells(spell1, spell2, ...):OnPet()|
+|ShowSpecial(special, spell1, spell2, ...) |Spells(spell1, spell2, ...):WithStack():Glowing():ShowSpecial(special)|
+|SelfTalentProc(spell, talent1, talent2, ...) |Spells(spell):Aliases( talent1, talent2, ...):OnSelf():OnlyMine():Glowing()|
+|GroupBuffs(spell1, spell2, ...) |Spells(spell1, spell2, ...):AreMutualAliases():OnSelf():ShowOthers()|
+|GroupDebuffs(spell1, spell2, ...) |Spells(spell1, spell2, ...):AreMutualAliases():ShowOthers()|
+|SharedAuras(class1, spell1, class2, spell2, ...) |SpellsByClass(class1, spell1, class2, spell2, ...):AreMutualAliases():ShowOthers()|
+
+h1. Custom state modules
+
+The state modules are written in Lua and can provides advanced features. However, they requires a solid knowledge of Lua programming, WoW API and Ace3 framework (namely AceAddon modules and AceEvent).
+
+To be continued...
+
 

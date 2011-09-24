@@ -73,9 +73,8 @@ local function BuildEnv(self, presets, statuses)
 
 		local reported = {}
 
-		-- GLOBALS: GetSpellName
 		-- Get the spell name, throwing error if not found
-		function GetSpellName(id, level, noStrict)
+		local function GetSpellName(id, level, noStrict)
 			local name
 			local input = id
 			if type(id) == "string" then

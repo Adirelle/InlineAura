@@ -2,7 +2,6 @@
     type: textile
     input-file: README.textile
     output-page: Main
-
 -
     type: textile
     input-file: InlineAura_Custom/README.textile

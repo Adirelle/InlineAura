@@ -1,5 +1,6 @@
 --[[
-Copyright (C) 2009-2010 Adirelle
+Inline Aura - displays aura information inside action buttons
+Copyright (C) 2009-2011 Adirelle (adirelle@tagada-team.net)
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

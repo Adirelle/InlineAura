@@ -63,6 +63,7 @@ local CreateFrame = _G.CreateFrame
 local format = _G.format
 local GetActionInfo = _G.GetActionInfo
 local GetAddOnInfo = _G.GetAddOnInfo
+local GetBuildInfo = _G.GetBuildInfo
 local GetCVarBool = _G.GetCVarBool
 local geterrorhandler = _G.geterrorhandler
 local GetItemInfo = _G.GetItemInfo
@@ -185,6 +186,10 @@ local UNIT_EVENTS = {
 	focus = 'PLAYER_FOCUS_CHANGED',
 	mouseover = 'UPDATE_MOUSEOVER_UNIT',
 }
+
+-- Detect 4.3 client for compat
+addon.client40300 = (select(4, GetBuildInfo()) == 40300)
+
 
 ------------------------------------------------------------------------------
 -- Some Unit helpers
@@ -593,14 +598,28 @@ local function AnalyzeAction(action, param)
 	return spell, helpful and "friend" or "foe", specific
 end
 
-local function GetMacroAction(index)
-	local macroSpell = GetMacroSpell(index)
-	if macroSpell then
-		return "spell", macroSpell
+local GetMacroAction
+if addon.client40300 then
+	function GetMacroAction(index)
+		local macroSpell, _, spellId = GetMacroSpell(index)
+		if macroSpell then
+			return "spell", spellId or macroSpell
+		end
+		local macroItem, itemLink = GetMacroItem(index)
+		if macroItem then
+			return "item", tonumber(itemLink:match('item:(%d+):')) or macroItem
+		end
 	end
-	local macroItem = GetMacroItem(index)
-	if macroItem then
-		return "item", macroItem
+else
+	function GetMacroAction(index)
+		local macroSpell = GetMacroSpell(index)
+		if macroSpell then
+			return "spell", macroSpell
+		end
+		local macroItem = GetMacroItem(index)
+		if macroItem then
+			return "item", macroItem
+		end
 	end
 end
 
@@ -687,6 +706,9 @@ local function UpdateAction_Hook(self, forceUpdate)
 				if macroAction and macroParam then
 					spell, targetHint, specific = AnalyzeAction(macroAction, macroParam)
 					active = "*"
+					if addon.client40300 and macroAction == "spell" and type(macroParam) == "number" then
+						state.spellUId = macroParam
+					end
 				end
 			else
 				spell, targetHint, specific = AnalyzeAction(action, param)
@@ -1014,23 +1036,26 @@ function addon:UPDATE_MACROS(event)
 	return self:RequireUpdate(true)
 end
 
-local overlayedSpells = {}
-addon.overlayedSpells = overlayedSpells
+if not addon.client40300 then
+	local overlayedSpells = {}
+	addon.overlayedSpells = overlayedSpells
 
-function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
-	local name = GetSpellInfo(id)
-	local enable = (event == "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW") or nil
-	if overlayedSpells[name] ~= enable then
-		addon.dprint("Spell glowing", name, '=>', enable)
-		overlayedSpells[name] = enable
-		for button in pairs(activeButtons) do
-			local state = buttons[button]
-			if state.action == "macro" and state.spell == name then
-				ActionButton_UpdateOverlayGlow(button)
+	function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
+		local name = GetSpellInfo(id)
+		local enable = (event == "SPELL_ACTIVATION_OVERLAY_GLOW_SHOW") or nil
+		if overlayedSpells[name] ~= enable then
+			addon.dprint("Spell glowing", name, '=>', enable)
+			overlayedSpells[name] = enable
+			for button in pairs(activeButtons) do
+				local state = buttons[button]
+				if state.action == "macro" and state.spell == name then
+					ActionButton_UpdateOverlayGlow(button)
+				end
 			end
 		end
 	end
 end
+
 ------------------------------------------------------------------------------
 -- Addon and library support
 ------------------------------------------------------------------------------
@@ -1314,8 +1339,10 @@ function addon:OnEnable()
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
 	self:RegisterEvent('UPDATE_MACROS')
-	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
-	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE', 'SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
+	if not addon.client40300 then
+		self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
+		self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE', 'SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
+	end
 
 	-- Refresh everything
 	self:RequireUpdate(true)

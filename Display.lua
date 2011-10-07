@@ -389,15 +389,30 @@ function addon:UpdateWidgets()
 	end
 end
 
-local function IsGlowing(state)
-	if (state.spellId and IsSpellOverlayed(state.spellId))
-		or (state.action == "macro" and overlayedSpells[state.spell]) then
-		return true
-	elseif state.highlight == "glowing" then
- 		local usable, noPower = IsUsableSpell(state.spell)
- 		if usable or noPower then
- 			local start, duration, enable = GetSpellCooldown(state.spell)
-			return enable == 0 or start == 0 or duration <= 1.5
+local IsGlowing
+if addon.client40300 then
+	function IsGlowing(state)
+		if (state.spellId and IsSpellOverlayed(state.spellId)) then
+			return true
+		elseif state.highlight == "glowing" then
+	 		local usable, noPower = IsUsableSpell(state.spell)
+	 		if usable or noPower then
+	 			local start, duration, enable = GetSpellCooldown(state.spell)
+				return enable == 0 or start == 0 or duration <= 1.5
+			end
+		end
+	end
+else
+	function IsGlowing(state)
+		if (state.spellId and IsSpellOverlayed(state.spellId))
+			or (state.action == "macro" and overlayedSpells[state.spell]) then
+			return true
+		elseif state.highlight == "glowing" then
+	 		local usable, noPower = IsUsableSpell(state.spell)
+	 		if usable or noPower then
+	 			local start, duration, enable = GetSpellCooldown(state.spell)
+				return enable == 0 or start == 0 or duration <= 1.5
+			end
 		end
 	end
 end

@@ -3,7 +3,7 @@
 ## Title: Inline Aura - Default spell configuration
 ## Author: Adirelle
 ## LoadOnDemand: 1
-## Version: @project-version@ 
+## Version: @project-version@
 ## X-Date: @project-date-iso@
 
 ..\InlineAura\Defaults.lua

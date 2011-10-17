@@ -5,7 +5,7 @@
 ## LoadOnDemand: 1
 ## Dependencies: InlineAura
 ## OptDeps: Ace3, AceGUI-3.0-SharedMediaWidgets
-## Version: @project-version@ 
+## Version: @project-version@
 ## X-Date: @project-date-iso@
 ## X-Embeds: AceGUI-3.0-SharedMediaWidgets
 

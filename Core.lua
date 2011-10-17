@@ -821,12 +821,12 @@ local function UpdateButtons()
 		end
 	elseif needUpdate then
 		for button in pairs(activeButtons) do
-			UpdateButtonAura(button, needUpdate)
+			UpdateButtonAura(button, true)
 		end
 	else
 		for button, hint in pairs(activeButtons) do
 			if hint == "*" or tokenChanged[hint] or auraChanged[tokenGUIDs[hint]] then
-				UpdateButtonAura(button, needUpdate)
+				UpdateButtonAura(button)
 			end
 		end
 	end

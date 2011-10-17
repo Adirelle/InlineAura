@@ -193,6 +193,12 @@ local options = {
 			disabled = function(info) return addon.db.profile.hideCountdown or not addon.db.profile.preciseCountdown end,
 			order = 46,
 		},
+		glowOutOfCombat = {
+			name = L['Out of combat glow'],
+			desc = L["Display Inline Aura's glows out of combat. Uncheck to show them only during combats. Do not affect Blizzard built-in glows."],
+			type = 'toggle',
+			order = 47,
+		},
 		targeting = {
 			name = L['Targeting settings'],
 			desc = L['Options related to the units to watch and the way to select them depending on the spells.'],

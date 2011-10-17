@@ -142,6 +142,7 @@ local DEFAULT_OPTIONS = {
 		hideStack = false,
 		showStackAtTop = false,
 		preciseCountdown = false,
+		glowOutOfCombat = true,
 		decimalCountdownThreshold = 10,
 		singleTextPosition = 'BOTTOM',
 		twoTextFirstPosition = 'BOTTOMLEFT',
@@ -979,6 +980,7 @@ end
 addon.UNIT_ENTERED_VEHICLE = addon.UNIT_PET
 
 function addon:PLAYER_ENTERING_WORLD(event)
+	addon.inCombat = not not InCombatLockdown()
 	self:UpdateTokens("all")
 end
 
@@ -1031,6 +1033,16 @@ function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, id)
 		end
 	end
 end
+
+function addon:PLAYER_REGEN_ENABLED(event)
+	addon.inCombat = (event == 'PLAYER_REGEN_DISABLED')
+	if not db.profile.glowOutOfCombat then
+		for button in pairs(activeButtons) do
+			ActionButton_UpdateOverlayGlow(button)
+		end
+	end
+end
+
 ------------------------------------------------------------------------------
 -- Addon and library support
 ------------------------------------------------------------------------------
@@ -1316,6 +1328,8 @@ function addon:OnEnable()
 	self:RegisterEvent('UPDATE_MACROS')
 	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
 	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE', 'SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
+	self:RegisterEvent('PLAYER_REGEN_ENABLED')
+	self:RegisterEvent('PLAYER_REGEN_DISABLED', 'PLAYER_REGEN_ENABLED')
 
 	-- Refresh everything
 	self:RequireUpdate(true)

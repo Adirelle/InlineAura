@@ -393,7 +393,7 @@ local function IsGlowing(state)
 	if (state.spellId and IsSpellOverlayed(state.spellId))
 		or (state.action == "macro" and overlayedSpells[state.spell]) then
 		return true
-	elseif state.highlight == "glowing" then
+	elseif state.highlight == "glowing" and (addon.inCombat or addon.db.profile.glowOutOfCombat) then
  		local usable, noPower = IsUsableSpell(state.spell)
  		if usable or noPower then
  			local start, duration, enable = GetSpellCooldown(state.spell)

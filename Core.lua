@@ -143,6 +143,7 @@ local DEFAULT_OPTIONS = {
 		hideStack = false,
 		showStackAtTop = false,
 		preciseCountdown = false,
+		glowOutOfCombat = true,
 		decimalCountdownThreshold = 10,
 		singleTextPosition = 'BOTTOM',
 		twoTextFirstPosition = 'BOTTOMLEFT',
@@ -824,12 +825,12 @@ local function UpdateButtons()
 		end
 	elseif needUpdate then
 		for button in pairs(activeButtons) do
-			UpdateButtonAura(button, needUpdate)
+			UpdateButtonAura(button, true)
 		end
 	else
 		for button, hint in pairs(activeButtons) do
 			if hint == "*" or tokenChanged[hint] or auraChanged[tokenGUIDs[hint]] then
-				UpdateButtonAura(button, needUpdate)
+				UpdateButtonAura(button)
 			end
 		end
 	end
@@ -983,6 +984,7 @@ end
 addon.UNIT_ENTERED_VEHICLE = addon.UNIT_PET
 
 function addon:PLAYER_ENTERING_WORLD(event)
+	addon.inCombat = not not InCombatLockdown()
 	self:UpdateTokens("all")
 end
 
@@ -1016,6 +1018,15 @@ end
 function addon:UPDATE_MACROS(event)
 	wipe(macroOptionsMemo)
 	return self:RequireUpdate(true)
+end
+
+function addon:PLAYER_REGEN_ENABLED(event)
+	addon.inCombat = (event == 'PLAYER_REGEN_DISABLED')
+	if not db.profile.glowOutOfCombat then
+		for button in pairs(activeButtons) do
+			ActionButton_UpdateOverlayGlow(button)
+		end
+	end
 end
 
 ------------------------------------------------------------------------------
@@ -1301,6 +1312,8 @@ function addon:OnEnable()
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
 	self:RegisterEvent('UPDATE_MACROS')
+	self:RegisterEvent('PLAYER_REGEN_ENABLED')
+	self:RegisterEvent('PLAYER_REGEN_DISABLED', 'PLAYER_REGEN_ENABLED')
 
 	-- Refresh everything
 	self:RequireUpdate(true)

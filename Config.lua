@@ -720,6 +720,7 @@ do
 		return gsub(strtrim(strlower(name)), "\194\160", " ")
 	end
 
+	local MAX_ID = 3 * select(4, GetBuildInfo()) -- Arbitrary high spell id based on current version	
 	local id = 0
 	local function LookupName(value, normalizedValue)
 		if addon.allKeywords[value] then
@@ -733,7 +734,7 @@ do
 		if knownSpell then
 			return knownSpell, 'spell'
 		end
-		while id < 100000 do -- Arbitrary high spell id
+		while id < MAX_ID do
 			id = id + 1
 			local name = GetSpellInfo(id)
 			if name then

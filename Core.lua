@@ -1040,12 +1040,6 @@ function addon:ACTIONBAR_UPDATE_STATE()
 	end
 end
 
-function addon:ACTIONBAR_UPDATE_COOLDOWN()
-	for button in pairs(activeButtons) do
-		self.UpdateButtonCooldown_Hook(button)
-	end
-end
-
 ------------------------------------------------------------------------------
 -- Addon and library support
 ------------------------------------------------------------------------------
@@ -1344,7 +1338,6 @@ function addon:OnEnable()
 	self:RegisterEvent('PLAYER_REGEN_ENABLED')
 	self:RegisterEvent('PLAYER_REGEN_DISABLED', 'PLAYER_REGEN_ENABLED')
 	self:RegisterEvent('ACTIONBAR_UPDATE_STATE')
-	self:RegisterEvent('ACTIONBAR_UPDATE_COOLDOWN')
 
 	-- Refresh everything
 	self:RequireUpdate(true)
@@ -1364,6 +1357,9 @@ end
 -- Chat command line
 -- GLOBALS: SLASH_INLINEAURA1
 SLASH_INLINEAURA1 = "/InlineAura"
+--@debug@
+SLASH_INLINEAURA2= "/IA"
+--@end-debug@
 function SlashCmdList.INLINEAURA()
 	LoadConfigGUI()
 	InterfaceOptionsFrame_OpenToCategory(L['Inline Aura'])

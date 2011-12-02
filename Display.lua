@@ -63,6 +63,12 @@ local unpack = _G.unpack
 local LSM = LibStub('LibSharedMedia-3.0')
 
 ------------------------------------------------------------------------------
+-- Local reference to addon settings
+------------------------------------------------------------------------------
+local profile = addon.db and addon.db.profile
+LibStub('AceEvent-3.0').RegisterMessage('InlineAura/Display.lua', 'InlineAura_ProfileChanged',function() profile = addon.db.profile end)
+
+------------------------------------------------------------------------------
 -- Home-made bucketed timers
 ------------------------------------------------------------------------------
 -- This is mainly a simplified version of AceTimer-3.0, credits goes to Ace3 authors
@@ -154,10 +160,10 @@ function baseProto:SetPosition(position)
 end
 
 function baseProto:ApplySettings()
-	self.font = LSM:Fetch(LSM.MediaType.FONT, addon.db.profile.fontName)
-	self.fontFlag = addon.db.profile.fontFlag
-	self.fontSize = addon.db.profile[self.sizeKey]
-	self.fontColor = addon.db.profile[self.colorKey]
+	self.font = LSM:Fetch(LSM.MediaType.FONT, profile.fontName)
+	self.fontFlag = profile.fontFlag
+	self.fontSize = profile[self.sizeKey]
+	self.fontColor = profile[self.colorKey]
 	return self:UpdateFont()
 end
 
@@ -198,9 +204,9 @@ end
 
 function countdownProto:ApplySettings()
 	self.sizeKey = addon.bigCountdown and "largeFontSize" or "smallFontSize"
-	self.getCountdownText = addon.db.profile.preciseCountdown and self.GetPreciseCountdownText or self.GetImpreciseCountdownText
-	self.decimalThreshold = addon.db.profile.decimalCountdownThreshold
-	self.getFontSize = addon.db.profile.dynamicCountdownColor and self.GetDynamicFontSize or self.GetStaticFontSize
+	self.getCountdownText = profile.preciseCountdown and self.GetPreciseCountdownText or self.GetImpreciseCountdownText
+	self.decimalThreshold = profile.decimalCountdownThreshold
+	self.getFontSize = profile.dynamicCountdownColor and self.GetDynamicFontSize or self.GetStaticFontSize
 	return baseProto.ApplySettings(self)
 end
 
@@ -355,10 +361,10 @@ local function UpdateTextLayout(countdown, stack)
 		stack = nil
 	end
 	if countdown and stack then
-		countdown:SetPosition(addon.db.profile.twoTextFirstPosition)
-		stack:SetPosition(addon.db.profile.twoTextSecondPosition)
+		countdown:SetPosition(profile.twoTextFirstPosition)
+		stack:SetPosition(profile.twoTextSecondPosition)
 	elseif countdown or stack then
-		(countdown or stack):SetPosition(addon.db.profile.singleTextPosition)
+		(countdown or stack):SetPosition(profile.singleTextPosition)
 	end
 end
 
@@ -392,10 +398,10 @@ end
 local function IsGlowing(state)
 	if (state.spellId and IsSpellOverlayed(state.spellId)) then
 		return true
-	elseif state.highlight == "glowing" and (addon.inCombat or addon.db.profile.glowOutOfCombat) then
+	elseif state.highlight == "glowing" and (addon.inCombat or profile.glowOutOfCombat) then
 		local usable, noPower = IsUsableSpell(state.spell)
 		if usable or noPower then
-			local start, duration, enable = GetSpellCooldown(state.spell)
+			local start, duration, enable = GetSpellCooldown(state.spellId or state.spell)
 			return enable == 0 or start == 0 or duration <= 1.5
 		end
 	end
@@ -460,7 +466,7 @@ function addon.UpdateButtonState_Hook(button)
 	if not state then return end
 	local texture = button:GetCheckedTexture()
 	local border = state.highlight and strmatch(state.highlight, '^border(.+)$')
-	local color = border and addon.db.profile["color"..border]
+	local color = border and profile["color"..border]
 	if color then
 		button:SetChecked(true)
 		return SetVertexColor(texture, unpack(color))

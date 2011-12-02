@@ -75,6 +75,12 @@ local wipe = _G.wipe
 local YES = _G.YES
 --GLOBALS>
 
+------------------------------------------------------------------------------
+-- Local reference to addon settings
+------------------------------------------------------------------------------
+local profile = addon.db and addon.db.profile
+LibStub('AceEvent-3.0').RegisterMessage('InlineAura/Config.lua', 'InlineAura_ProfileChanged',function() profile = addon.db.profile end)
+
 -----------------------------------------------------------------------------
 -- Default option handler
 -----------------------------------------------------------------------------
@@ -82,7 +88,7 @@ local YES = _G.YES
 local handler = {}
 
 function handler:GetDatabase(info)
-	local db = addon.db.profile
+	local db = profile
 	local key = info.arg or info[#info]
 	if type(key) == "table" then
 		for i = 1, #key-1 do
@@ -180,7 +186,7 @@ local options = {
 			name = L['Precise countdown'],
 			desc = L['Use a more accurate rounding, down to tenths of second, instead of the default Blizzard rounding.'],
 			type = 'toggle',
-			disabled = function(info) return addon.db.profile.hideCountdown end,
+			disabled = function(info) return profile.hideCountdown end,
 			order = 45,
 		},
 		decimalCountdownThreshold = {
@@ -190,7 +196,7 @@ local options = {
 			min = 1,
 			max = 10,
 			step = 0.5,
-			disabled = function(info) return addon.db.profile.hideCountdown or not addon.db.profile.preciseCountdown end,
+			disabled = function(info) return profile.hideCountdown or not profile.preciseCountdown end,
 			order = 46,
 		},
 		glowOutOfCombat = {
@@ -324,14 +330,14 @@ local options = {
 					desc = L['Make the countdown color, and size if possible, depends on remaining time.'],
 					type = 'toggle',
 					order = 35,
-					disabled = function() return addon.db.profile.hideCountdown end,
+					disabled = function() return profile.hideCountdown end,
 				},
 				colorCountdown = {
 					name = L['Countdown text color'],
 					type = 'color',
 					hasAlpha = true,
 					order = 40,
-					disabled = function() return addon.db.profile.hideCountdown or addon.db.profile.dynamicCountdownColor end,
+					disabled = function() return profile.hideCountdown or profile.dynamicCountdownColor end,
 				},
 				colorStack = {
 					name = L['Application text color'],
@@ -357,8 +363,8 @@ local options = {
 					desc = L['Select where to place the countdown text when both values are shown.'],
 					type = 'select',
 					arg = 'twoTextFirstPosition',
-					values = function(info) return info.handler:ListTextPositions(info, addon.db.profile.twoTextSecondPosition) end,
-					disabled = function(info) return addon.db.profile.hideCountdown or addon.db.profile.hideStack end,
+					values = function(info) return info.handler:ListTextPositions(info, profile.twoTextSecondPosition) end,
+					disabled = function(info) return profile.hideCountdown or profile.hideStack end,
 					order = 20,
 				},
 				twoTextSecond = {
@@ -366,8 +372,8 @@ local options = {
 					desc = L['Select where to place the application count text when both values are shown.'],
 					type = 'select',
 					arg = 'twoTextSecondPosition',
-					values = function(info) return info.handler:ListTextPositions(info, addon.db.profile.twoTextFirstPosition) end,
-					disabled = function(info) return addon.db.profile.hideCountdown or addon.db.profile.hideStack end,
+					values = function(info) return info.handler:ListTextPositions(info, profile.twoTextFirstPosition) end,
+					disabled = function(info) return profile.hideCountdown or profile.hideStack end,
 					order = 30,
 				},
 				oneText = {
@@ -376,7 +382,7 @@ local options = {
 					type = 'select',
 					arg = 'singleTextPosition',
 					values = "ListTextPositions",
-					disabled = function(info) return addon.db.profile.hideCountdown and addon.db.profile.hideStack end,
+					disabled = function(info) return profile.hideCountdown and profile.hideStack end,
 					order = 40,
 				},
 			},
@@ -478,7 +484,7 @@ end
 
 function spellSpecificHandler:GetSpellList()
 	wipe(spellList)
-	local pref = addon.db.profile.configSpellSources
+	local pref = profile.configSpellSources
 	if pref.actionbars then
 		-- Scan action buttons for spells and items
 		for button, state in pairs(addon.buttons) do
@@ -512,7 +518,7 @@ function spellSpecificHandler:GetSpellList()
 		MergeSpellbook(BOOKTYPE_PET, 1, huge)
 	end
 	if pref.modified then
-		for key, status in pairs(addon.db.profile.spellStatuses) do
+		for key, status in pairs(profile.spellStatuses) do
 			if status ~= (PRESETS[key] and "preset" or "global") then
 				AddSpellOrItem(key)
 			end
@@ -600,10 +606,10 @@ function spellSpecificHandler:GetStatus()
 end
 
 function spellSpecificHandler:SetStatus(_, status)
-	if status == "user" and PRESETS[self.name] and not rawget(addon.db.profile.spells, self.name) then
-		copy(PRESETS[self.name], addon.db.profile.spells[self.name])
+	if status == "user" and PRESETS[self.name] and not rawget(profile.spells, self.name) then
+		copy(PRESETS[self.name], profile.spells[self.name])
 	end
-	addon.db.profile.spellStatuses[self.name] = status
+	profile.spellStatuses[self.name] = status
 	addon:RequireUpdate(true)
 	self:SelectSpell(self.name)
 end
@@ -726,7 +732,7 @@ do
 		return gsub(strtrim(strlower(name)), "\194\160", " ")
 	end
 
-	local MAX_ID = 3 * select(4, GetBuildInfo()) -- Arbitrary high spell id based on current version	
+	local MAX_ID = 3 * select(4, GetBuildInfo()) -- Arbitrary high spell id based on current version
 	local id = 0
 	local function LookupName(value, normalizedValue)
 		if addon.allKeywords[value] then
@@ -863,8 +869,8 @@ local spellOptions = {
 			),
 			type = 'multiselect',
 			control = 'Dropdown',
-			get = function(info, key) return addon.db.profile.configSpellSources[key] end,
-			set = function(info, key, value) addon.db.profile.configSpellSources[key] = value end,
+			get = function(info, key) return profile.configSpellSources[key] end,
+			set = function(info, key, value) profile.configSpellSources[key] = value end,
 			values = 'GetSpellListList',
 			disabled = false,
 			hidden = false,

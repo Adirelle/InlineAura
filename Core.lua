@@ -35,7 +35,7 @@ local L = addon.L
 -- Locals
 ------------------------------------------------------------------------------
 
-local db
+local profile
 
 local auraChanged = {}
 local tokenChanged = {}
@@ -381,8 +381,8 @@ local function GetAuraToDisplay(spell, target, specific)
 
 	if not specific then
 		-- No specific settings: pretty straightforward
-		hideStack, hideCountdown = db.profile.hideStack, db.profile.hideCountdown
-		hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = CheckAura(spell, target, db.profile.onlyMyBuffs, db.profile.onlyMyDebuffs)
+		hideStack, hideCountdown = profile.hideStack, profile.hideCountdown
+		hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = CheckAura(spell, target, profile.onlyMyBuffs, profile.onlyMyDebuffs)
 
 	else
 
@@ -401,10 +401,10 @@ local function GetAuraToDisplay(spell, target, specific)
 			-- Has specific settings but not special
 
 			-- Get boolean settings
-			hideStack = FirstNotNull(specific.hideStack, db.profile.hideStack)
-			hideCountdown = FirstNotNull(specific.hideCountdown, db.profile.hideCountdown)
-			local onlyMyBuffs = FirstNotNull(specific.onlyMine, db.profile.onlyMyBuffs)
-			local onlyMyDebuffs = FirstNotNull(specific.onlyMine, db.profile.onlyMyDebuffs)
+			hideStack = FirstNotNull(specific.hideStack, profile.hideStack)
+			hideCountdown = FirstNotNull(specific.hideCountdown, profile.hideCountdown)
+			local onlyMyBuffs = FirstNotNull(specific.onlyMine, profile.onlyMyBuffs)
+			local onlyMyDebuffs = FirstNotNull(specific.onlyMine, profile.onlyMyDebuffs)
 
 			if specific.aliases then
 				-- Has aliases: we need to test them all and combine the results
@@ -463,11 +463,11 @@ end
 ------------------------------------------------------------------------------
 
 function addon:GetSpellSettings(id)
-	local status = db.profile.spellStatuses[id]
+	local status = profile.spellStatuses[id]
 	if status == "preset" then
 		return PRESETS[id], status
 	elseif status == "user" then
-		return db.profile.spells[id], status
+		return profile.spells[id], status
 	else
 		return nil, status
 	end
@@ -778,7 +778,7 @@ end
 
 local function UpdateUnitListeners()
 	for unit, event in pairs(UNIT_EVENTS) do
-		if db.profile.enabledUnits[unit] then
+		if profile.enabledUnits[unit] then
 			addon:RegisterEvent(event)
 		else
 			addon:UnregisterEvent(event)
@@ -863,7 +863,10 @@ function addon:OnUpdate(elapsed)
 
 end
 
-function addon:RequireUpdate(config)
+function addon:RequireUpdate(config, profileChanged)
+	if profileChanged then
+		self:SendMessage('InlineAura_ProfileChanged')
+	end
 	configUpdated = config
 	needUpdate = true
 end
@@ -937,7 +940,7 @@ function addon:UpdateTokens(which)
 		self:UpdateToken("pet")
 	end
 	if which == "all" or which == "focus" then
-		self:UpdateToken("focus", db.profile.enabledUnits.focus and "focus" or "none")
+		self:UpdateToken("focus", profile.enabledUnits.focus and "focus" or "none")
 	end
 	if which == "all" or which == "target" or which == "focus" then
 		local target = "target"
@@ -947,10 +950,10 @@ function addon:UpdateTokens(which)
 			target = "focus"
 		end
 		self:UpdateToken("target", target)
-		self:UpdateToken("friend", (UnitIsBuffable(target) and target) or ((addon.db.profile.emulateAutoSelfCast or GetCVarBool("autoSelfCast")) and "player") or "none")
+		self:UpdateToken("friend", (UnitIsBuffable(target) and target) or ((profile.emulateAutoSelfCast or GetCVarBool("autoSelfCast")) and "player") or "none")
 		self:UpdateToken("foe", UnitIsDebuffable(target) and target or "none")
 	end
-	self:UpdateToken("mouseover", db.profile.enabledUnits.mouseover and GetUnitForMouseover() or "none")
+	self:UpdateToken("mouseover", profile.enabledUnits.mouseover and GetUnitForMouseover() or "none")
 end
 
 function addon:AuraChanged(unit)
@@ -1022,7 +1025,7 @@ end
 
 function addon:PLAYER_REGEN_ENABLED(event)
 	addon.inCombat = (event == 'PLAYER_REGEN_DISABLED')
-	if not db.profile.glowOutOfCombat then
+	if not profile.glowOutOfCombat then
 		for button in pairs(activeButtons) do
 			ActionButton_UpdateOverlayGlow(button)
 		end
@@ -1157,21 +1160,23 @@ local SV_VERSION = 2
 
 -- Mark new profiles with the database version
 function addon:NewProfile()
-	db.profile.version = SV_VERSION
-	self:RequireUpdate(true)
+	profile = self.db.profile
+	profile.version = SV_VERSION
+	self:RequireUpdate(true, true)
 end
 
 -- Upgrade the database from previous versions
 function addon:UpgradeProfile()
+	profile = self.db.profile
 	if not self.defaultsLoaded then return end
 
 	-- Upgrade only if needed
-	local version = db.profile.version or 0
+	local version = profile.version or 0
 	if version < SV_VERSION then
 
 		-- 0 => 1
 		if version < 1 then
-			for name, spell in pairs(db.profile.spells) do
+			for name, spell in pairs(profile.spells) do
 				if type(spell) == "table" then
 					if spell.disabled then
 						spell.status = "ignore"
@@ -1204,46 +1209,47 @@ function addon:UpgradeProfile()
 						end
 					end
 				else
-					db.profile.spells[name] = nil
-					db.profile.spellStatuses[name] = "global"
+					profile.spells[name] = nil
+					profile.spellStatuses[name] = "global"
 				end
 			end
 		end
 
 		-- 1 => 2
 		if version < 2 then
-			for name, spell in pairs(db.profile.spells) do
+			for name, spell in pairs(profile.spells) do
 				local status = rawget(spell, 'status')
 				if status then
-					db.profile.spellStatuses[name] = status
+					profile.spellStatuses[name] = status
 					spell.status = nil
 				end
 			end
 		end
 
 		-- Do not forget to "tag" the upgraded profile
-		db.profile.version = SV_VERSION
+		profile.version = SV_VERSION
 	end
 
 	-- Clean unused settings
-	for name in pairs(db.profile.spells) do
-		if db.profile.spellStatuses[name] ~= "user" then
-			db.profile.spells[name] = nil
+	for name in pairs(profile.spells) do
+		if profile.spellStatuses[name] ~= "user" then
+			profile.spells[name] = nil
 		end
 	end
 
 	-- And update all
-	self:RequireUpdate(true)
+	self:RequireUpdate(true, true)
 end
 
 function addon:OnInitialize()
 	-- Saved variables setup
-	db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
+	local db = LibStub('AceDB-3.0'):New("InlineAuraDB", DEFAULT_OPTIONS)
 	db.RegisterCallback(self, 'OnNewProfile', 'NewProfile')
 	db.RegisterCallback(self, 'OnProfileReset', 'NewProfile')
 	db.RegisterCallback(self, 'OnProfileChanged', 'UpgradeProfile')
 	db.RegisterCallback(self, 'OnProfileCopied', 'UpgradeProfile')
 	self.db = db
+	profile = self.db.profile
 
 	LibStub('LibDualSpec-1.0'):EnhanceDatabase(db, "Inline Aura")
 
@@ -1337,7 +1343,6 @@ function addon:OnEnable()
 	self:RegisterEvent('PLAYER_REGEN_DISABLED', 'PLAYER_REGEN_ENABLED')
 	self:RegisterEvent('ACTIONBAR_UPDATE_STATE')
 	self:RegisterEvent('ACTIONBAR_UPDATE_COOLDOWN')
-
 
 	-- Refresh everything
 	self:RequireUpdate(true)

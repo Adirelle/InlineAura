@@ -399,11 +399,19 @@ local function IsGlowing(state)
 	if (state.spellId and IsSpellOverlayed(state.spellId)) then
 		return true
 	elseif state.highlight == "glowing" and (addon.inCombat or profile.glowOutOfCombat) then
-		local usable, noPower = IsUsableSpell(state.spell)
-		if usable or noPower then
-			local start, duration, enable = GetSpellCooldown(state.spellId or state.spell)
-			return enable == 0 or start == 0 or duration <= 1.5
+		if not profile.glowUnusable then
+			local usable, noPower = IsUsableSpell(state.spell)
+			if not usable and not noPower then
+				return false
+			end
 		end
+		if not profile.glowOnCooldown then
+			local start, duration, enable = GetSpellCooldown(state.spellId or state.spell)
+			if enable ~= 0 and start ~= 0 and duration > 1.5 then
+				return false
+			end
+		end
+		return true
 	end
 end
 
@@ -482,7 +490,10 @@ function addon.UpdateButtonUsable_Hook(button)
 	if state.highlight == "dim" and IsUsableAction(button.action) then
 		local name = button:GetName()
 		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
-		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0);
+		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0)
+	end
+	if not profile.glowOnCooldown then
+		addon:UpdateOverlayGlow(button)
 	end
 end
 

@@ -199,11 +199,29 @@ local options = {
 			disabled = function(info) return profile.hideCountdown or not profile.preciseCountdown end,
 			order = 46,
 		},
-		glowOutOfCombat = {
-			name = L['Out of combat glow'],
-			desc = L["Display Inline Aura's glows out of combat. Uncheck to show them only during combats. Do not affect Blizzard built-in glows."],
-			type = 'toggle',
+		glowingAnimation = {
+			name = L["Glowing highlight"],
+			desc = L["Control Inline Aura's glowing highlight. Do not affect Blizzard built-in highlight."],
+			type = 'group',
+			inline = true,
 			order = 47,
+			args ={
+				glowUnusable = {
+					name = L["Unusable action"],
+					desc = L["Uncheck this to disable highlight for unusable actions."],
+					type = 'toggle',
+				},
+				glowOnCooldown = {
+					name = L["On cooldown"],
+					desc = L["Uncheck this to disable highlight for actions in cooldown."],
+					type = 'toggle',
+				},
+				glowOutOfCombat = {
+					name = L["Out of combat"],
+					desc = L["Uncheck this to disable highlight out of combat."],
+					type = 'toggle',
+				},
+			}
 		},
 		targeting = {
 			name = L['Targeting settings'],

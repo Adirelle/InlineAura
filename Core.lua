@@ -1029,6 +1029,18 @@ function addon:PLAYER_REGEN_ENABLED(event)
 	end
 end
 
+function addon:ACTIONBAR_UPDATE_STATE()
+	for button in pairs(activeButtons) do
+		self.UpdateButtonState_Hook(button)
+	end
+end
+
+function addon:ACTIONBAR_UPDATE_COOLDOWN()
+	for button in pairs(activeButtons) do
+		self.UpdateButtonCooldown_Hook(button)
+	end
+end
+
 ------------------------------------------------------------------------------
 -- Addon and library support
 ------------------------------------------------------------------------------
@@ -1266,6 +1278,15 @@ function addon:OnEnable()
 			self:UpgradeProfile()
 		end
 
+--@debug@
+		local debug_hooksecurefunc = function(funcname, hook)
+			hooksecurefunc(funcname, function(button, ...)
+				(button.Debug or dprint)(button, funcname, debugstack(3, 3, 0), ...)
+				return hook(button, ...)
+			end)
+		end
+--@end-debug@
+
 		-- Secure hooks
 		hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
 		hooksecurefunc('ActionButton_UpdateState', self.UpdateButtonState_Hook)
@@ -1314,6 +1335,9 @@ function addon:OnEnable()
 	self:RegisterEvent('UPDATE_MACROS')
 	self:RegisterEvent('PLAYER_REGEN_ENABLED')
 	self:RegisterEvent('PLAYER_REGEN_DISABLED', 'PLAYER_REGEN_ENABLED')
+	self:RegisterEvent('ACTIONBAR_UPDATE_STATE')
+	self:RegisterEvent('ACTIONBAR_UPDATE_COOLDOWN')
+
 
 	-- Refresh everything
 	self:RequireUpdate(true)

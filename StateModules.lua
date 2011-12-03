@@ -129,12 +129,9 @@ if playerClass == "PALADIN" then
 
 	function holyPowerStat:Test(aura)
 		local pref = self.db.profile
-		if UnitAura("player", self.auraName) then
-			return pref.stacks, MAX_HOLY_POWER, false, nil, pref.highlight, true
-		else
-			local power = UnitPower("player", SPELL_POWER_HOLY_POWER)
-			return pref.stacks, power, false, nil, pref.highlight and power >= pref.highlightThreshold, true
-		end
+		local power = UnitPower("player", SPELL_POWER_HOLY_POWER)
+		local highlight = pref.highlight and (power >= pref.highlightThreshold or UnitAura("player", self.auraName))
+		return pref.stacks, power, false, nil, highlight, true
 	end
 
 	function holyPowerStat:UNIT_POWER(event, unit, type)

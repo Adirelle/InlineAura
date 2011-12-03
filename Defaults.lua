@@ -692,8 +692,11 @@ function InlineAura_LoadDefaults()
 			85673, -- Word of Glory
 			85256, -- Templar's Verdict
 			53600, -- Shield of the Righteous
-			84963  -- Inquisition
+			85222, -- Light of Dawn
+			85256  -- Templar's Verdict
 		)
+
+		Spells(84963):Aliases(84963, "HOLY_POWER") -- Inquisition
 
 		SelfTalentProc(86150, 86698, 86659, 86669) -- Guardian of Ancient Kings and its 3 variants
 

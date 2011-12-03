@@ -518,6 +518,9 @@ function InlineAura_LoadDefaults()
 		Spells(16190):Aliases(16191) -- Mana Tide Totem => Mana Tide
 		Spells(8177):Aliases(8178) -- Grounding Totem => Grounding Totem Effect
 
+		-- Flame Shock, Lava Burst, Fire Nova => Unleash Flame
+		Spells(8050, 51505, 1535):Aliases(73683):OnSelf():Glowing()
+
 	------------------------------------------------------------------------------
 	elseif class == 'WARLOCK' then
 	------------------------------------------------------------------------------

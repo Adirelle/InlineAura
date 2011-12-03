@@ -49,6 +49,7 @@ local configUpdated = false
 local buttons = {}
 local newButtons = {}
 local activeButtons = {}
+local buttonsToUpdate = {}
 addon.buttons = buttons
 
 ------------------------------------------------------------------------------
@@ -333,7 +334,7 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 		if module and module:CanTestUnit(unit, aura, spell) then
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority = module:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
 			if not newPriority then newPriority = 30 end
-			dprint("AuraLookup", aura, module, "=>", hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight)
+			-- dprint("AuraLookup", aura, module, "=>", hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight)
 		else
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority = CheckAura(aura, unit, onlyMyBuffs, onlyMyDebuffs)
 			if not newPriority then newPriority = 0 end
@@ -358,9 +359,11 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 					expirationTime = newExpiratiomTime
 				end
 			else
+				--[[
 				if strmatch(aura, "ENERGY") then
 					dprint("AuraLookup(count)", aura, "current=", hasCount, count, "new=", hasNewCount, newCount)
 				end
+				]]
 				if hasNewCount and newCount > (hasCount and count or 0) then
 					hasCount, count = true, newCount
 				end
@@ -630,7 +633,7 @@ local function UpdateButtonAura(self, force)
 
 	if force or guid ~= state.guid or auraChanged[guid or state.guid or false] then
 		--@debug@
-		self:Debug("UpdateButtonAura: updating because", (force and "forced") or (guid ~= state.guid and "guid changed") or "aura changed", "|", spell, target, specific, guid)
+		-- self:Debug("UpdateButtonAura: updating because", (force and "forced") or (guid ~= state.guid and "guid changed") or "aura changed", "|", spell, target, specific, guid)
 		--@end-debug@
 		state.guid = guid
 
@@ -638,16 +641,22 @@ local function UpdateButtonAura(self, force)
 		if spell and target and (targetHint ~= "foe" or UnitIsDebuffable(target)) and (targetHint ~= "friend" or UnitIsBuffable(target)) and UnitExists(target) and UnitIsVisible(target) and UnitIsConnected(target) and not UnitIsDeadOrGhost(target) then
 			count, expirationTime, highlight = GetAuraToDisplay(spell, target, specific)
 			--@debug@
-			self:Debug("GetAuraToDisplay", spell, target, specific, "=>", "count=", count, "expirationTime=", expirationTime, "highlight=", highlight)
+			-- self:Debug("GetAuraToDisplay", spell, target, specific, "=>", "count=", count, "expirationTime=", expirationTime, "highlight=", highlight)
 			--@end-debug@
 		end
 
-		if state.highlight ~= highlight or force then
+		-- Split highlight border type
+		local highlightBorder = highlight and strmatch(highlight, '^border(.*)$')
+		if highlightBorder then
+			highlight = 'border'
+		end
+
+		if state.highlight ~= highlight or state.highlightBorder ~= highlightBorder or force then
 			--@debug@
 			self:Debug("GetAuraToDisplay: updating highlight")
 			--@end-debug@
-			state.highlight = highlight
-			self:__IA_Update()
+			state.highlight, state.highlightBorder = highlight, highlightBorder
+			buttonsToUpdate[state.button] = 'UpdateButtonAura'
 		end
 
 		if state.count ~= count or state.expirationTime ~= expirationTime or force then
@@ -669,7 +678,7 @@ local function UpdateAction_Hook(self, forceUpdate)
 	if not state then return end
 	local action, param
 	if self:IsVisible() then
-		action, param = self:__IA_GetAction()
+		action, param = state:GetAction()
 		if action == 'action' then
 			local actionAction, actionParam, _, spellId = GetActionInfo(param)
 			if actionAction == 'companion' then
@@ -683,7 +692,7 @@ local function UpdateAction_Hook(self, forceUpdate)
 		state.spellId = (action == "spell") and tonumber(param)
 	end
 	if forceUpdate or action == "macro" or action ~= state.action or param ~= state.param then
-		state.action, state.param = action, param, action
+		state.action, state.param = action, param
 		local spell, targetHint, specific, active
 		if action and param then
 			if action == "macro" then
@@ -706,7 +715,7 @@ local function UpdateAction_Hook(self, forceUpdate)
 			forceUpdate = true
 		end
 		--@debug@
-		self:Debug("UpdateAction_Hook: action changed =>", action, param, "static:", spell, targetHint, specific, forceUpdate and "| forcing update")
+		--self:Debug("UpdateAction_Hook: action changed =>", action, param, "static:", spell, targetHint, specific, forceUpdate and "| forcing update")
 		--@end-debug@
 		return UpdateButtonAura(self, forceUpdate)
 	end
@@ -717,22 +726,11 @@ end
 ------------------------------------------------------------------------------
 
 local function Blizzard_GetAction(self)
-	return 'action', self.action
-end
-
-local function Blizzard_Update(self)
-	ActionButton_UpdateOverlayGlow(self)
-	ActionButton_UpdateState(self)
-	ActionButton_UpdateUsable(self)
+	return 'action', self.button.action
 end
 
 local function LAB_GetAction(self)
-	return self:GetAction()
-end
-
-local function LAB_Update(self)
-	ActionButton_UpdateOverlayGlow(self)
-	return self:UpdateAction(true)
+	return self.button:GetAction()
 end
 
 local function NOOP() end
@@ -749,12 +747,10 @@ local function InitializeButton(self)
 		AdiProfiler:RegisterFrame(self, "ia:ActionButton")
 	end
 	if self.__LAB_Version then
-		self.__IA_GetAction = LAB_GetAction
-		self.__IA_Update = LAB_Update
+		state.GetAction = LAB_GetAction
 		self:HookScript('OnShow', UpdateAction_Hook)
 	else
-		self.__IA_GetAction = Blizzard_GetAction
-		self.__IA_Update = Blizzard_Update
+		state.GetAction = Blizzard_GetAction
 	end
 	return UpdateAction_Hook(self)
 end
@@ -861,6 +857,14 @@ function addon:OnUpdate(elapsed)
 		needUpdate, configUpdated = false, false
 		wipe(auraChanged)
 		wipe(tokenChanged)
+	end
+
+	-- Update button highlight
+	if next(buttonsToUpdate) then
+		for button, event in pairs(buttonsToUpdate) do
+			addon:UpdateButtonHighlight(button, event)
+		end
+		wipe(buttonsToUpdate)
 	end
 
 end
@@ -1025,18 +1029,57 @@ function addon:UPDATE_MACROS(event)
 	return self:RequireUpdate(true)
 end
 
-function addon:PLAYER_REGEN_ENABLED(event)
-	addon.inCombat = (event == 'PLAYER_REGEN_DISABLED')
-	if not profile.glowOutOfCombat then
-		for button in pairs(activeButtons) do
-			ActionButton_UpdateOverlayGlow(button)
+function addon:ACTIONBAR_UPDATE_STATE(event)
+	for button in pairs(activeButtons) do
+		if buttons[button].highlight == "border" then
+			buttonsToUpdate[button] = event
 		end
 	end
 end
 
-function addon:ACTIONBAR_UPDATE_STATE()
+function addon:COMPANION_UPDATE(event, kind)
+	if kind == "MOUNT" then
+		return self:ACTIONBAR_UPDATE_STATE(event)
+	end
+end
+
+function addon:PLAYER_REGEN_ENABLED(event)
+	addon.inCombat = (event == 'PLAYER_REGEN_DISABLED')
+	if not profile.glowOutOfCombat then
+		for button in pairs(activeButtons) do
+			if buttons[button].highlight == "highlight" then
+				buttonsToUpdate[button] = event
+			end
+		end
+	end
+end
+
+function addon:ACTIONBAR_UPDATE_COOLDOWN(event)
+	if not profile.glowOnCooldown then
+		for button in pairs(activeButtons) do
+			if buttons[button].highlight == "highlight" then
+				buttonsToUpdate[button] = event
+			end
+		end
+	end
+end
+
+function addon:ACTIONBAR_UPDATE_USABLE(event)
+	if not profile.glowUnusable then
+		for button in pairs(activeButtons) do
+			local highlight = buttons[button].highlight
+			if highlight == "highlight" or highlight == "dim" then
+				buttonsToUpdate[button] = event
+			end
+		end
+	end
+end
+
+function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, spellId)
 	for button in pairs(activeButtons) do
-		self.UpdateButtonState_Hook(button)
+		if buttons[button].spellId == spellId then
+			buttonsToUpdate[button] = event
+		end
 	end
 end
 
@@ -1058,7 +1101,7 @@ local addonSupport = {
 	end,
 	tullaRange = function(self)
 		-- GLOBALS: tullaRange
-		hooksecurefunc(tullaRange, "SetButtonColor", self.UpdateButtonUsable_Hook)
+		--hooksecurefunc(tullaRange, "SetButtonColor", self.UpdateButtonUsable_Hook)
 	end,
 }
 addonSupport.CooldownCount = addonSupport.OmniCC
@@ -1078,8 +1121,8 @@ local librarySupport = {
 			local UpdateButtonUsable_Hook = addon.UpdateButtonUsable_Hook
 			lib.RegisterCallback(self, "OnButtonCreated", function(_, button) return InitializeButton(button) end)
 			lib.RegisterCallback(self, "OnButtonUpdate", function(_, button) return UpdateAction_Hook(button) end)
-			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return UpdateButtonUsable_Hook(button) end)
-			lib.RegisterCallback(self, "OnButtonState", function(_, button) return UpdateButtonState_Hook(button) end)
+--			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return UpdateButtonUsable_Hook(button) end)
+--			lib.RegisterCallback(self, "OnButtonState", function(_, button) return UpdateButtonState_Hook(button) end)
 			for button in pairs(lib:GetAllButtons()) do
 				newButtons[button] = true
 			end
@@ -1291,18 +1334,14 @@ function addon:OnEnable()
 
 		-- Secure hooks
 		hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
-		hooksecurefunc('ActionButton_UpdateState', self.UpdateButtonState_Hook)
-		hooksecurefunc('ActionButton_UpdateUsable', self.UpdateButtonUsable_Hook)
-		hooksecurefunc('ActionButton_UpdateCooldown', self.UpdateButtonCooldown_Hook)
 		hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
-		hooksecurefunc("ActionButton_HideOverlayGlow", self.ActionButton_HideOverlayGlow_Hook)
 
 		-- Our bucket thingy
 		local delay = 0
 		updateFrame = CreateFrame("Frame")
 		updateFrame:SetScript('OnUpdate', function(_, elapsed)
 			delay = delay + elapsed
-			if delay >= 0.09 then
+			if delay >= 0.09 or needUpdate or configChanged or next(buttonsToUpdate) then
 				self:OnUpdate(delay)
 				delay = 0
 			end
@@ -1335,9 +1374,21 @@ function addon:OnEnable()
 	self:RegisterEvent('CVAR_UPDATE')
 	self:RegisterEvent('UPDATE_BINDINGS')
 	self:RegisterEvent('UPDATE_MACROS')
+
+	-- Events that causes state update
+	self:RegisterEvent('ACTIONBAR_UPDATE_STATE')
+	self:RegisterEvent('TRADE_SKILL_SHOW', 'ACTIONBAR_UPDATE_STATE')
+	self:RegisterEvent('TRADE_SKILL_CLOSE', 'ACTIONBAR_UPDATE_STATE')
+	self:RegisterEvent('ARCHAEOLOGY_CLOSED', 'ACTIONBAR_UPDATE_STATE')
+	self:RegisterEvent('COMPANION_UPDATE') -- arg1 == "MOUNT"
+
+	-- Events that can cause glowing highlight update
+	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
+	self:RegisterEvent('SPELL_ACTIVATION_OVERLAY_GLOW_HIDE', 'SPELL_ACTIVATION_OVERLAY_GLOW_SHOW')
 	self:RegisterEvent('PLAYER_REGEN_ENABLED')
 	self:RegisterEvent('PLAYER_REGEN_DISABLED', 'PLAYER_REGEN_ENABLED')
-	self:RegisterEvent('ACTIONBAR_UPDATE_STATE')
+	self:RegisterEvent('ACTIONBAR_UPDATE_USABLE')
+	self:RegisterEvent('ACTIONBAR_UPDATE_COOLDOWN')
 
 	-- Refresh everything
 	self:RequireUpdate(true)

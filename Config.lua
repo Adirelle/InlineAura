@@ -201,13 +201,13 @@ local options = {
 		},
 		glowingAnimation = {
 			name = L["Glowing highlight"],
-			desc = L["Control Inline Aura's glowing highlight. Do not affect Blizzard built-in highlight."],
+			desc = L["Allow you to disable glowing highlight in certain situations."],
 			type = 'group',
 			inline = true,
 			order = 47,
 			args ={
 				glowUnusable = {
-					name = L["Unusable action"],
+					name = L["Unusable"],
 					desc = L["Uncheck this to disable highlight for unusable actions."],
 					type = 'toggle',
 				},

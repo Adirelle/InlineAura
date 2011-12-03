@@ -36,7 +36,9 @@ local overlayedSpells = addon.overlayedSpells
 local _G = _G
 local ActionButton_HideOverlayGlow = _G.ActionButton_HideOverlayGlow
 local ActionButton_ShowOverlayGlow = _G.ActionButton_ShowOverlayGlow
-local ActionButton_UpdateOverlayGlow = _G.ActionButton_UpdateOverlayGlow
+local ActionButton_UpdateState = _G.ActionButton_UpdateState
+local ActionButton_UpdateUsable = _G.ActionButton_UpdateUsable
+local GetActionCooldown = _G.GetActionCooldown
 local assert = _G.assert
 local ceil = _G.ceil
 local CreateFrame = _G.CreateFrame
@@ -350,7 +352,7 @@ local function GetStack(button, spawn)
 end
 
 ------------------------------------------------------------------------------
--- Visual feedback hooks
+-- Text feedback
 ------------------------------------------------------------------------------
 
 local function UpdateTextLayout(countdown, stack)
@@ -395,67 +397,9 @@ function addon:UpdateWidgets()
 	end
 end
 
-local function IsGlowing(state)
-	if (state.spellId and IsSpellOverlayed(state.spellId)) then
-		return true
-	elseif state.highlight == "glowing" and (addon.inCombat or profile.glowOutOfCombat) then
-		if not profile.glowUnusable then
-			local usable, noPower = IsUsableSpell(state.spell)
-			if not usable and not noPower then
-				return false
-			end
-		end
-		if not profile.glowOnCooldown then
-			local start, duration, enable = GetSpellCooldown(state.spellId or state.spell)
-			if enable ~= 0 and start ~= 0 and duration > 1.5 then
-				return false
-			end
-		end
-		return true
-	end
-end
-
-local FixOverlayAnimation
-do
-	local fixedOverlays = {}
-	function FixOverlayAnimation(overlay)
-		if overlay and not fixedOverlays[overlay] then
-			overlay.animIn:SetScript('OnStop', overlay.animIn:GetScript('OnFinished'))
-			fixedOverlays[overlay] = true
-		end
-	end
-end
-
-function addon.ActionButton_HideOverlayGlow_Hook(button)
-	local state = buttons[button]
-	if state and IsGlowing(state) then
-		if button.overlay then
-			if button.overlay.animOut:IsPlaying() then
-				button.overlay.animOut:Stop()
-			end
-		else
-			ActionButton_ShowOverlayGlow(button)
-		end
-		-- Small hack to prevent ugly glitches
-		local animIn = button.overlay.animIn
-		if not animIn:IsPlaying() then
-			animIn:GetScript('OnFinished')(animIn)
-		end
-	end
-end
-
-function addon:UpdateOverlayGlow(button)
-	local state = buttons[button]
-	if state then
-		if IsGlowing(state) then
-			ActionButton_ShowOverlayGlow(button)
-		else
-			ActionButton_HideOverlayGlow(button)
-		end
-	else
-		return ActionButton_UpdateOverlayGlow(button)
-	end
-end
+------------------------------------------------------------------------------
+-- Vertex color setter
+------------------------------------------------------------------------------
 
 local function SetVertexColor(texture, r, g, b, a)
 	return texture:SetVertexColor(r, g, b, a)
@@ -469,37 +413,67 @@ function addon:HasLibButtonFacade()
 	end
 end
 
-function addon.UpdateButtonState_Hook(button)
-	local state = buttons[button]
-	if not state then return end
-	local texture = button:GetCheckedTexture()
-	local border = state.highlight and strmatch(state.highlight, '^border(.+)$')
-	local color = border and profile["color"..border]
-	if color then
-		button:SetChecked(true)
-		return SetVertexColor(texture, unpack(color))
-	else
-		addon:UpdateOverlayGlow(button)
-		return texture:SetVertexColor(1, 1, 1)
-	end
+------------------------------------------------------------------------------
+-- Highlight feedback
+------------------------------------------------------------------------------
+
+local function IsUsable(action)
+	local usable, noPower = IsUsableAction(action)
+	return usable or noPower
 end
 
-function addon.UpdateButtonUsable_Hook(button)
-	local state = buttons[button]
-	if not state then return end
-	if state.highlight == "dim" and IsUsableAction(button.action) then
+local function IsOnCooldown(action)
+	local start, duration, enable = GetActionCooldown(action)
+	return enable ~= 0 and start ~= 0 and duration > 1.5
+end
+
+function addon:UpdateButtonHighlight(button, event)
+	button:Debug('UpdateButtonHighlight on', event)
+	local state = self.buttons[button]
+	local highlight, action, spellId = state.highlight, button.action, state.spellId
+
+	-- Glowing
+	if (highlight == "glowing" or (spellId and IsSpellOverlayed(spellId)))
+		 and (profile.glowOutOfCombat or addon.inCombat)
+		 and (profile.glowUnusable or IsUsable(action))
+		 and (profile.glowOnCooldown or IsOnCooldown(action))
+	then
+		highlight = "glowing"
+		if button.overlay then
+			if button.overlay.animOut:IsPlaying() then
+				button.overlay.animOut:Stop()
+			end
+		else
+			ActionButton_ShowOverlayGlow(button)
+		end
+		-- Small hack to prevent ugly glitches
+		local animIn = button.overlay.animIn
+		if not animIn:IsPlaying() then
+			animIn:GetScript('OnFinished')(animIn)
+		end
+	else
+		ActionButton_HideOverlayGlow(button)
+	end
+
+	-- Dim
+	if highlight == "dim" then
 		local name = button:GetName()
 		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
 		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0)
+	else
+		ActionButton_UpdateUsable(button)
 	end
-	if not profile.glowOnCooldown then
-		addon:UpdateOverlayGlow(button)
-	end
-end
 
-function addon.UpdateButtonCooldown_Hook(button)
-	if buttons[button] then
-		return addon:UpdateOverlayGlow(button)
+	-- Color border
+	if highlight == "border" then
+		local color = profile["color"..state.highlightBorder]
+		if color then
+			button:SetChecked(true)
+			return SetVertexColor(button:GetCheckedTexture(), unpack(color))
+		end
 	end
+
+	button:GetCheckedTexture():SetVertexColor(1, 1, 1)
+	ActionButton_UpdateState(button)
 end
 

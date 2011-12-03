@@ -18,7 +18,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 --]]
 
 local _, addon = ...
-local _, playerClass = UnitClass("player")
 
 local UnitIsBuffable = addon.UnitIsBuffable
 local UnitIsDebuffable = addon.UnitIsDebuffable
@@ -42,8 +41,11 @@ local MAX_COMBO_POINTS = _G.MAX_COMBO_POINTS
 local MAX_HOLY_POWER = _G.MAX_HOLY_POWER
 local setmetatable = _G.setmetatable
 local SPELL_POWER_ECLIPSE = _G.SPELL_POWER_ECLIPSE
+local SPELL_POWER_SOUL_SHARDS = _G.SPELL_POWER_SOUL_SHARDS
+local SPELL_POWER_HOLY_POWER = _G.SPELL_POWER_HOLY_POWER
 local strlower = _G.strlower
 local tinsert = _G.tinsert
+local UnitAura = _G.UnitAura
 local UnitCastingInfo = _G.UnitCastingInfo
 local UnitChannelInfo = _G.UnitChannelInfo
 local UnitClass = _G.UnitClass
@@ -68,41 +70,75 @@ local interestingUnits = setmetatable({
 	t[unit] = false
 end })
 
+local _, playerClass = UnitClass("player")
+
 ------------------------------------------------------------------------------
--- Warlocks' Soul Shards and Paladins' Holy Power
+-- Warlocks' Soul Shards
 ------------------------------------------------------------------------------
 
-if playerClass == "WARLOCK" or playerClass == "PALADIN" then
-	local POWER_TYPE, SPELL_POWER, MAX_POWER
-	if playerClass == "WARLOCK"  then
-		POWER_TYPE, MAX_POWER = "SOUL_SHARDS", 3
-	else
-		POWER_TYPE, MAX_POWER = "HOLY_POWER", MAX_HOLY_POWER
-	end
-	local SPELL_POWER = _G["SPELL_POWER_"..POWER_TYPE]
-	local UnitPower = UnitPower
+if playerClass == "WARLOCK" then
+	local soulShardState = addon:NewStateModule("SOUL_SHARDS")
+	soulShardState.keywords = { "SOUL_SHARDS" }
+	soulShardState.features = {
+		stacks = true,
+		highlight = true,
+		highlightThreshold = true,
+		highlightMaxThreshold = 3
+	}
+	soulShardState.defaults = { highlightThreshold = 1 }
 
-	local powerState = addon:NewStateModule(POWER_TYPE)
-	powerState.keywords = { POWER_TYPE }
-	powerState.features = { stacks = true, highlight = true, highlightThreshold = true, highlightMaxThreshold = MAX_POWER }
-	if playerClass == "WARLOCK"  then
-		powerState.defaults = { highlightThreshold = 1 }
-	else
-		powerState.defaults = { highlightThreshold = MAX_POWER }
-	end
-
-	function powerState:PostEnable()
+	function soulShardState:PostEnable()
 		self:RegisterEvent("UNIT_POWER")
 	end
 
-	function powerState:Test(aura)
+	function soulShardState:Test(aura)
 		local pref = self.db.profile
-		local power = UnitPower("player", SPELL_POWER)
+		local power = UnitPower("player", SPELL_POWER_SOUL_SHARDS)
 		return pref.stacks, power, false, nil, pref.highlight and power >= pref.highlightThreshold, true
 	end
 
-	function powerState:UNIT_POWER(event, unit, type)
-		if unit == "player" and type == POWER_TYPE then
+	function soulShardState:UNIT_POWER(event, unit, type)
+		if unit == "player" and type == "SOUL_SHARDS" then
+			addon:AuraChanged("player")
+		end
+	end
+
+end
+
+------------------------------------------------------------------------------
+-- Paladins' Holy Power
+------------------------------------------------------------------------------
+
+if playerClass == "PALADIN" then
+	local holyPowerStat = addon:NewStateModule("HOLY_POWER")
+	holyPowerStat.keywords = { "HOLY_POWER" }
+	holyPowerStat.features = {
+		stacks = true,
+		highlight = true,
+		highlightThreshold = true,
+		highlightMaxThreshold = MAX_HOLY_POWER
+	}
+	holyPowerStat.defaults = {
+		highlightThreshold = MAX_HOLY_POWER
+	}
+
+	function holyPowerStat:PostEnable()
+		self:RegisterEvent("UNIT_POWER")
+		self.auraName = GetSpellInfo(86172) -- Divine Purpose
+	end
+
+	function holyPowerStat:Test(aura)
+		local pref = self.db.profile
+		if UnitAura("player", self.auraName) then
+			return pref.stacks, MAX_HOLY_POWER, false, nil, pref.highlight, true
+		else
+			local power = UnitPower("player", SPELL_POWER_HOLY_POWER)
+			return pref.stacks, power, false, nil, pref.highlight and power >= pref.highlightThreshold, true
+		end
+	end
+
+	function holyPowerStat:UNIT_POWER(event, unit, type)
+		if unit == "player" and type == "HOLY_POWER" then
 			addon:AuraChanged("player")
 		end
 	end
@@ -290,7 +326,7 @@ if healthThresholds then
 						return threshold
 					end
 				end
-				return 100
+				return 100				
 			end
 		end
 	end

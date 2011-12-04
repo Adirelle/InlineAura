@@ -545,6 +545,9 @@ function InlineAura_LoadDefaults()
 		SelfTalentProc( 6353, 63165, 85385) -- Soul Fire => Decimation or Improved Soul Fire
 		SelfTalentProc(  686, 17941, 34936) -- Shadow Bolt => Shadow Trance Backlash
 
+		-- Demon Soul and its variants
+		Spells(77801):Aliases(79462, 79460, 79459, 79436, 79464)
+
 		-- Show nether ward on shadow ward
 		Spells(6229):Aliases(91711):OnSelf()
 

@@ -427,17 +427,16 @@ local function IsOnCooldown(state)
 	return enable ~= 0 and start ~= 0 and duration > 1.5
 end
 
-function addon:UpdateButtonHighlight(button, event)
-	local state = self.buttons[button]
-	local highlight, action, spellId = state.highlight, button.action, state.spellId
+function addon:UpdateButtonHighlight(state)
+	if (state.spellId and IsSpellOverlayed(state.spellId)) or state.highlight ~= "highlight" then
+		return
+	end
 
-	-- Glowing
-	if (spellId and IsSpellOverlayed(spellId)) or (
-		highlight == "glowing"
-		and (profile.glowOutOfCombat or addon.inCombat)
-		and (profile.glowUnusable or IsUsable(state))
-		and (profile.glowOnCooldown or not IsOnCooldown(state))
-	) then
+	local button = state.button
+	if (profile.glowOutOfCombat or addon.inCombat)
+			and (profile.glowUnusable or IsUsable(state))
+			and (profile.glowOnCooldown or not IsOnCooldown(state))
+	then
 		if button.overlay then
 			if button.overlay.animOut:IsPlaying() then
 				button.overlay.animOut:Stop()
@@ -450,28 +449,36 @@ function addon:UpdateButtonHighlight(button, event)
 		if not animIn:IsPlaying() then
 			animIn:GetScript('OnFinished')(animIn)
 		end
+
 	elseif button.overlay and not button.overlay.animOut:IsPlaying() then
 		ActionButton_HideOverlayGlow(button)
 	end
+end
 
-	-- Dim
-	if highlight == "dim" then
-		local name = button:GetName()
+function addon:UpdateButtonUsable(state)
+	if state.highlight == "highlight" and not profile.glowUnusable then
+		return self:UpdateButtonHighlight(state)
+	elseif state.highlight == "dim" then
+		local name = state.button:GetName()
 		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
 		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0)
-	else
-		state:UpdateUsable()
 	end
+end
 
-	-- Color border
-	if highlight == "border" then
-		local color = profile["color"..state.highlightBorder]
-		if color then
-			button:SetChecked(true)
-			return SetVertexColor(button:GetCheckedTexture(), unpack(color))
-		end
+function addon:UpdateButtonState(state)
+	if state.highlight ~= "border" then return end
+	local color = profile["color"..state.highlightBorder]
+	if color then
+		state.button:SetChecked(true)
+		SetVertexColor(state.button:GetCheckedTexture(), unpack(color))
+	else
+		state.button:GetCheckedTexture():SetVertexColor(1, 1, 1)
 	end
-	button:GetCheckedTexture():SetVertexColor(1, 1, 1)
-	state:UpdateState()
+end
+
+function addon:UpdateButtonCooldown(state)
+	if state.highlight == "highlight" and not profile.glowOnCooldown then
+		return self:UpdateButtonHighlight(state)
+	end
 end
 

@@ -417,13 +417,13 @@ end
 -- Highlight feedback
 ------------------------------------------------------------------------------
 
-local function IsUsable(action)
-	local usable, noPower = IsUsableAction(action)
+local function IsUsable(state)
+	local usable, noPower = state:IsUsablestate()
 	return usable or noPower
 end
 
-local function IsOnCooldown(action)
-	local start, duration, enable = GetActionCooldown(action)
+local function IsOnCooldown(state)
+	local start, duration, enable = state:GetCooldown()
 	return enable ~= 0 and start ~= 0 and duration > 1.5
 end
 
@@ -435,8 +435,8 @@ function addon:UpdateButtonHighlight(button, event)
 	if (spellId and IsSpellOverlayed(spellId)) or (
 		highlight == "glowing"
 		and (profile.glowOutOfCombat or addon.inCombat)
-		and (profile.glowUnusable or IsUsable(action))
-		and (profile.glowOnCooldown or not IsOnCooldown(action))
+		and (profile.glowUnusable or IsUsable(state))
+		and (profile.glowOnCooldown or not IsOnCooldown(state))
 	) then
 		if button.overlay then
 			if button.overlay.animOut:IsPlaying() then
@@ -450,7 +450,7 @@ function addon:UpdateButtonHighlight(button, event)
 		if not animIn:IsPlaying() then
 			animIn:GetScript('OnFinished')(animIn)
 		end
-	else
+	elseif button.overlay and not button.overlay.animOut:IsPlaying() then
 		ActionButton_HideOverlayGlow(button)
 	end
 
@@ -460,7 +460,7 @@ function addon:UpdateButtonHighlight(button, event)
 		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
 		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0)
 	else
-		ActionButton_UpdateUsable(button)
+		state:UpdateUsable()
 	end
 
 	-- Color border
@@ -471,8 +471,7 @@ function addon:UpdateButtonHighlight(button, event)
 			return SetVertexColor(button:GetCheckedTexture(), unpack(color))
 		end
 	end
-
 	button:GetCheckedTexture():SetVertexColor(1, 1, 1)
-	ActionButton_UpdateState(button)
+	state:UpdateState()
 end
 

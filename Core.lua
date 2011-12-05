@@ -725,13 +725,26 @@ end
 -- Button initializing
 ------------------------------------------------------------------------------
 
-local function Blizzard_GetAction(self)
-	return 'action', self.button.action
-end
-
-local function LAB_GetAction(self)
-	return self.button:GetAction()
-end
+local buttonClasses = {
+	Blizzard = {
+		__index = {
+			GetAction = function(self) return 'action', self.button.action end,
+			GetCooldown = function(self) return GetActionCooldown(self.button.action) end,
+			IsUsable = function(self) return IsUsableAction(self.button.action) end,
+			UpdateUsable = function(self) return ActionButton_UpdateUsable(self.button) end,
+			UpdateState = function(self) return ActionButton_UpdateState(self.button) end,
+		}
+	},
+	LibActionButton = {
+		__index = {
+			GetAction = function(self) return self.button:GetAction() end,
+			GetCooldown = function(self) return self.button:GetCooldown() end,
+			IsUsable = function(self) return self.button:IsUsable() end,
+			UpdateUsable = function(self) return self.button:UpdateAction(true) end,
+			UpdateState = function(self) return self.button:UpdateAction(true) end,
+		}
+	}
+}
 
 local function NOOP() end
 local function InitializeButton(self)
@@ -747,9 +760,10 @@ local function InitializeButton(self)
 		AdiProfiler:RegisterFrame(self, "ia:ActionButton")
 	end
 	if self.__LAB_Version then
-		state.GetAction = LAB_GetAction
+		setmetatable(state, buttonClasses.LibActionButton)
 		self:HookScript('OnShow', UpdateAction_Hook)
 	else
+		setmetatable(state, buttonClasses.Blizzard)
 		state.GetAction = Blizzard_GetAction
 	end
 	return UpdateAction_Hook(self)

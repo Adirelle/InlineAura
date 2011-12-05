@@ -702,7 +702,7 @@ function InlineAura_LoadDefaults()
 			85256  -- Templar's Verdict
 		)
 
-		Spells(84963):Aliases(84963, "HOLY_POWER") -- Inquisition
+		Spells(84963):OnSelf():Aliases("HOLY_POWER") -- Inquisition
 
 		SelfTalentProc(86150, 86698, 86659, 86669) -- Guardian of Ancient Kings and its 3 variants
 

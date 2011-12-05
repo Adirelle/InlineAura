@@ -1083,6 +1083,12 @@ function addon:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(event, spellId)
 	end
 end
 
+function addon.ButtonNeedUpdate(button)
+	if buttons[button] and activeButtons[button] then
+		buttonsToUpdate[button] = "ButtonNeedUpdate"
+	end
+end
+
 ------------------------------------------------------------------------------
 -- Addon and library support
 ------------------------------------------------------------------------------
@@ -1101,7 +1107,7 @@ local addonSupport = {
 	end,
 	tullaRange = function(self)
 		-- GLOBALS: tullaRange
-		--hooksecurefunc(tullaRange, "SetButtonColor", self.UpdateButtonUsable_Hook)
+		hooksecurefunc(tullaRange, "SetButtonColor", self.ButtonNeedUpdate)
 	end,
 }
 addonSupport.CooldownCount = addonSupport.OmniCC
@@ -1117,12 +1123,11 @@ local librarySupport = {
 	end,
 	["LibActionButton-1.0"] = function(self, lib, minor)
 		if minor >= 11 then -- Callbacks and GetAllButtons() are supported since minor 11
-			local UpdateButtonState_Hook = addon.UpdateButtonState_Hook
-			local UpdateButtonUsable_Hook = addon.UpdateButtonUsable_Hook
+			local ButtonNeedUpdate = self.ButtonNeedUpdate
 			lib.RegisterCallback(self, "OnButtonCreated", function(_, button) return InitializeButton(button) end)
 			lib.RegisterCallback(self, "OnButtonUpdate", function(_, button) return UpdateAction_Hook(button) end)
---			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return UpdateButtonUsable_Hook(button) end)
---			lib.RegisterCallback(self, "OnButtonState", function(_, button) return UpdateButtonState_Hook(button) end)
+			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return ButtonNeedUpdate(button) end)
+			lib.RegisterCallback(self, "OnButtonState", function(_, button) return ButtonNeedUpdate(button) end)
 			for button in pairs(lib:GetAllButtons()) do
 				newButtons[button] = true
 			end

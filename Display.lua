@@ -428,17 +428,16 @@ local function IsOnCooldown(action)
 end
 
 function addon:UpdateButtonHighlight(button, event)
-	button:Debug('UpdateButtonHighlight on', event)
 	local state = self.buttons[button]
 	local highlight, action, spellId = state.highlight, button.action, state.spellId
 
 	-- Glowing
-	if (highlight == "glowing" or (spellId and IsSpellOverlayed(spellId)))
-		 and (profile.glowOutOfCombat or addon.inCombat)
-		 and (profile.glowUnusable or IsUsable(action))
-		 and (profile.glowOnCooldown or IsOnCooldown(action))
-	then
-		highlight = "glowing"
+	if (spellId and IsSpellOverlayed(spellId)) or (
+		highlight == "glowing"
+		and (profile.glowOutOfCombat or addon.inCombat)
+		and (profile.glowUnusable or IsUsable(action))
+		and (profile.glowOnCooldown or IsOnCooldown(action))
+	) then
 		if button.overlay then
 			if button.overlay.animOut:IsPlaying() then
 				button.overlay.animOut:Stop()

@@ -436,7 +436,7 @@ function addon:UpdateButtonHighlight(button, event)
 		highlight == "glowing"
 		and (profile.glowOutOfCombat or addon.inCombat)
 		and (profile.glowUnusable or IsUsable(action))
-		and (profile.glowOnCooldown or IsOnCooldown(action))
+		and (profile.glowOnCooldown or not IsOnCooldown(action))
 	) then
 		if button.overlay then
 			if button.overlay.animOut:IsPlaying() then

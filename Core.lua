@@ -735,6 +735,7 @@ local buttonClasses = {
 				ActionButton_UpdateUsable(self.button)
 				ActionButton_UpdateState(self.button)
 				ActionButton_UpdateCooldown(self.button)
+				ActionButton_UpdateOverlayGlow(self.button)
 			end,
 		}
 	},
@@ -799,6 +800,11 @@ end
 local function ActionButton_UpdateCooldown_Hook(self)
 	local state = buttons[self]
 	return state and addon:UpdateButtonCooldown(state)
+end
+
+local function ActionButton_HideOverlayGlow_Hook(self)
+	local state = buttons[self]
+	return state and addon:UpdateButtonHighlight(state)
 end
 
 ------------------------------------------------------------------------------
@@ -1334,6 +1340,7 @@ function addon:OnEnable()
 		hooksecurefunc('ActionButton_UpdateState', ActionButton_UpdateState_Hook)
 		hooksecurefunc('ActionButton_UpdateUsable', ActionButton_UpdateUsable_Hook)
 		hooksecurefunc('ActionButton_UpdateCooldown', ActionButton_UpdateCooldown_Hook)
+		hooksecurefunc('ActionButton_HideOverlayGlow', ActionButton_HideOverlayGlow_Hook)
 
 		-- Our bucket thingy
 		local delay = 0

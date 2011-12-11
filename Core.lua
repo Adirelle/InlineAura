@@ -56,7 +56,7 @@ addon.buttons = buttons
 -- Make often-used globals local
 ------------------------------------------------------------------------------
 
---GLOBALS: ActionButton_UpdateOverlayGlow ActionButton_UpdateState ActionButton_UpdateUsable
+--GLOBALS: ActionButton_UpdateOverlayGlow ActionButton_UpdateState ActionButton_UpdateUsable ActionButton_UpdateCooldown
 --<GLOBALS
 local _G = _G
 local assert = _G.assert
@@ -75,6 +75,9 @@ local GetMacroSpell = _G.GetMacroSpell
 local GetNumPartyMembers = _G.GetNumPartyMembers
 local GetNumRaidMembers = _G.GetNumRaidMembers
 local GetSpellInfo = _G.GetSpellInfo
+local GetActionCooldown = _G.GetActionCooldown
+local InCombatLockdown = _G.InCombatLockdown
+local IsUsableAction = _G.IsUsableAction
 local hooksecurefunc = _G.hooksecurefunc
 local InterfaceOptionsFrameAddOns = _G.InterfaceOptionsFrameAddOns
 local InterfaceOptionsFrame_OpenToCategory = _G.InterfaceOptionsFrame_OpenToCategory
@@ -1165,7 +1168,7 @@ end
 -- Initialization
 ------------------------------------------------------------------------------
 
--- GLOBALS: InlineAura_LoadDefaults
+-- GLOBALS: InlineAura_LoadDefaults InlineAura_LoadCustomDefaults
 function addon:LoadSpellDefaults(event)
 	--@debug@
 	dprint('Loaded default settings on', event)
@@ -1326,6 +1329,7 @@ function addon:OnEnable()
 		end
 
 --@debug@
+		-- GLOBALS: debugstack
 		local debug_hooksecurefunc = function(funcname, hook)
 			hooksecurefunc(funcname, function(button, ...)
 				(button.Debug or dprint)(button, funcname, debugstack(3, 3, 0), ...)
@@ -1415,6 +1419,7 @@ end
 -- GLOBALS: SLASH_INLINEAURA1
 SLASH_INLINEAURA1 = "/InlineAura"
 --@debug@
+-- GLOBALS: SLASH_INLINEAURA2
 SLASH_INLINEAURA2= "/IA"
 --@end-debug@
 function SlashCmdList.INLINEAURA()

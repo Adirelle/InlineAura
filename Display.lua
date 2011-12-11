@@ -416,7 +416,7 @@ end
 ------------------------------------------------------------------------------
 
 local function IsUsable(state)
-	local usable, noPower = state:IsUsablestate()
+	local usable, noPower = state:IsUsable()
 	return usable or noPower
 end
 
@@ -425,8 +425,8 @@ local function IsOnCooldown(state)
 	return enable ~= 0 and start ~= 0 and duration > 1.5
 end
 
-function addon:UpdateButtonHighlight(state)
-	if (state.spellId and IsSpellOverlayed(state.spellId)) or state.highlight ~= "highlight" then
+function addon:UpdateButtonGlowing(state)
+	if (state.spellId and IsSpellOverlayed(state.spellId)) or state.highlight ~= "glowing" then
 		return
 	end
 
@@ -454,8 +454,8 @@ function addon:UpdateButtonHighlight(state)
 end
 
 function addon:UpdateButtonUsable(state)
-	if state.highlight == "highlight" and not profile.glowUnusable then
-		return self:UpdateButtonHighlight(state)
+	if state.highlight == "glowing" and not profile.glowUnusable then
+		return self:UpdateButtonGlowing(state)
 	elseif state.highlight == "dim" then
 		local name = state.button:GetName()
 		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
@@ -475,8 +475,8 @@ function addon:UpdateButtonState(state)
 end
 
 function addon:UpdateButtonCooldown(state)
-	if state.highlight == "highlight" and not profile.glowOnCooldown then
-		return self:UpdateButtonHighlight(state)
+	if state.highlight == "glowing" and not profile.glowOnCooldown then
+		return self:UpdateButtonGlowing(state)
 	end
 end
 

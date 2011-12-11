@@ -654,7 +654,7 @@ local function UpdateButtonAura(self, force)
 			highlight = 'border'
 		end
 
-		if state.highlight ~= highlight or state.highlightBorder ~= highlightBorder or force then
+		if force or state.highlight ~= highlight or state.highlightBorder ~= highlightBorder then
 			--@debug@
 			self:Debug("GetAuraToDisplay: updating highlight")
 			--@end-debug@
@@ -662,7 +662,7 @@ local function UpdateButtonAura(self, force)
 			state:UpdateAll()
 		end
 
-		if state.count ~= count or state.expirationTime ~= expirationTime or force then
+		if force or state.count ~= count or state.expirationTime ~= expirationTime then
 			--@debug@
 			self:Debug("GetAuraToDisplay: updating countdown and/or stack", expirationTime, count)
 			--@end-debug@
@@ -807,7 +807,7 @@ end
 
 local function ActionButton_HideOverlayGlow_Hook(self)
 	local state = buttons[self]
-	return state and addon:UpdateButtonHighlight(state)
+	return state and addon:UpdateButtonGlowing(state)
 end
 
 ------------------------------------------------------------------------------
@@ -1065,7 +1065,7 @@ function addon:PLAYER_REGEN_ENABLED(event)
 	addon.inCombat = (event == 'PLAYER_REGEN_DISABLED')
 	if not profile.glowOutOfCombat then
 		for button in pairs(activeButtons) do
-			self:UpdateButtonHighlight(buttons[button])
+			self:UpdateButtonGlowing(buttons[button])
 		end
 	end
 end

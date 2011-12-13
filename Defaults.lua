@@ -24,6 +24,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 -- GLOBALS: InlineAura_LoadDefaults
 function InlineAura_LoadDefaults()
 
+  -- These functions are not really globals but I have to list them here
+  -- to prevent my checking script from whinning
+	-- GLOBALS: SharedAuras SpellsByClass SelfBuffs Spells class Aliases SelfTalentProc GroupBuffs GroupDebuffs PetBuffs ShowSpecial
+
 	------------------------------------------------------------------------------
 	-- Group (de)buffs
 	------------------------------------------------------------------------------
@@ -698,8 +702,7 @@ function InlineAura_LoadDefaults()
 			85673, -- Word of Glory
 			85256, -- Templar's Verdict
 			53600, -- Shield of the Righteous
-			85222, -- Light of Dawn
-			85256  -- Templar's Verdict
+			85222  -- Light of Dawn
 		)
 
 		Spells(84963):OnSelf():Aliases("HOLY_POWER") -- Inquisition

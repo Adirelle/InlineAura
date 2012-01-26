@@ -48,6 +48,7 @@ local IsSpellOverlayed = _G.IsSpellOverlayed
 local IsUsableAction = _G.IsUsableAction
 local IsUsableSpell = _G.IsUsableSpell
 local min = _G.min
+local max = _G.max
 local next = _G.next
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
@@ -198,7 +199,7 @@ function countdownProto:UpdateFont()
 	self:SetFont(self.font, fontSize, self.fontFlag)
 	local overflowRatio = self:GetStringWidth() / (self:GetParent():GetWidth()-4)
 	if overflowRatio > 1 then
-		return self:SetFont(self.font, fontSize / overflowRatio, self.fontFlag)
+		return self:SetFont(self.font, max(5, fontSize / overflowRatio), self.fontFlag)
 	end
 end
 

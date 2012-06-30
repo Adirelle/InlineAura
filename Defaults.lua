@@ -24,8 +24,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 -- GLOBALS: InlineAura_LoadDefaults
 function InlineAura_LoadDefaults()
 
-  -- These functions are not really globals but I have to list them here
-  -- to prevent my checking script from whinning
+	-- These functions are not really globals but I have to list them here
+	-- to prevent my checking script from whinning
 	-- GLOBALS: SharedAuras SpellsByClass SelfBuffs Spells class Aliases SelfTalentProc GroupBuffs GroupDebuffs PetBuffs ShowSpecial
 
 	------------------------------------------------------------------------------

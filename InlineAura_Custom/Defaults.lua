@@ -8,4 +8,3 @@ function InlineAura_LoadCustomDefaults()
 	-- Customize there
 
 end
-

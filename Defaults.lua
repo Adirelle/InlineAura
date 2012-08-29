@@ -15,6 +15,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+Contributors :
+  - crymson
 --]]
 
 ------------------------------------------------------------------------------
@@ -58,27 +61,22 @@ function InlineAura_LoadDefaults()
 	-- Increased Attack Power (10%)
 	SharedAuras(
 		"PALADIN",     19740, -- Blessing of Might
-		"DEATHKNIGHT", 53138, -- Abomination's Might (passive)
-		"HUNTER",      19506, -- Trueshot Aura (passive)
-		"SHAMAN",      30808  -- Unleashed Rage (passive)
+		"HUNTER",      19506 -- Trueshot Aura (passive)
 	):OnSelf()
 
 	-- Increased Spell Power (6%)
 	SharedAuras(
-		"MAGE",   1459, -- Arcane Brillance
-		"SHAMAN", 8227  -- Flametongue Totem
+		"MAGE",   1459 -- Arcane Brillance
 	):OnSelf()
 
 	-- Increased Physical Haste (10%)
 	SharedAuras(
 		"DEATHKNIGHT", 55610, -- Improved Icy Talons (passive)
-		"HUNTER",      53290, -- Hunting Party (passive)
-		"SHAMAN",       8512  -- Windfury Totem
+		"ROGUE",      113742 -- Swiftblades Cunning (passive) added for MOP
 	):OnSelf()
 
 	-- Increased Spell Haste (5%)
 	SharedAuras(
-		"SHAMAN",  3738, -- Wrath of Air Totem
 		"PRIEST", 49868, -- Mind Quickening (passive)
 		"DRUID",  24907  -- Moonkin Aura (passive)
 	):OnSelf()
@@ -96,7 +94,6 @@ function InlineAura_LoadDefaults()
 	-- Agility & Strength bonuses
 	SharedAuras(
 		"WARRIOR",      6673, -- Battle Shout
-		"SHAMAN",       8076, -- Strength of Earth (Totem)
 		"DEATHKNIGHT", 57330, -- Horn of Winter
 		"HUNTER",      93435  -- Roar of Courage (pet ability)
 	):OnSelf()
@@ -109,34 +106,9 @@ function InlineAura_LoadDefaults()
 		"HUNTER",  90364  -- Qiraji Fortitude (exotic pet ability)
 	):OnSelf()
 
-	-- Armor Bonus
-	SharedAuras(
-		"PALADIN",  465, -- Devotion Aura
-		"SHAMAN",  8071  -- Stoneskin Totem
-	):OnSelf()
-
 	-- Mana Bonus
 	SharedAuras(
-		"MAGE",     1459, -- Arcane Brillance
-		"WARLOCK", 54424  -- Fel Intelligence (felhunter ability)
-	):OnSelf()
-
-	-- Pushback Resistance
-	SharedAuras(
-		"PALADIN", 19746, -- Concentration Aura
-		"SHAMAN",  87718  -- Totem of Tranquil Mind
-	):OnSelf()
-
-	-- Nature Resistance Auras
-	SharedAuras(
-		"HUNTER", 20043, -- Aspect of the Wild
-		"SHAMAN",  8184  -- Elemental Resistance Totem
-	):OnSelf()
-
-	-- Shadow Resistance Auras
-	SharedAuras(
-		"PRIEST",  27683, -- Shadow Protection
-		"PALADIN", 19891  -- Resistance Aura
+		"MAGE",     1459 -- Arcane Brillance
 	):OnSelf()
 
 	--- Debuffs ---
@@ -144,10 +116,8 @@ function InlineAura_LoadDefaults()
 	-- Spell Damage Taken (8%)
 	SharedAuras(
 		"WARLOCK",      1490, -- Curse of the Elements
-		"WARLOCK",     85547, -- Jinx
 		"ROGUE",       58410, -- Master Poisoner (passive)
 		"DEATHKNIGHT", 51160, -- Ebon Plaguebringer (passive)
-		"DRUID",       48506, -- Earth and Moon (passive)
 		"HUNTER",      34889, -- Fire Breath (pet ability)
 		"HUNTER",      24844  -- Lightning Breath (pet ability)
 	)
@@ -157,15 +127,12 @@ function InlineAura_LoadDefaults()
 		"DRUID",   33878, -- Mangle (bear)
 		"DRUID",   33876, -- Mangle (cat)
 		"ROGUE",   16511, -- Hemorrhage
-		"WARRIOR", 29836, -- Blood Frenzy (passive)
-		"HUNTER",  50271, -- Tendon Ripe (pet ability)
 		"HUNTER",  35290, -- Gore (pet ability)
 		"HUNTER",  57386  -- Stampede (pet ability)
 	)
 
 	-- Reduced Casting Speed (30%)
 	SharedAuras(
-		"WARLOCK",      1714, -- Curse of Tongues
 		"ROGUE",        5761, -- Mind-Numbing Poison
 		"MAGE",        31589, -- Slow
 		"DEATHKNIGHT", 73975, -- Necrotic Strike
@@ -179,18 +146,13 @@ function InlineAura_LoadDefaults()
 		"WARRIOR", 20243, -- Devastate
 		"ROGUE",    8647, -- Expose Armor
 		"DRUID",     770, -- Faerie Fire (balance)
-		"DRUID",   16857, -- Faerie Fire (feral)
-		"DRUID",   91565, -- Faerie Fire (the actual debuff)
-		"HUNTER",  35387, -- Corrosive Spit (pet ability)
 		"HUNTER",  50498  -- Tear Armor (pet ability)
 	):WithStack()
 
 	-- Reduced Healing (25%)
 	SharedAuras(
 		"WARRIOR", 12294, -- Mortal Strike
-		"WARRIOR", 46910, -- Furious Attacks
-		"PRIEST",  15313, -- Improved Mind Blast
-		"ROGUE",   13219, -- Wound Poison
+		"ROGUE",   8679,  -- Wound Poison
 		"HUNTER",  82654, -- Widow Venom
 		"WARLOCK", 30213, -- Legion Strike (felguard ability)
 		"HUNTER",  54680  -- Monstrous Bite (exotic pet ability)
@@ -198,11 +160,10 @@ function InlineAura_LoadDefaults()
 
 	-- Physical Damage Done (10%)
 	SharedAuras(
-		"WARLOCK",       702, -- Curse of Weakness
 		"DRUID",          99, -- Demoralizing Roar
 		"HUNTER",      50256, -- Demoralizing Roar (pet ability)
 		"WARRIOR",      1160, -- Demoralizing Shout
-		"DEATHKNIGHT", 81130, -- Scarlet Fever
+		"DEATHKNIGHT", 81132, -- Scarlet Fever
 		"PALADIN",     26017  -- Vindication
 	)
 
@@ -220,8 +181,6 @@ function InlineAura_LoadDefaults()
 	-- Spell Crit Taken (5%)
 	SharedAuras(
 		"WARLOCK",   686, -- Shadow Bolt
-		"WARLOCK", 17800, -- Shadow and Flame
-		"MAGE",    22959, -- Critical Mass
 		"MAGE",     2948  -- Scorch
 	)
 
@@ -266,15 +225,11 @@ function InlineAura_LoadDefaults()
 	SharedAuras(
 		"*",            1604, -- Dazed,
 		"DEATHKNIGHT", 45524, -- Chains of Ice
-		"DEATHKNIGHT", 50434, -- Chilblains
-		"DEATHKNIGHT", 58617, -- Glyph of Heart Strike
-		"DEATHKNIGHT", 68766, -- Desecration
 		"DRUID",       50259, -- Dazed (feral charge effect)
 		"DRUID",       58180, -- Infected Wounds
 		"DRUID",       61391, -- Typhoon
 		"MAGE",        31589, -- Slow
 		"MAGE",        44614, -- Frostfire Bolt
-		"HUNTER",       2974, -- Wing Clip
 		"HUNTER",       5116, -- Concussive Shot
 		"HUNTER",      13810, -- Ice Trap
 		"HUNTER",      35101, -- Concussive Barrage
@@ -290,14 +245,10 @@ function InlineAura_LoadDefaults()
 		"PALADIN",      1044, -- Hand of Freedom
 		"ROGUE",        3409, -- Crippling Poison
 		"ROGUE",       26679, -- Deadly Throw
-		"ROGUE",       31126, -- Blade Twisting
-		"ROGUE",       51693, -- Waylay
-		"ROGUE",       51585, -- Blade Twisting
 		"SHAMAN",       3600, -- Earthbind
 		"SHAMAN",       8034, -- Frostbrand Attack
 		"SHAMAN",       8056, -- Frost Shock
 		"SHAMAN",       8178, -- Grounding Totem Effect
-		"WARLOCK",     18118, -- Aftermath
 		"WARLOCK",     18223, -- Curse of Exhaustion
 		"WARIROR",      1715, -- Piercing Howl
 		"WARRIOR",     12323  -- Hamstring
@@ -313,7 +264,6 @@ function InlineAura_LoadDefaults()
 		"HUNTER",      19577, -- Intimidation
 		"HUNTER",      50519, -- Sonic Blast (Bat)
 		"HUNTER",      56626, -- Sting (famous singer)
-		"MAGE",        12355, -- Impact
 		"MAGE",        44572, -- Deep Freeze
 		"MAGE",        82691, -- Ring of Frost
 		"PALADIN",       853, -- Hammer of Justice
@@ -323,25 +273,20 @@ function InlineAura_LoadDefaults()
 		"ROGUE",        1833, -- Cheap Shot
 		"WARLOCK",     30283, -- Shadowfury
 		"WARLOCK",     89766, -- Axe Toss (Felguard)
-		"WARRIOR",     12809, -- Concussion Blow
-		"WARRIOR",     20253, -- Intercept
-		"WARRIOR",     46968, -- Shockwave
-		"WARRIOR",     85388  -- Throwdown
+		"WARRIOR",     46968  -- Shockwave
 	)
 
 	-- Roots
 	SharedAuras(
 		"DRUID",     339, -- Entangling Roots
 		"HUNTER",   4167, -- Web (Spider)
-		"HUNTER",  19306, -- Counterattack
 		"HUNTER",  50245, -- Pin (Crab)
 		"HUNTER",  54706, -- Venom Web Spray (Silithid)
 		"HUNTER",  90327, -- Lock Jaw (Dog)
 		"MAGE",      122, -- Frost Nova
 		"MAGE",    33395, -- Freeze (elementals)
 		"MAGE",    63685, -- Freeze
-		"SHAMAN",  64695, -- Earthgrab
-		"WARRIOR", 23694  -- Improved Hamstring
+		"SHAMAN",  64695  -- Earthgrab
 	)
 
 	-- Interrupts

@@ -7,7 +7,7 @@
 ## X-Date: @project-date-iso@
 ## X-Category: Buffs & Debuffs, Action Bars
 ## X-License: GPL v2
-## X-eMail: adirelle@tagada-team.net
+## X-eMail: adirelle@gmail.com
 ## X-Embeds: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0
 
 ## LoadManagers: AddonLoader

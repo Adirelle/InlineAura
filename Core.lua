@@ -1168,6 +1168,27 @@ end
 -- Initialization
 ------------------------------------------------------------------------------
 
+local function catchErrorCall(f)
+	local saved = geterrorhandler()
+	if saved ~= _ERRORMESSAGE then
+		return f()
+	end
+
+	local count = 0
+	local errh = function(...) count = count + 1 end
+
+	seterrorhandler(errh)
+	local status = xpcall(f, errh)
+	seterrorhandler(saved)
+
+	if not status or count > 0 then
+		print(" |cffff0000InlineAura: "..(count or "some").." error(s) happened "..
+			"while loading the default settings. InlineAura probably won't work "..
+			"as expected. Please install an error handler like BugGrabber or "..
+			"Swatter  prior to reporting any issue.|r")
+	end
+end
+
 -- GLOBALS: InlineAura_LoadDefaults InlineAura_LoadCustomDefaults
 function addon:LoadSpellDefaults(event)
 	--@debug@
@@ -1180,9 +1201,11 @@ function addon:LoadSpellDefaults(event)
 	end
 
 	-- Insert spell defaults
-	self:InitSettingsEnvironment(PRESETS, DEFAULT_OPTIONS.profile.spellStatuses)
-	self:LoadSettings(InlineAura_LoadDefaults)
-	self:LoadSettings(InlineAura_LoadCustomDefaults)
+	catchErrorCall(function()
+		self:InitSettingsEnvironment(PRESETS, DEFAULT_OPTIONS.profile.spellStatuses)
+		self:LoadSettings(InlineAura_LoadDefaults)
+		self:LoadSettings(InlineAura_LoadCustomDefaults)
+	end)
 
 	-- Register updated defaults
 	if self.db then

@@ -1,7 +1,8 @@
-*.lua     text
-*.xml     text
-*.toc     text
-*.textile text
+[attr]source	text whitespace=indent-with-non-tab,trailing-space
+*.lua     source
+*.xml     source
+*.toc     source
+*.textile source
 .*meta    text whitespace=blank-at-eol,tab-in-indent
 *.sh      text eol=lf
 *         text=auto

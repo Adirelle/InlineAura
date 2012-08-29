@@ -330,7 +330,7 @@ function InlineAura_LoadDefaults()
 	Spells("item:58149"):Aliases(79639, 79640, 79638):OnSelf()
 
 	------------------------------------------------------------------------------
-	if class == 'HUNTER' then
+	if IsClass('HUNTER') then
 	------------------------------------------------------------------------------
 
 		Aliases( 1499,  3355) -- Freezing Trap => Freezing Trap Effect
@@ -373,9 +373,10 @@ function InlineAura_LoadDefaults()
 				136, -- Mend Pet
 			19574  -- Bestial Wrath
 		)
+	end
 
 	------------------------------------------------------------------------------
-	elseif class == 'WARRIOR' then
+	if IsClass('WARRIOR') then
 	------------------------------------------------------------------------------
 
 		SelfBuffs(
@@ -424,8 +425,10 @@ function InlineAura_LoadDefaults()
 		-- Colossus Smash
 		Spells(86346):OnlyMine()
 
+	end
+
 	------------------------------------------------------------------------------
-	elseif class == 'SHAMAN' then
+	if IsClass('SHAMAN') then
 	------------------------------------------------------------------------------
 
 		SelfBuffs(
@@ -469,9 +472,10 @@ function InlineAura_LoadDefaults()
 
 		-- Unleash Elements => Unleash Flame/Unleash Frost/Unleash Wind
 		Spells(73680):Aliases(73683, 73682, 73681):OnSelf()
+	end
 
 	------------------------------------------------------------------------------
-	elseif class == 'WARLOCK' then
+	if IsClass('WARLOCK') then
 	------------------------------------------------------------------------------
 
 		-- Soul link
@@ -502,9 +506,10 @@ function InlineAura_LoadDefaults()
 
 		Spells(89808):Aliases("DISPELLABLE") -- Singe Magic (Imp)
 		Spells(19505):Aliases("DISPELLABLE") -- Devour Magic (Felhunter)
+	end
 
 	------------------------------------------------------------------------------
-	elseif class == 'MAGE' then
+	if IsClass('MAGE') then
 	------------------------------------------------------------------------------
 
 		SelfBuffs(
@@ -517,9 +522,10 @@ function InlineAura_LoadDefaults()
 		Spells(30451):Aliases(36032):OnSelf() -- Arcane Blast => Arcane Blast debuff
 
 		Spells(475):Aliases("DISPELLABLE") -- Remove Curse
+	end
 
 	------------------------------------------------------------------------------
-	elseif class == 'DEATHKNIGHT' then
+	if IsClass('DEATHKNIGHT') then
 	------------------------------------------------------------------------------
 
 		Aliases(45462, 59879) -- Plague Strike => Blood Plague
@@ -556,9 +562,10 @@ function InlineAura_LoadDefaults()
 		PetBuffs(63560):WithStack() -- Dark Transformation
 
 		Spells(49998):Aliases(77535):OnSelf() -- Blood Shield (thanks to twistdshade)
+	end
 
 	------------------------------------------------------------------------------
-	elseif class == 'PRIEST' then
+	if IsClass('PRIEST') then
 	------------------------------------------------------------------------------
 
 		SelfBuffs(
@@ -575,9 +582,10 @@ function InlineAura_LoadDefaults()
 		Aliases(17, 6788) -- Power Word: Shield / Weakened Soul
 
 		Spells(527):Aliases("DISPELLABLE") -- Dispel Magic
+	end
 
 	------------------------------------------------------------------------------
-	elseif class == 'DRUID' then
+	if IsClass('DRUID') then
 	------------------------------------------------------------------------------
 
 		-- Display eclipse energy
@@ -616,9 +624,10 @@ function InlineAura_LoadDefaults()
 		Aliases(93402,  8921) -- ... and conversely
 
 		Spells(2782, 2908):Aliases("DISPELLABLE") -- Remove Corruption, Soothe
+	end
 
 	------------------------------------------------------------------------------
-	elseif class == 'PALADIN' then
+	if IsClass('PALADIN') then
 	------------------------------------------------------------------------------
 
 		-- Hammer of Wrath
@@ -662,9 +671,10 @@ function InlineAura_LoadDefaults()
 		Aliases(53563, 53651):OnlyMine() -- Beacon of Light => Light's Beacon
 
 		Spells(4987):Aliases("DISPELLABLE") -- Cleanse
+	end
 
 	------------------------------------------------------------------------------
-	elseif class == 'ROGUE' then
+	if IsClass('ROGUE') then
 	------------------------------------------------------------------------------
 
 		SelfBuffs(

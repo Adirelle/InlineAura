@@ -62,8 +62,12 @@ local function BuildEnv(self, presets, statuses)
 
 	local function AddFuncs()
 
-		-- GLOBALS: class
-		_, class = UnitClass('player')
+		local playerClass = UnitClass('player')
+		-- GLOBALS: IsClass
+		IsClass = function(class) return class == playerClass end
+		--@debug@
+		IsClass = function() return true end
+		--@end-debug@
 
 		-- GLOBALS: version
 		version = "@file-hash@/@project-version@"

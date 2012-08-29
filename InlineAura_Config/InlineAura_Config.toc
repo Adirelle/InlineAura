@@ -1,4 +1,4 @@
-## Interface: 40300
+## Interface: 50100
 
 ## Title: Inline Aura - Configuration GUI
 ## Author: Adirelle

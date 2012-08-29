@@ -17,7 +17,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 Contributors :
-  - crymson
+  - crymson (MoP common),
+  - Moozhe (warrior),
+  - brotherhobbes (shaman and priest),
+  - Citlalin (death knight)
 --]]
 
 ------------------------------------------------------------------------------
@@ -375,8 +378,6 @@ function InlineAura_LoadDefaults()
 	elseif class == 'WARRIOR' then
 	------------------------------------------------------------------------------
 
-		-- Most settings contributed by Moozhe
-
 		SelfBuffs(
 			  871, -- Shield Wall
 			 2565, -- Shield Block
@@ -426,7 +427,6 @@ function InlineAura_LoadDefaults()
 	------------------------------------------------------------------------------
 	elseif class == 'SHAMAN' then
 	------------------------------------------------------------------------------
-		-- Contributed by brotherhobbes
 
 		SelfBuffs(
 				324, -- Lightning Shield
@@ -522,8 +522,6 @@ function InlineAura_LoadDefaults()
 	elseif class == 'DEATHKNIGHT' then
 	------------------------------------------------------------------------------
 
-		-- Contributed by Citlalin
-
 		Aliases(45462, 59879) -- Plague Strike => Blood Plague
 		Aliases(45477, 59921) -- Icy Touch => Frost Fever
 		Aliases(48721, 81132) -- Blood Boil => Scarlet Fever
@@ -563,7 +561,6 @@ function InlineAura_LoadDefaults()
 	elseif class == 'PRIEST' then
 	------------------------------------------------------------------------------
 
-		-- Contributed by brotherhobbes
 		SelfBuffs(
 				588, -- Inner Fire
 			73413, -- Inner Will

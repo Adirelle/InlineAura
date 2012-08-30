@@ -17,10 +17,11 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 Contributors :
-  - crymson (MoP common),
-  - Moozhe (warrior),
-  - brotherhobbes (shaman and priest),
-  - Citlalin (death knight)
+  - crymson (MoP common spells),
+  - Moozhe (warrior, tactictal debuffs),
+  - brotherhobbes (shaman and priest spells),
+  - Citlalin (death knight spells)
+  - Phanx (crowd control effects)
 --]]
 
 ------------------------------------------------------------------------------
@@ -189,7 +190,7 @@ function InlineAura_LoadDefaults()
 
 	-- CC and tactical debuffs --
 
-	-- Crowd control (using Phanx's list)
+	-- Crowd control
 	SharedAuras(
 		"WARLOCK",   710, -- Banish
 		"SHAMAN",  76780, -- Bind Elemental
@@ -213,7 +214,7 @@ function InlineAura_LoadDefaults()
 		"HUNTER",  19386  -- Wyvern Sting
 	)
 
-	-- Disarm (contributed by Moozhe)
+	-- Disarm
 	SharedAuras(
 		"WARRIOR",   676, -- Disarm
 		"HUNTER",  50541, -- Clench (Scorpid)
@@ -222,7 +223,7 @@ function InlineAura_LoadDefaults()
 		"HUNTER",  91644  -- Snatch (Bird of Prey)
 	)
 
-	-- Snares and anti-snares (contributed by Moozhe)
+	-- Snares and anti-snares
 	-- Note that some of these are talent procs or passive effects.
 	-- This is intended as they will show up on active spells anyway.
 	SharedAuras(
@@ -257,7 +258,7 @@ function InlineAura_LoadDefaults()
 		"WARRIOR",     12323  -- Hamstring
 	)
 
-	-- Stuns (contributed by Moozhe)
+	-- Stuns
 	SharedAuras(
 		"*",           20549, -- War Stomp (Tauren racial)
 		"DEATHKNIGHT", 91800, -- Gnaw (Ghoul)

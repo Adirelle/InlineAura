@@ -366,7 +366,7 @@ function InlineAura_LoadDefaults()
 
 		GroupBuffs(13159) -- Aspect of the Pack
 
-		GroupDebuffs(1130, 53243) -- Hunter's Mark, Marked For Death
+		--GroupDebuffs(1130, 53243) -- Hunter's Mark, Marked For Death
 
 		Spells(19801):Aliases("DISPELLABLE") -- Tranquilizing Shot => foes' magic buffs
 
@@ -396,17 +396,19 @@ function InlineAura_LoadDefaults()
 		-- Execute
 		Spells(5308):Aliases('BELOW20'):Glowing()
 
-		SelfTalentProc(   78, 50685):Glowing() -- Heroic Strike => Incite
+		--SelfTalentProc(   78):Glowing() -- Heroic Strike => Incite
 		SelfTalentProc( 1464, 46916):Glowing() -- Slam => Bloodsurge
-		SelfTalentProc( 5308, 90806):WithStack() -- Execute => Executioner stacks
-		SelfTalentProc( 7384, 60503):Glowing() -- Overpower => Taste For Blood
+		--SelfTalentProc( 5308):WithStack() -- Execute => Executioner stacks
+		--SelfTalentProc( 7384, 60503):Glowing() -- Overpower => Taste For Blood
 		SelfTalentProc(34428, 32216):Glowing() -- Victory Rush => Victorious
 
 		-- Self Buffs with Stacks: Recklessness, Retaliation
-		Spells(1719, 20230):OnSelf():WithStack()
+		Spells(1719):OnSelf():WithStack()
 
 		-- Cleave & Whirlwind => Meat Cleaver
-		Spells(845, 1680):Aliases(85738):OnSelf():WithStack()
+		Spells(845, 1680)
+			--:Aliases(85738)
+			:OnSelf():WithStack()
 
 		-- Raging Blow => Death Wish, Berserker Rage, Enrage
 		Spells(85288):Aliases(12292, 18499, 12880):OnSelf()
@@ -421,7 +423,7 @@ function InlineAura_LoadDefaults()
 		Spells(23881):OnSelf():NoCountdown()
 
 		-- Heroic Fury => Roots on Self
-		Spells(60970):Aliases(19306, 64695, 339, 63685, 33395, 122, 23694, 90327, 94358, 50245, 54706, 4167):OnSelf():ShowOthers():Glowing()
+		--Spells(60970):Aliases(19306, 64695, 339, 63685, 33395, 122, 23694, 90327, 94358, 50245, 54706, 4167):OnSelf():ShowOthers():Glowing()
 
 		-- Colossus Smash
 		Spells(86346):OnlyMine()
@@ -437,37 +439,37 @@ function InlineAura_LoadDefaults()
 			 2645, -- Ghost Wolf
 			16188, -- Nature's Swiftness
 			30823, -- Shamanistic Rage
-			52127, -- Water Shield
-			55198  -- Tidal Force
+			52127 -- Water Shield
+			--55198  -- Tidal Force
 		)
 
 		Spells(370, 51886):Aliases("DISPELLABLE") -- Purge and Cleanse Spirit
 
 		-- Totems
 		Spells(
-			 8075, -- Strength of Earth Totem
+			 --8075, -- Strength of Earth Totem
 			 3599, -- Searing Totem
-			 8227, -- Flametongue Totem
+			 --8227, -- Flametongue Totem
 			 2484, -- Earthbind Totem
 			 5394, -- Healing Stream Totem
-			 8512, -- Windfury Totem
+			 --8512, -- Windfury Totem
 			 8190, -- Magma Totem
 			 8177, -- Grounding Totem
-			 5675, -- Mana Spring Totem
-			 3738, -- Wrath of Air Totem
-			 8071, -- Stoneskin Totem
+			 --5675, -- Mana Spring Totem
+			 --3738, -- Wrath of Air Totem
+			 --8071, -- Stoneskin Totem
 			 8143, -- Tremor Totem
 			 2062, -- Earth Elemental Totem
-			 5730, -- Stoneclaw Totem
-			 8184, -- Elemental Resistance Totem
+			 --5730, -- Stoneclaw Totem
+			 --8184, -- Elemental Resistance Totem
 			 2894, -- Fire Elemental Totem
-			87718, -- Totem of Tranquil Mind
+			--87718, -- Totem of Tranquil Mind
 			16190  -- Mana Tide Totem
 		):Aliases("TOTEM"):OnSelf()
 
 		-- Some totems grants a (de)buff with a different name
-		Spells(8075):Aliases(8076) -- Strength of Earth Totem => Strength of Earth
-		Spells(5675):Aliases(5677) -- Mana Spring Totem => Mana Spring
+		--Spells(8075):Aliases(8076) -- Strength of Earth Totem => Strength of Earth
+		--Spells(5675):Aliases(5677) -- Mana Spring Totem => Mana Spring
 		Spells(16190):Aliases(16191) -- Mana Tide Totem => Mana Tide
 		Spells(8177):Aliases(8178) -- Grounding Totem => Grounding Totem Effect
 
@@ -480,7 +482,7 @@ function InlineAura_LoadDefaults()
 	------------------------------------------------------------------------------
 
 		-- Soul link
-		Spells(19028, 25228):OnPet()
+		--Spells(19028, 25228):OnPet()
 
 		Spells(1120):Aliases('BELOW25'):Glowing() -- Drain Soul
 		Spells(17877):Aliases('BELOW20'):Glowing() -- Shadowburn
@@ -489,18 +491,19 @@ function InlineAura_LoadDefaults()
 		ShowSpecial("SOUL_SHARDS", 74434) -- Soulburn
 
 		SelfBuffs(
-			687,   -- Demon Armor
-			7812,  -- Sacrifice (voidwalker buff)
-			19028, -- Soul Link
-			28176  -- Fel Armor
+			--687,   -- Demon Armor
+			7812  -- Sacrifice (voidwalker buff)
+			--19028 -- Soul Link
+			--28176  -- Fel Armor
 		)
 
-		SelfTalentProc(29722, 47383, 34936, 54274):WithStack() -- Incinerate => Molten Core, Backlash or Backdraft
-		SelfTalentProc( 6353, 63165, 85385) -- Soul Fire => Decimation or Improved Soul Fire
+		--SelfTalentProc(29722, 47383, 34936, 54274):WithStack() -- Incinerate => Molten Core, Backlash or Backdraft
+		SelfTalentProc(29722, 34936):WithStack() -- Incinerate => Molten Core, Backlash or Backdraft
+		--SelfTalentProc( 6353, 63165, 85385) -- Soul Fire => Decimation or Improved Soul Fire
 		SelfTalentProc(  686, 17941, 34936) -- Shadow Bolt => Shadow Trance Backlash
 
 		-- Demon Soul and its variants
-		Spells(77801):Aliases(79462, 79460, 79459, 79436, 79464)
+		--Spells(77801):Aliases(79462, 79460, 79459, 79436, 79464)
 
 		-- Show nether ward on shadow ward
 		Spells(6229):Aliases(91711):OnSelf()
@@ -532,7 +535,7 @@ function InlineAura_LoadDefaults()
 		Aliases(45462, 59879) -- Plague Strike => Blood Plague
 		Aliases(45477, 59921) -- Icy Touch => Frost Fever
 		Aliases(48721, 81132) -- Blood Boil => Scarlet Fever
-		Aliases(47541, 49194) -- Death Coil => Unholy Blight
+		--Aliases(47541, 49194) -- Death Coil => Unholy Blight
 
 		Aliases(66188, 77513) -- Death Strike => Blood Shield
 		Aliases(49184, 59052) -- Howling Blast => Freezing Fog
@@ -556,8 +559,8 @@ function InlineAura_LoadDefaults()
 		GroupDebuffs(
 			77606, -- Dark Simulacrum
 			 9484, -- Chains of Ice
-			47476, -- Strangulate
-			49203  -- Hungering Cold
+			47476 -- Strangulate
+			--49203  -- Hungering Cold
 		)
 
 		PetBuffs(63560):WithStack() -- Dark Transformation
@@ -608,7 +611,7 @@ function InlineAura_LoadDefaults()
 			 5229, -- Enrage
 			 5487, -- Bear Form
 			16689, -- Nature's Grasp
-			17116, -- Nature's Swiftness
+			--17116, -- Nature's Swiftness
 			22812, -- Barkskin
 			22842, -- Frenzied Regeneration
 			24858, -- Moonkin Form
@@ -617,8 +620,8 @@ function InlineAura_LoadDefaults()
 			40120, -- Swift Flight Form
 			50334, -- Berserk
 			52610, -- Savage Roar
-			61336, -- Survival Instincts
-			80313  -- Pulverize
+			61336 -- Survival Instincts
+			--80313  -- Pulverize
 		)
 
 		Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
@@ -645,8 +648,8 @@ function InlineAura_LoadDefaults()
 			31842, -- Divine Illumination
 			31850, -- Ardent Defender
 			31884, -- Avenging Wrath
-			54428, -- Divine Plea
-			85696  -- Zealotry
+			54428 -- Divine Plea
+			-- 85696  -- Zealotry
 		)
 
 		ShowSpecial(
@@ -659,11 +662,11 @@ function InlineAura_LoadDefaults()
 
 		Spells(84963):OnSelf():Aliases("HOLY_POWER") -- Inquisition
 
-		SelfTalentProc(86150, 86698, 86659, 86669) -- Guardian of Ancient Kings and its 3 variants
+		--SelfTalentProc(86150, 86698, 86659, 86669) -- Guardian of Ancient Kings and its 3 variants
 
 		SelfTalentProc(635, 94686) -- Holy Light => Crusader
 
-		GroupBuffs( 7294) -- Retribution Aura
+		--GroupBuffs( 7294) -- Retribution Aura
 		GroupBuffs(32223) -- Crusader Aura
 
 		Aliases(642, 25771) -- Divine Shield / Forbearance

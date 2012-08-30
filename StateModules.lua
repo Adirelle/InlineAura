@@ -59,6 +59,8 @@ local UnitPowerType = _G.UnitPowerType
 local wipe = _G.wipe
 --GLOBALS>
 
+local IsClass = addon.IsClass
+
 local interestingUnits = setmetatable({
 	player = true,
 	pet = true,
@@ -70,13 +72,11 @@ local interestingUnits = setmetatable({
 	t[unit] = false
 end })
 
-local _, playerClass = UnitClass("player")
-
 ------------------------------------------------------------------------------
 -- Warlocks' Soul Shards
 ------------------------------------------------------------------------------
 
-if playerClass == "WARLOCK" then
+if IsClass("WARLOCK") then
 	local soulShardState = addon:NewStateModule("SOUL_SHARDS")
 	soulShardState.keywords = { "SOUL_SHARDS" }
 	soulShardState.features = {
@@ -109,7 +109,7 @@ end
 -- Paladins' Holy Power
 ------------------------------------------------------------------------------
 
-if playerClass == "PALADIN" then
+if IsClass("PALADIN") then
 	local holyPowerStat = addon:NewStateModule("HOLY_POWER")
 	holyPowerStat.keywords = { "HOLY_POWER" }
 	holyPowerStat.features = {
@@ -146,7 +146,7 @@ end
 -- Rogue and druid: combo points
 ------------------------------------------------------------------------------
 
-if playerClass == "ROGUE" or playerClass == "DRUID" then
+if IsClass("ROGUE") or IsClass("DRUID") then
 	local comboPoints = addon:NewStateModule("COMBO_POINTS")
 	comboPoints.keywords = { "COMBO_POINTS" }
 	comboPoints.auraType = "regular"
@@ -177,7 +177,7 @@ end
 -- Druid: eclipse energy (moonkins)
 ------------------------------------------------------------------------------
 
-if playerClass == "DRUID" then
+if IsClass("DRUID") then
 	local isMoonkin, direction, power
 
 	local eclipseState = addon:NewStateModule("Eclipse energy") -- L['Eclipse energy']
@@ -189,7 +189,7 @@ if playerClass == "DRUID" then
 	end
 
 	function eclipseState:PLAYER_TALENT_UPDATE(event)
-		local newIsMoonkin = (GetPrimaryTalentTree() == 1)
+		local newIsMoonkin = (GetSpecializationInfo(GetSpecialization()) == 102) -- see SpellBookFrame.lua
 		if isMoonkin ~= newIsMoonkin then
 			isMoonkin = newIsMoonkin
 			if isMoonkin then
@@ -239,7 +239,7 @@ end
 -- Shaman totems
 ------------------------------------------------------------------------------
 
-if playerClass == "SHAMAN" then
+if IsClass("SHAMAN") then
 
 	local totemState = addon:NewStateModule("Totem timers") -- L['Totem timers']
 	totemState.keywords = { "TOTEM" }
@@ -271,22 +271,21 @@ end
 -- Health threshold
 ------------------------------------------------------------------------------
 
-local healthThresholds
-if playerClass == "WARRIOR" or playerClass == "HUNTER" then
-	healthThresholds = { 20 }
-elseif playerClass == "PALADIN" then
-	healthThresholds = { 20, 35 }
-elseif playerClass == "WARLOCK" then
-	healthThresholds = { 20, 25 }
-elseif playerClass == "PRIEST" then
-	healthThresholds = { 25 }
-elseif playerClass == "ROGUE" then
-	healthThresholds = { 35 }
-elseif playerClass == "DRUID" then
-	healthThresholds = { 25, 80 }
+local healthThresholds = {}
+if IsClass("WARLOCK") or IsClass("WARRIOR") or IsClass("HUNTER") or IsClass("PALADIN") then
+	tinsert(healthThresholds, 20)
+end
+if IsClass("WARLOCK") or IsClass("PRIEST") or IsClass("DRUID") then
+	tinsert(healthThresholds, 25)
+end
+if IsClass("PALADIN") or IsClass("ROGUE") then
+	tinsert(healthThresholds, 35)
+end
+if IsClass("DRUID") then
+	tinsert(healthThresholds, 80)
 end
 
-if healthThresholds then
+if #healthThresholds > 0 then
 
 	local keywords = {}
 	local tests = {}
@@ -429,11 +428,11 @@ end
 ------------------------------------------------------------------------------
 
 local powerThresholds
-if playerClass == "WARRIOR" or playerClass == "HUNTER" then
+if IsClass("WARRIOR") or IsClass("HUNTER") then
 	powerThresholds = { 60 }
-elseif playerClass == "MAGE" then
+elseif IsClass("MAGE") then
 	powerThresholds = { 40 }
-elseif playerClass == "DRUID" then
+elseif IsClass("DRUID") then
 	powerThresholds = { 80 }
 end
 

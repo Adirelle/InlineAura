@@ -62,12 +62,8 @@ local function BuildEnv(self, presets, statuses)
 
 	local function AddFuncs()
 
-		local playerClass = UnitClass('player')
 		-- GLOBALS: IsClass
-		IsClass = function(class) return class == playerClass end
-		--@debug@
-		IsClass = function() return true end
-		--@end-debug@
+		IsClass = self.IsClass
 
 		-- GLOBALS: version
 		version = "@file-hash@/@project-version@"
@@ -78,6 +74,7 @@ local function BuildEnv(self, presets, statuses)
 		local reported = {}
 
 		-- Get the spell name, throwing error if not found
+		local _, class = UnitClass("player")
 		local function GetSpellName(id, level, noStrict)
 			local name
 			local input = id
@@ -107,7 +104,7 @@ local function BuildEnv(self, presets, statuses)
 			if name then
 				return name
 			elseif not reported[input] then
-				local source = debugstack((level or 0)+2, 1,0):match(":(%d+)")
+				local source = debugstack((level or 0)+2, 3, 0):match("Defaults.-%.lua:(%d+)")
 				geterrorhandler()(format("Wrong spell id. Please report this error with the following information: id=%s, class=%s, version=%s, line=%s", tostringall(input, class, version, source)))
 				reported[input] = true
 			end

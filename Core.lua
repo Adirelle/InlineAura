@@ -1168,6 +1168,11 @@ end
 -- Initialization
 ------------------------------------------------------------------------------
 
+addon.IsClass = function(class) return class == UnitClass('player') end
+--@debug@
+addon.IsClass = function() return true end
+--@end-debug@
+
 local function catchErrorCall(f)
 	local saved = geterrorhandler()
 	if saved ~= _ERRORMESSAGE then

@@ -1168,7 +1168,8 @@ end
 -- Initialization
 ------------------------------------------------------------------------------
 
-addon.IsClass = function(class) return class == UnitClass('player') end
+local _, playerClass = UnitClass('player')
+addon.IsClass = function(class) return class == playerClass end
 --@debug@
 addon.IsClass = function() return true end
 --@end-debug@

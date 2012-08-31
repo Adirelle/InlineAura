@@ -34,8 +34,8 @@ Contributors :
 -- GLOBALS: InlineAura_LoadDefaults
 function InlineAura_LoadDefaults()
 
-	-- These functions are not really globals but I have to list them here
-	-- to prevent my checking script from whinning
+  -- These functions are not really globals but I have to list them here
+  -- to prevent my checking script from whinning
 	-- GLOBALS: SharedAuras SpellsByClass SelfBuffs Spells class Aliases SelfTalentProc GroupBuffs GroupDebuffs PetBuffs ShowSpecial
 
 	------------------------------------------------------------------------------
@@ -60,32 +60,40 @@ function InlineAura_LoadDefaults()
 
 	-- Increased Stats (5%)
 	SharedAuras(
-		"PALADIN", 20217, -- Blessing of Kings
-		"DRUID",    1126, -- Mark of the Wild
-		"HUNTER",  90363  -- Embrace of the Shale Spider (exotic pet ability)
+		"PALADIN",   20217, -- Blessing of Kings
+		"DRUID",      1126, -- Mark of the Wild
+		"MONK",     115921, -- Legacy of the Emporer
+		"HUNTER",    90363  -- Embrace of the Shale Spider (shale spider)
 	):OnSelf()
 
 	-- Increased Attack Power (10%)
 	SharedAuras(
-		"PALADIN",     19740, -- Blessing of Might
-		"HUNTER",      19506 -- Trueshot Aura (passive)
+		"DEATHKNIGHT", 57330, -- Horn of Winter
+		"HUNTER",      19506, -- Trueshot Aura (passive)
+		"WARRIOR",      6673  -- Battle Shout
 	):OnSelf()
 
-	-- Increased Spell Power (6%)
+	-- Increased Spell Power (10%)
 	SharedAuras(
-		"MAGE",   1459 -- Arcane Brillance
+		"MAGE",      1459, -- Arcane Brillance
+		"SHAMAN",   77747, -- Burning Wrath (passive)
+		"WARLOCK", 109773, -- Dark Intent
+		"HUNTER",  126309  -- Still Water (waterstrider)
 	):OnSelf()
 
 	-- Increased Physical Haste (10%)
 	SharedAuras(
-		"DEATHKNIGHT", 55610, -- Improved Icy Talons (passive)
-		"ROGUE",      113742 -- Swiftblades Cunning (passive) added for MOP
+		"DEATHKNIGHT",  55610, -- Improved Icy Talons
+		"ROGUE",       113742, -- Swiftblade's Cunning (passive)
+		"SHAMAN",       30809, -- Unleashed Rage
+		"HUNTER",      128432, -- Cackling Hown (hyena)
+		"HUNTER",      128433  -- Serpent's Swiftness (serpent)
 	):OnSelf()
 
 	-- Increased Spell Haste (5%)
 	SharedAuras(
-		"PRIEST", 49868, -- Mind Quickening (passive)
-		"DRUID",  24907  -- Moonkin Aura (passive)
+		"SHAMAN", 51470, -- Elemental Oath (passive)
+		"PRIEST", 15473  -- Shadowform (passive)
 	):OnSelf()
 
 	-- Burst Haste (30%)
@@ -98,24 +106,19 @@ function InlineAura_LoadDefaults()
 		"HUNTER", 95809  -- Insanity (Ancient Hysteria debuff)
 	):OnSelf()
 
-	-- Agility & Strength bonuses
+	-- Mastery Bonus
 	SharedAuras(
-		"WARRIOR",      6673, -- Battle Shout
-		"DEATHKNIGHT", 57330, -- Horn of Winter
-		"HUNTER",      93435  -- Roar of Courage (pet ability)
+		"PALADIN",  19740, -- Blessing of Might
+		"SHAMAN",  116956, -- Grace of Air (passive)
+		"HUNTER",   93435  -- Roar of Courage (pet ability)
 	):OnSelf()
 
 	-- Stamina Bonus
 	SharedAuras(
-		"PRIEST",  21562, -- Power Word: Fortitude
-		"WARRIOR",   469, -- Commanding Shout
-		"WARLOCK",  6307, -- Blood Pact (imp ability)
-		"HUNTER",  90364  -- Qiraji Fortitude (exotic pet ability)
-	):OnSelf()
-
-	-- Mana Bonus
-	SharedAuras(
-		"MAGE",     1459 -- Arcane Brillance
+		"PRIEST",   21562, -- Power Word: Fortitude
+		"WARRIOR",    469, -- Commanding Shout
+		"WARLOCK", 103127, -- Blood Pact (imp ability)
+		"HUNTER",   90364  -- Qiraji Fortitude (exotic pet ability)
 	):OnSelf()
 
 	--- Debuffs ---
@@ -124,74 +127,61 @@ function InlineAura_LoadDefaults()
 	SharedAuras(
 		"WARLOCK",      1490, -- Curse of the Elements
 		"ROGUE",       58410, -- Master Poisoner (passive)
-		"DEATHKNIGHT", 51160, -- Ebon Plaguebringer (passive)
 		"HUNTER",      34889, -- Fire Breath (pet ability)
 		"HUNTER",      24844  -- Lightning Breath (pet ability)
 	)
 
-	-- Bleed Damage Taken (30%)
-	SharedAuras(
-		"DRUID",   33878, -- Mangle (bear)
-		"DRUID",   33876, -- Mangle (cat)
-		"ROGUE",   16511, -- Hemorrhage
-		"HUNTER",  35290, -- Gore (pet ability)
-		"HUNTER",  57386  -- Stampede (pet ability)
-	)
-
 	-- Reduced Casting Speed (30%)
 	SharedAuras(
-		"ROGUE",        5761, -- Mind-Numbing Poison
-		"MAGE",        31589, -- Slow
-		"DEATHKNIGHT", 73975, -- Necrotic Strike
-		"HUNTER",      50274, -- Spore Cloud (pet ability)
-		"HUNTER",      58604  -- Lava Breath (pet ability)
+		"WARLOCK",     109466, -- Curse of Enfeeblement
+		"ROGUE",         5761, -- Mind-Numbing Poison
+		"DEATHKNIGHT",  73975, -- Necrotic Strike
+		"HUNTER",       90314, -- Tailspin (pet ability)
+		"HUNTER",      126402, -- Trample (pet ability)
+		"HUNTER",       50274, -- Spore Cloud (pet ability)
+		"HUNTER",       58604  -- Lava Breath (pet ability)
 	)
 
 	-- Reduced Armor (12%)
 	SharedAuras(
 		"WARRIOR",  7386, -- Sunder Armor
-		"WARRIOR", 20243, -- Devastate
 		"ROGUE",    8647, -- Expose Armor
-		"DRUID",     770, -- Faerie Fire (balance)
+		"DRUID",     770, -- Faerie Fire
+		"HUNTER",  50285, -- Dust Cloud (pet ability)
 		"HUNTER",  50498  -- Tear Armor (pet ability)
 	):WithStack()
 
 	-- Reduced Healing (25%)
 	SharedAuras(
-		"WARRIOR", 12294, -- Mortal Strike
-		"ROGUE",   8679,  -- Wound Poison
-		"HUNTER",  82654, -- Widow Venom
-		"WARLOCK", 30213, -- Legion Strike (felguard ability)
-		"HUNTER",  54680  -- Monstrous Bite (exotic pet ability)
+		"WARRIOR",  12294, -- Mortal Strike
+		"WARRIOR", 100130, -- Wild Strike
+		"ROGUE",     8679, -- Wound Poison
+		"HUNTER",   82654, -- Widow Venom
+		"HUNTER",   54680  -- Monstrous Bite (exotic pet ability)
 	)
 
 	-- Physical Damage Done (10%)
 	SharedAuras(
-		"*",           115798, -- Weakened Blows
+		"DRUID",       106830, -- Thrash (Cat)
+		"DRUID",        77758, -- Thrash (Bear)
+		"HUNTER",       50256, -- Demoralizing Roar (pet ability)
+		"HUNTER",       24423, -- Demoralizing Screech (pet ability)
+		"MONK",        121253, -- Keg Smash
 		"WARRIOR",       6343, -- Thunder Clap
-		"SHAMAN",        8042, -- Earth Shock
-		"HUNTER",       54404, -- Dust Cloud (Tallstrider)
-		"DEATHKNIGHT",  55095, -- Frost Fever
-		"DRUID",        58180, -- Infected Wounds
-		"DRUID",        42231, -- Hurricane
-		"HUNTER",       90315  -- Tailspin (Fox)
+		"DEATHKNIGHT",  81132, -- Scarlet Fever
+		"PALADIN",      53595  -- Hammer of the Righteous
 	)
 
-	-- Reduced Attack Speed (20%)
+	-- Physical Damage Taken (4%)
 	SharedAuras(
-		"WARRIOR",      6343, -- Thunder Clap
-		"SHAMAN",       8042, -- Earth Shock
-		"HUNTER",      54404, -- Dust Cloud (Tallstrider)
-		"DEATHKNIGHT", 55095, -- Frost Fever
-		"DRUID",       58180, -- Infected Wounds
-		"DRUID",       42231, -- Hurricane
-		"HUNTER",      90315  -- Tailspin (Fox)
-	)
-
-	-- Spell Crit Taken (5%)
-	SharedAuras(
-		"WARLOCK",   686, -- Shadow Bolt
-		"MAGE",     2948  -- Scorch
+		"DEATH KNIGHT",  81328, -- Brittle Bones
+		"DEATH KNIGHT",  51160, -- Ebon Plaguebringer
+		"PALADIN",      111529, -- Judgments of the Bold
+		"WARRIOR",       86346, -- Colossus Smash
+		"HUNTER",        35290, -- Gore (pet ability)
+		"HUNTER",        50518, -- Ravage (pet ability)
+		"HUNTER",        57386, -- Stampede (exotic pet ability)
+		"HUNTER",        55749  -- Acid Spit (exotic pet ability)
 	)
 
 	-- CC and tactical debuffs --
@@ -232,6 +222,7 @@ function InlineAura_LoadDefaults()
 	-- Snares and anti-snares
 	-- Note that some of these are talent procs or passive effects.
 	-- This is intended as they will show up on active spells anyway.
+
 	SharedAuras(
 		"*",            1604, -- Dazed,
 		"DEATHKNIGHT", 45524, -- Chains of Ice
@@ -355,21 +346,21 @@ function InlineAura_LoadDefaults()
 		Spells(131894):Aliases('BELOW20'):Glowing()
 
 		SelfBuffs(
-			 5118, -- Aspect of the Cheetah
-			13165, -- Aspect of the Hawk
-		   109260, -- Aspect of the Iron Hawk
-			 1494, -- Track Beast
-			19878, -- Track Demons
-			19879, -- Track Dragonkin
-			19880, -- Track Elementals
-			19882, -- Track Giants
-			19885, -- Track Hidden
-			19883, -- Track Humanoids
-			19884, -- Track Undead
-			 3045, -- Rapid Fire
-			19263, -- Deterrence
-			 5384, -- Feign Death
-			82692  -- Focus Fire
+			  5118, -- Aspect of the Cheetah
+			 13165, -- Aspect of the Hawk
+			109260, -- Aspect of the Iron Hawk
+			  1494, -- Track Beast
+			 19878, -- Track Demons
+			 19879, -- Track Dragonkin
+			 19880, -- Track Elementals
+			 19882, -- Track Giants
+			 19885, -- Track Hidden
+			 19883, -- Track Humanoids
+			 19884, -- Track Undead
+			  3045, -- Rapid Fire
+			 19263, -- Deterrence
+			  5384, -- Feign Death
+			 82692  -- Focus Fire
 		)
 
 		GroupBuffs(13159) -- Aspect of the Pack
@@ -379,7 +370,7 @@ function InlineAura_LoadDefaults()
 		Spells(19801):Aliases("DISPELLABLE") -- Tranquilizing Shot => foes' magic buffs
 
 		PetBuffs(
-			136,   -- Mend Pet
+			  136, -- Mend Pet
 			19574  -- Bestial Wrath
 		)
 	end
@@ -406,10 +397,8 @@ function InlineAura_LoadDefaults()
 
 		SelfTalentProc( 20243, 122013):Glowing() -- Devestate => Incite
 		SelfTalentProc(100130,  46916):Glowing() -- Wild Strike => Bloodsurge
-		--SelfTalentProc( 5308, 90806):WithStack() -- Execute
 		SelfTalentProc(  7384,  56638):Glowing() -- Overpower => Taste For Blood
 		SelfTalentProc( 34428,  32216):Glowing() -- Victory Rush => Victorious
-		SelfTalentProc(    78, 122509):Glowing() -- Shield Slam Ultimatum => heroic strike
 
 		-- Self Buffs with Stacks: Recklessness, Retaliation
 		Spells(1719):OnSelf()
@@ -430,9 +419,6 @@ function InlineAura_LoadDefaults()
 		-- Bloodthirst
 		Spells(23881):OnSelf():NoCountdown()
 
-		-- Heroic Fury => Roots on Self
-		--Spells(60970):Aliases(19306, 64695, 339, 63685, 33395, 122, 23694, 90327, 94358, 50245, 54706, 4167):OnSelf():ShowOthers():Glowing()
-
 		-- Colossus Smash
 		Spells(86346):OnlyMine()
 	end
@@ -442,41 +428,35 @@ function InlineAura_LoadDefaults()
 	------------------------------------------------------------------------------
 
 		SelfBuffs(
-				324, -- Lightning Shield
+			  324, -- Lightning Shield
 			 2645, -- Ghost Wolf
 			16188, -- Nature's Swiftness
 			30823, -- Shamanistic Rage
 			52127 -- Water Shield
-			--55198  -- Tidal Force
 		)
 
 		Spells(370, 51886):Aliases("DISPELLABLE") -- Purge and Cleanse Spirit
 
 		-- Totems
 		Spells(
-			 --8075, -- Strength of Earth Totem
-			 3599, -- Searing Totem
-			 --8227, -- Flametongue Totem
-			 2484, -- Earthbind Totem
-			 5394, -- Healing Stream Totem
-			 --8512, -- Windfury Totem
-			 8190, -- Magma Totem
-			 8177, -- Grounding Totem
-			 --5675, -- Mana Spring Totem
-			 --3738, -- Wrath of Air Totem
-			 --8071, -- Stoneskin Totem
-			 8143, -- Tremor Totem
-			 2062, -- Earth Elemental Totem
-			 --5730, -- Stoneclaw Totem
-			 --8184, -- Elemental Resistance Totem
-			 2894, -- Fire Elemental Totem
-			--87718, -- Totem of Tranquil Mind
-			16190  -- Mana Tide Totem
+			  3599, -- Searing Totem
+			  2484, -- Earthgrab Totem
+			  5394, -- Healing Stream Totem
+			  8190, -- Magma Totem
+			  8177, -- Grounding Totem
+			  8143, -- Tremor Totem
+			  2062, -- Earth Elemental Totem
+			  2894, -- Fire Elemental Totem
+			 16190, -- Mana Tide Totem
+			 98008, -- Spirit Link Totem
+			108269, -- Capacitor Totem
+			108270, -- Stone Bulwark Totem
+			108273, -- Windwalk Totem
+			108280, -- Healing Tide Totem
+			120668  -- Stormlash Totem
 		):Aliases("TOTEM"):OnSelf()
 
 		-- Some totems grants a (de)buff with a different name
-		--Spells(8075):Aliases(8076) -- Strength of Earth Totem => Strength of Earth
-		--Spells(5675):Aliases(5677) -- Mana Spring Totem => Mana Spring
 		Spells(16190):Aliases(16191) -- Mana Tide Totem => Mana Tide
 		Spells(8177):Aliases(8178) -- Grounding Totem => Grounding Totem Effect
 
@@ -489,28 +469,28 @@ function InlineAura_LoadDefaults()
 	------------------------------------------------------------------------------
 
 		-- Soul link
-		--Spells(19028, 25228):OnPet()
+		Spells(108415):OnPet()
 
 		Spells(1120):Aliases('BELOW25'):Glowing() -- Drain Soul
 		Spells(17877):Aliases('BELOW20'):Glowing() -- Shadowburn
 
 		-- Display soul shard count on Soulburn
-		ShowSpecial("SOUL_SHARDS", 74434) -- Soulburn
+		ShowSpecial("SOUL_SHARDS", 74434):NoHighlight() -- Soulburn
 
 		SelfBuffs(
-			--687,   -- Demon Armor
-			7812  -- Sacrifice (voidwalker buff)
-			--19028 -- Soul Link
-			--28176  -- Fel Armor
+			  7812, -- Sacrifice (voidwalker buff)
+			108415  -- Soul Link
 		)
 
-		--SelfTalentProc(29722, 47383, 34936, 54274):WithStack() -- Incinerate => Molten Core, Backlash or Backdraft
-		SelfTalentProc(29722, 34936):WithStack() -- Incinerate => Molten Core, Backlash or Backdraft
-		--SelfTalentProc( 6353, 63165, 85385) -- Soul Fire => Decimation or Improved Soul Fire
-		SelfTalentProc(  686, 17941, 34936) -- Shadow Bolt => Shadow Trance Backlash
+		SelfTalentProc(29722, 122351, 117896):WithStack() -- Incinerate => Molten Core, Backdraft
+		SelfTalentProc( 6353, 108869) -- Soul Fire => Decimation
+		SelfTalentProc(  686, 108563) -- Shadow Bolt => Backlash
 
-		-- Demon Soul and its variants
-		--Spells(77801):Aliases(79462, 79460, 79459, 79436, 79464)
+		SelfBuffs(
+			113860, -- Misery
+			113861, -- Knowledge
+			113858  -- Instability
+		)
 
 		-- Show nether ward on shadow ward
 		Spells(6229):Aliases(91711):OnSelf()
@@ -542,7 +522,6 @@ function InlineAura_LoadDefaults()
 		Aliases(45462, 59879) -- Plague Strike => Blood Plague
 		Aliases(45477, 59921) -- Icy Touch => Frost Fever
 		Aliases(48721, 81132) -- Blood Boil => Scarlet Fever
-		--Aliases(47541, 49194) -- Death Coil => Unholy Blight
 
 		Aliases(66188, 77513) -- Death Strike => Blood Shield
 		Aliases(49184, 59052) -- Howling Blast => Freezing Fog
@@ -567,7 +546,6 @@ function InlineAura_LoadDefaults()
 			77606, -- Dark Simulacrum
 			 9484, -- Chains of Ice
 			47476 -- Strangulate
-			--49203  -- Hungering Cold
 		)
 
 		PetBuffs(63560):WithStack() -- Dark Transformation
@@ -587,7 +565,7 @@ function InlineAura_LoadDefaults()
 		)
 
 		-- Shadow word: Death
-		Spells(32379):Aliases('BELOW25'):Glowing()
+		Spells(32379):Aliases('BELOW20'):Glowing()
 
 		-- This will display either the buff or the debuff
 		Aliases(17, 6788) -- Power Word: Shield / Weakened Soul
@@ -610,25 +588,23 @@ function InlineAura_LoadDefaults()
 		Spells(52610):OnSelf():Aliases("COMBO_POINTS"):WithStack()
 
 		SelfBuffs(
-			   768, -- Cat Form
-			   783, -- Travel Form
-			  1066, -- Aquatic Form
-			  1850, -- Dash
-			  5217, -- Tiger's Fury
-			  5229, -- Enrage
-			  5487, -- Bear Form
-			 16689, -- Nature's Grasp
-			132158, -- Nature's Swiftness
-			 22812, -- Barkskin
-			 22842, -- Frenzied Regeneration
-			 24858, -- Moonkin Form
-			 33891, -- Tree of Life
-			 33943, -- Flight Form
-			 40120, -- Swift Flight Form
-			 50334, -- Berserk
-			 52610, -- Savage Roar
-			 61336, -- Survival Instincts
-			118345 -- Pulverize
+			  768, -- Cat Form
+			  783, -- Travel Form
+			 1066, -- Aquatic Form
+			 1850, -- Dash
+			 5217, -- Tiger's Fury
+			 5229, -- Enrage
+			 5487, -- Bear Form
+			16689, -- Nature's Grasp
+			22812, -- Barkskin
+			22842, -- Frenzied Regeneration
+			24858, -- Moonkin Form
+			33891, -- Tree of Life
+			33943, -- Flight Form
+			40120, -- Swift Flight Form
+			50334, -- Berserk
+			52610, -- Savage Roar
+			61336  -- Survival Instincts
 		)
 
 		Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
@@ -645,41 +621,40 @@ function InlineAura_LoadDefaults()
 		Spells(24275):Aliases('BELOW20'):Glowing()
 
 		SelfBuffs(
-				498, -- Divine Protection
-				642, -- Divine Shield
-			20154, -- Seal of Righteousness
-			20164, -- Seal of Justice
-			20165, -- Seal of Insight
-			25780, -- Righteous Fury
-			31801, -- Seal of Truth
-			31842, -- Divine Illumination
-			31850, -- Ardent Defender
-			31884, -- Avenging Wrath
-			54428 -- Divine Plea
-			-- 85696  -- Zealotry
+			   498, -- Divine Protection
+			   642, -- Divine Shield
+			 20154, -- Seal of Righteousness
+			 20164, -- Seal of Justice
+			 20165, -- Seal of Insight
+			 25780, -- Righteous Fury
+			 31801, -- Seal of Truth
+			 71166, -- Divine Favor
+			 31850, -- Ardent Defender
+			 31884, -- Avenging Wrath
+			 54428, -- Divine Plea
+			105809  -- Holy Avenger
 		)
 
 		ShowSpecial(
 			"HOLY_POWER",
-			85673, -- Word of Glory
 			85256, -- Templar's Verdict
-			53600, -- Shield of the Righteous
+			114163,-- Eternal Flame
+			85673, -- Word of Glory
 			85222  -- Light of Dawn
 		)
 
 		Spells(84963):OnSelf():Aliases("HOLY_POWER") -- Inquisition
 
-		--SelfTalentProc(86150, 86698, 86659, 86669) -- Guardian of Ancient Kings and its 3 variants
+		SelfTalentProc(86698, 86659, 86669) -- Guardian of Ancient Kings and its 3 variants
 
-		SelfTalentProc(635, 94686) -- Holy Light => Crusader
-
-		--GroupBuffs( 7294) -- Retribution Aura
-		GroupBuffs(32223) -- Crusader Aura
+		SelfTalentProc(20271, 94686) -- Holy Light => Crusader
 
 		Aliases(642, 25771) -- Divine Shield / Forbearance
 		Aliases(1022, 25771) -- Hand of Protection / Forbearance
 
 		Aliases(53563, 53651):OnlyMine() -- Beacon of Light => Light's Beacon
+		Aliases(114163, 114163):OnlyMine() -- Eternal Flame
+		Aliases(53600, 132403):OnSelf() -- Shield of the Righteous
 
 		Spells(4987):Aliases("DISPELLABLE") -- Cleanse
 	end

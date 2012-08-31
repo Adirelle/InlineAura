@@ -20,8 +20,9 @@ Contributors :
   - crymson (MoP common spells),
   - Moozhe (warrior, tactictal debuffs),
   - brotherhobbes (shaman and priest spells),
-  - Citlalin (death knight spells)
-  - Phanx (crowd control effects)
+  - Citlalin (death knight spells),
+  - Phanx (crowd control effects),
+  - Thrael (hunter MoP spells)
 --]]
 
 ------------------------------------------------------------------------------
@@ -341,15 +342,17 @@ function InlineAura_LoadDefaults()
 		-- Aimed Shot => Ready, Set, Aim...
 		SelfTalentProc(19434, 82925):WithStack():NoHighlight()
 
-		-- Steady Shot => Improved Steady Shot
+		-- Steady Shot => Steady Focus
 		SelfTalentProc(56641, 53224):NoStack():ColoredBorder()
 
-		-- Kill Shot
+		-- Kill Shot & Murder of Crows
 		Spells(53351):Aliases('BELOW20'):Glowing()
+		Spells(131894):Aliases('BELOW20'):Glowing()
 
 		SelfBuffs(
 			 5118, -- Aspect of the Cheetah
 			13165, -- Aspect of the Hawk
+		   109260, -- Aspect of the Iron Hawk
 			 1494, -- Track Beast
 			19878, -- Track Demons
 			19879, -- Track Dragonkin
@@ -366,12 +369,12 @@ function InlineAura_LoadDefaults()
 
 		GroupBuffs(13159) -- Aspect of the Pack
 
-		--GroupDebuffs(1130, 53243) -- Hunter's Mark, Marked For Death
+		GroupDebuffs(1130) -- Hunter's Mark
 
 		Spells(19801):Aliases("DISPELLABLE") -- Tranquilizing Shot => foes' magic buffs
 
 		PetBuffs(
-				136, -- Mend Pet
+			136,   -- Mend Pet
 			19574  -- Bestial Wrath
 		)
 	end

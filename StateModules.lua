@@ -32,7 +32,7 @@ local _G = _G
 local ceil = _G.ceil
 local GetComboPoints = _G.GetComboPoints
 local GetEclipseDirection = _G.GetEclipseDirection
-local GetPrimaryTalentTree = _G.GetPrimaryTalentTree
+local GetSpecialization = _G.GetSpecialization
 local GetSpellInfo = _G.GetSpellInfo
 local GetTotemInfo = _G.GetTotemInfo
 local ipairs = _G.ipairs
@@ -427,16 +427,18 @@ end
 -- Power state
 ------------------------------------------------------------------------------
 
-local powerThresholds
+local powerThresholds = {}
+if IsClass("MAGE") then
+	tinsert(powerThresholds, 40)
+end
 if IsClass("WARRIOR") or IsClass("HUNTER") then
-	powerThresholds = { 60 }
-elseif IsClass("MAGE") then
-	powerThresholds = { 40 }
-elseif IsClass("DRUID") then
-	powerThresholds = { 80 }
+	tinsert(powerThresholds, 60)
+end
+if IsClass("DRUID") then
+	tinsert(powerThresholds, 80)
 end
 
-if powerThresholds then
+if #powerThresholds > 0 then
 
 	local keywords = {}
 	local tests = {}

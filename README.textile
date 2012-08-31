@@ -49,5 +49,5 @@ h3. Known issues and limitations
 
 h2. Acknowledgements
 
-I would like to thanks Tuller for the original idea and Avitus, Contrebasse, Gaff3, Moozhe, brotherhobbes, Citlalin, Phanx, crymson , Thrael and a lot of other people for testing and useful feedback.
+I would like to thanks Tuller for the original idea and Avitus, Contrebasse, Gaff3, Moozhe, brotherhobbes, Citlalin, Phanx, crymson , Thrael, FreakPsych, nulian and a lot of other people for testing and useful feedback.
 

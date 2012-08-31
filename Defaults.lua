@@ -23,7 +23,8 @@ Contributors :
   - Citlalin (death knight spells),
   - Phanx (crowd control effects),
   - Thrael (hunter MoP spells),
-  - FreakPsych (some spell ids fixes).
+  - FreakPsych (some spell ids fixes),
+  - nulian (warrior Mop spells).
 --]]
 
 ------------------------------------------------------------------------------
@@ -166,11 +167,14 @@ function InlineAura_LoadDefaults()
 
 	-- Physical Damage Done (10%)
 	SharedAuras(
-		"DRUID",          99, -- Demoralizing Roar
-		"HUNTER",      50256, -- Demoralizing Roar (pet ability)
-		"WARRIOR",      1160, -- Demoralizing Shout
-		"DEATHKNIGHT", 81132, -- Scarlet Fever
-		"PALADIN",     26017  -- Vindication
+		"*",           115798, -- Weakened Blows
+		"WARRIOR",       6343, -- Thunder Clap
+		"SHAMAN",        8042, -- Earth Shock
+		"HUNTER",       54404, -- Dust Cloud (Tallstrider)
+		"DEATHKNIGHT",  55095, -- Frost Fever
+		"DRUID",        58180, -- Infected Wounds
+		"DRUID",        42231, -- Hurricane
+		"HUNTER",       90315  -- Tailspin (Fox)
 	)
 
 	-- Reduced Attack Speed (20%)
@@ -400,22 +404,22 @@ function InlineAura_LoadDefaults()
 		-- Execute
 		Spells(5308):Aliases('BELOW20'):Glowing()
 
-		--SelfTalentProc(   78):Glowing() -- Heroic Strike => Incite
-		SelfTalentProc( 1464, 46916):Glowing() -- Slam => Bloodsurge
-		--SelfTalentProc( 5308):WithStack() -- Execute => Executioner stacks
-		--SelfTalentProc( 7384, 60503):Glowing() -- Overpower => Taste For Blood
-		SelfTalentProc(34428, 32216):Glowing() -- Victory Rush => Victorious
+		SelfTalentProc( 20243, 122013):Glowing() -- Devestate => Incite
+		SelfTalentProc(100130,  46916):Glowing() -- Wild Strike => Bloodsurge
+		--SelfTalentProc( 5308, 90806):WithStack() -- Execute
+		SelfTalentProc(  7384,  56638):Glowing() -- Overpower => Taste For Blood
+		SelfTalentProc( 34428,  32216):Glowing() -- Victory Rush => Victorious
+		SelfTalentProc(    78, 122509):Glowing() -- Shield Slam Ultimatum => heroic strike
 
 		-- Self Buffs with Stacks: Recklessness, Retaliation
-		Spells(1719):OnSelf():WithStack()
+		Spells(1719):OnSelf()
+		-- Self Buff deadly calm with heroic strike and cleave
+		Spells(845, 78):Aliases(85730):OnSelf():WithStack()
+		-- Cleave & Whirlwind & Raging Blow => Meat Cleaver
+		Spells(845, 1680, 96103):Aliases(12950):OnSelf():WithStack()
 
-		-- Cleave & Whirlwind => Meat Cleaver
-		Spells(845, 1680)
-			--:Aliases(85738)
-			:OnSelf():WithStack()
-
-		-- Raging Blow => Death Wish, Berserker Rage, Enrage
-		Spells(85288):Aliases(12292, 18499, 12880):OnSelf()
+		-- Raging Blow => Raging Blow!
+		Spells(85288):Aliases(131116):OnSelf()
 
 		-- Shattering Throw => Divine Shield, Hand of Protection
 		Spells(64382):Aliases(642, 1022):Glowing()
@@ -431,7 +435,6 @@ function InlineAura_LoadDefaults()
 
 		-- Colossus Smash
 		Spells(86346):OnlyMine()
-
 	end
 
 	------------------------------------------------------------------------------

@@ -22,7 +22,8 @@ Contributors :
   - brotherhobbes (shaman and priest spells),
   - Citlalin (death knight spells),
   - Phanx (crowd control effects),
-  - Thrael (hunter MoP spells)
+  - Thrael (hunter MoP spells),
+  - FreakPsych (some spell ids fixes).
 --]]
 
 ------------------------------------------------------------------------------
@@ -606,25 +607,25 @@ function InlineAura_LoadDefaults()
 		Spells(52610):OnSelf():Aliases("COMBO_POINTS"):WithStack()
 
 		SelfBuffs(
-				768, -- Cat Form
-				783, -- Travel Form
-			 1066, -- Aquatic Form
-			 1850, -- Dash
-			 5217, -- Tiger's Fury
-			 5229, -- Enrage
-			 5487, -- Bear Form
-			16689, -- Nature's Grasp
-			--17116, -- Nature's Swiftness
-			22812, -- Barkskin
-			22842, -- Frenzied Regeneration
-			24858, -- Moonkin Form
-			33891, -- Tree of Life
-			33943, -- Flight Form
-			40120, -- Swift Flight Form
-			50334, -- Berserk
-			52610, -- Savage Roar
-			61336 -- Survival Instincts
-			--80313  -- Pulverize
+			   768, -- Cat Form
+			   783, -- Travel Form
+			  1066, -- Aquatic Form
+			  1850, -- Dash
+			  5217, -- Tiger's Fury
+			  5229, -- Enrage
+			  5487, -- Bear Form
+			 16689, -- Nature's Grasp
+			132158, -- Nature's Swiftness
+			 22812, -- Barkskin
+			 22842, -- Frenzied Regeneration
+			 24858, -- Moonkin Form
+			 33891, -- Tree of Life
+			 33943, -- Flight Form
+			 40120, -- Swift Flight Form
+			 50334, -- Berserk
+			 52610, -- Savage Roar
+			 61336, -- Survival Instincts
+			118345 -- Pulverize
 		)
 
 		Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...

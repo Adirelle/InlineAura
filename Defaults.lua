@@ -17,14 +17,15 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 Contributors :
-  - crymson (MoP common spells),
-  - Moozhe (warrior, tactictal debuffs),
-  - brotherhobbes (shaman and priest spells),
-  - Citlalin (death knight spells),
-  - Phanx (crowd control effects),
-  - Thrael (hunter MoP spells),
-  - FreakPsych (some spell ids fixes),
-  - nulian (warrior Mop spells).
+  - crymson,
+  - Moozhe,
+  - brotherhobbes,
+  - Citlalin,
+  - Phanx),
+  - Thrael,
+  - FreakPsych,
+  - nulian,
+  - Kleinerelf.
 --]]
 
 ------------------------------------------------------------------------------
@@ -123,7 +124,7 @@ function InlineAura_LoadDefaults()
 
 	--- Debuffs ---
 
-	-- Spell Damage Taken (8%)
+	-- Spell Damage Taken (5%)
 	SharedAuras(
 		"WARLOCK",      1490, -- Curse of the Elements
 		"ROGUE",       58410, -- Master Poisoner (passive)
@@ -131,7 +132,7 @@ function InlineAura_LoadDefaults()
 		"HUNTER",      24844  -- Lightning Breath (pet ability)
 	)
 
-	-- Reduced Casting Speed (30%)
+	-- Increasing Casting Time (50%)
 	SharedAuras(
 		"WARLOCK",     109466, -- Curse of Enfeeblement
 		"ROGUE",         5761, -- Mind-Numbing Poison
@@ -144,24 +145,31 @@ function InlineAura_LoadDefaults()
 
 	-- Reduced Armor (12%)
 	SharedAuras(
-		"WARRIOR",  7386, -- Sunder Armor
-		"ROGUE",    8647, -- Expose Armor
-		"DRUID",     770, -- Faerie Fire
-		"HUNTER",  50285, -- Dust Cloud (pet ability)
-		"HUNTER",  50498  -- Tear Armor (pet ability)
+		"*",       113746, -- Weakened Armor (main effect)
+		"WARRIOR",   7386, -- Sunder Armor
+		"WARRIOR", 100130, -- Wild Strike
+		"WARRIOR",  20243, -- Devastate
+		"ROGUE",     8647, -- Expose Armor
+		"DRUID",      770, -- Faerie Fire
+		"HUNTER",   50285, -- Dust Cloud (pet ability)
+		"HUNTER",   50498  -- Tear Armor (pet ability)
 	):WithStack()
 
 	-- Reduced Healing (25%)
 	SharedAuras(
+		"*",       115804, -- Mortal Wounds (main effect)
 		"WARRIOR",  12294, -- Mortal Strike
 		"WARRIOR", 100130, -- Wild Strike
 		"ROGUE",     8679, -- Wound Poison
 		"HUNTER",   82654, -- Widow Venom
+		"WARLOCK",  30213, -- Legion Strike
+		"MONK",    107428, -- Rising Sun Kick
 		"HUNTER",   54680  -- Monstrous Bite (exotic pet ability)
 	)
 
 	-- Physical Damage Done (10%)
 	SharedAuras(
+	   "*",            115798, -- Weakened Blows (main effect)
 		"DRUID",       106830, -- Thrash (Cat)
 		"DRUID",        77758, -- Thrash (Bear)
 		"HUNTER",       50256, -- Demoralizing Roar (pet ability)
@@ -169,11 +177,13 @@ function InlineAura_LoadDefaults()
 		"MONK",        121253, -- Keg Smash
 		"WARRIOR",       6343, -- Thunder Clap
 		"DEATHKNIGHT",  81132, -- Scarlet Fever
-		"PALADIN",      53595  -- Hammer of the Righteous
+		"SHAMAN",        8042, -- Earth Shock
+		"PALADIN"       53595, -- Hammer of the Righteous
 	)
 
 	-- Physical Damage Taken (4%)
 	SharedAuras(
+		 "*",            81326, -- Physical Vulnerability
 		"DEATH KNIGHT",  81328, -- Brittle Bones
 		"DEATH KNIGHT",  51160, -- Ebon Plaguebringer
 		"PALADIN",      111529, -- Judgments of the Bold
@@ -471,7 +481,7 @@ function InlineAura_LoadDefaults()
 		-- Soul link
 		Spells(108415):OnPet()
 
-		Spells(1120):Aliases('BELOW25'):Glowing() -- Drain Soul
+		Spells(1120):Aliases('BELOW20'):Glowing() -- Drain Soul
 		Spells(17877):Aliases('BELOW20'):Glowing() -- Shadowburn
 
 		-- Display soul shard count on Soulburn
@@ -606,9 +616,6 @@ function InlineAura_LoadDefaults()
 			52610, -- Savage Roar
 			61336  -- Survival Instincts
 		)
-
-		Aliases( 8921, 93402) -- Show Sunfire on Moonfire ...
-		Aliases(93402,  8921) -- ... and conversely
 
 		Spells(2782, 2908):Aliases("DISPELLABLE") -- Remove Corruption, Soothe
 	end

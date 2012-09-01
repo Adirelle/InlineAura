@@ -58,56 +58,39 @@ addon.buttons = buttons
 
 --GLOBALS: ActionButton_UpdateOverlayGlow ActionButton_UpdateState ActionButton_UpdateUsable ActionButton_UpdateCooldown
 --<GLOBALS
-local _G = _G
-local assert = _G.assert
 local CreateFrame = _G.CreateFrame
-local format = _G.format
+local GetActionCooldown = _G.GetActionCooldown
 local GetActionInfo = _G.GetActionInfo
 local GetAddOnInfo = _G.GetAddOnInfo
 local GetBuildInfo = _G.GetBuildInfo
 local GetCVarBool = _G.GetCVarBool
-local geterrorhandler = _G.geterrorhandler
 local GetItemInfo = _G.GetItemInfo
 local GetItemSpell = _G.GetItemSpell
 local GetMacroBody = _G.GetMacroBody
 local GetMacroItem = _G.GetMacroItem
 local GetMacroSpell = _G.GetMacroSpell
-local GetNumPartyMembers = _G.GetNumPartyMembers
-local GetNumRaidMembers = _G.GetNumRaidMembers
+local GetNumGroupMembers = _G.GetNumGroupMembers
+local GetNumSubgroupMembers = _G.GetNumSubgroupMembers
 local GetSpellInfo = _G.GetSpellInfo
-local GetActionCooldown = _G.GetActionCooldown
 local InCombatLockdown = _G.InCombatLockdown
-local IsUsableAction = _G.IsUsableAction
-local hooksecurefunc = _G.hooksecurefunc
 local InterfaceOptionsFrameAddOns = _G.InterfaceOptionsFrameAddOns
 local InterfaceOptionsFrame_OpenToCategory = _G.InterfaceOptionsFrame_OpenToCategory
 local IsAddOnLoaded = _G.IsAddOnLoaded
 local IsHelpfulItem = _G.IsHelpfulItem
 local IsHelpfulSpell = _G.IsHelpfulSpell
+local IsInGroup = _G.IsInGroup
+local IsInRaid = _G.IsInRaid
 local IsLoggedIn = _G.IsLoggedIn
 local IsModifiedClick = _G.IsModifiedClick
-local issecurevariable = _G.issecurevariable
+local IsUsableAction = _G.IsUsableAction
 local LoadAddOn = _G.LoadAddOn
-local next = _G.next
-local pairs = _G.pairs
-local print = _G.print
-local rawget = _G.rawget
 local SecureButton_GetModifiedUnit = _G.SecureButton_GetModifiedUnit
 local SecureCmdOptionParse = _G.SecureCmdOptionParse
-local select = _G.select
-local setmetatable = _G.setmetatable
 local SlashCmdList = _G.SlashCmdList
-local strjoin = _G.strjoin
-local strlower = _G.strlower
-local strmatch = _G.strmatch
-local strsplit = _G.strsplit
-local strtrim = _G.strtrim
-local tonumber = _G.tonumber
-local tostring = _G.tostring
-local type = _G.type
 local UnitBuff = _G.UnitBuff
 local UnitCanAssist = _G.UnitCanAssist
 local UnitCanAttack = _G.UnitCanAttack
+local UnitClass = _G.UnitClass
 local UnitDebuff = _G.UnitDebuff
 local UnitExists = _G.UnitExists
 local UnitGUID = _G.UnitGUID
@@ -116,9 +99,31 @@ local UnitIsConnected = _G.UnitIsConnected
 local UnitIsDeadOrGhost = _G.UnitIsDeadOrGhost
 local UnitIsUnit = _G.UnitIsUnit
 local UnitIsVisible = _G.UnitIsVisible
+local _ERRORMESSAGE = _G._ERRORMESSAGE
+local _G = _G
+local assert = _G.assert
+local format = _G.format
+local geterrorhandler = _G.geterrorhandler
+local hooksecurefunc = _G.hooksecurefunc
+local issecurevariable = _G.issecurevariable
+local next = _G.next
+local pairs = _G.pairs
+local print = _G.print
+local rawget = _G.rawget
+local select = _G.select
+local seterrorhandler = _G.seterrorhandler
+local setmetatable = _G.setmetatable
+local strjoin = _G.strjoin
+local strlower = _G.strlower
+local strmatch = _G.strmatch
+local strsplit = _G.strsplit
+local strtrim = _G.strtrim
+local tonumber = _G.tonumber
+local tostring = _G.tostring
+local type = _G.type
 local unpack = _G.unpack
 local wipe = _G.wipe
-local _ERRORMESSAGE = _G._ERRORMESSAGE
+local xpcall = _G.xpcall
 --GLOBALS>
 
 ------------------------------------------------------------------------------
@@ -946,16 +951,16 @@ local function GetUnitForMouseover()
 		return "player"
 	elseif UnitIsUnit("mouseover", "pet") then
 		return "pet"
-	elseif GetNumRaidMembers() > 0 then
-		for i = 1, GetNumRaidMembers() do
+	elseif IsInRaid() > 0 then
+		for i = 1, GetNumGroupMembers() do
 			if UnitIsUnit("mouseover", "raid"..i) then
 				return "raid"..i
 			elseif UnitIsUnit("mouseover", "raidpet"..i) then
 				return "raidpet"..i
 			end
 		end
-	elseif GetNumPartyMembers() > 0 then
-		for i = 1, GetNumPartyMembers() do
+	elseif IsInGroup() > 0 then
+		for i = 1, GetNumSubgroupMembers() do
 			if UnitIsUnit("mouseover", "party"..i) then
 				return "party"..i
 			elseif UnitIsUnit("mouseover", "partypet"..i) then

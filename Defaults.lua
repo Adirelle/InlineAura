@@ -178,7 +178,7 @@ function InlineAura_LoadDefaults()
 		"WARRIOR",       6343, -- Thunder Clap
 		"DEATHKNIGHT",  81132, -- Scarlet Fever
 		"SHAMAN",        8042, -- Earth Shock
-		"PALADIN"       53595, -- Hammer of the Righteous
+		"PALADIN",      53595  -- Hammer of the Righteous
 	)
 
 	-- Physical Damage Taken (4%)

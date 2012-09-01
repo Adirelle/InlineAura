@@ -951,7 +951,7 @@ local function GetUnitForMouseover()
 		return "player"
 	elseif UnitIsUnit("mouseover", "pet") then
 		return "pet"
-	elseif IsInRaid() > 0 then
+	elseif IsInRaid() then
 		for i = 1, GetNumGroupMembers() do
 			if UnitIsUnit("mouseover", "raid"..i) then
 				return "raid"..i
@@ -959,7 +959,7 @@ local function GetUnitForMouseover()
 				return "raidpet"..i
 			end
 		end
-	elseif IsInGroup() > 0 then
+	elseif IsInGroup() then
 		for i = 1, GetNumSubgroupMembers() do
 			if UnitIsUnit("mouseover", "party"..i) then
 				return "party"..i

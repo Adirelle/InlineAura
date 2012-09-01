@@ -14,7 +14,7 @@ h2. Features
 * mimics built-in target selection, taking into account spell type (helpful/harmfull) and self/focus key modifiers as well as the auto self cast setting.
 * support macro targets, though it is restricted to "@target", "@player", "@pet", "@focus" and "@mouseover". For performance reasons, "@mouseover" support is disabled by default ; enable it if you really use it.
 
-h2. Addon support
+h2. Other addon support
 
 * support default Blizzard action bars, Dominos and any action bar addon using built-in Blizzard code.
 * support Bartender4 and any action bar addon using LibActionButton-1.0.
@@ -27,16 +27,6 @@ h2. Configuration
 * optional spell specific configuration.
 * helpful defaults for most classes ; if you don't like them, just disable the "InlineAura_Defaults" addon.
 
-h2. Suggestions and feedback
-
-There is a "forum thread":http://forums.wowace.com/showthread.php?t=15753 for discussion ; please use the ticket system for bug reports (see below). You can help "localizing the configuration interface":http://www.wowace.com/addons/inline-aura/localization/. Your Curse account works on wowace.com.
-
-*A word about bug reports:* please check existing tickets before submitting new ones. Moreover, reports like "it doesn't work" without any error message are useless. Please ensure you have enabled Lua error display or installed a error handler addon, like the "BugGrabber":http://wow.curse.com/downloads/wow-addons/details/bug-grabber.aspx + "BugSack":http://wow.curse.com/downloads/wow-addons/details/bugsack.aspx couple, Swatter (shipped with any Norganna's addon) or "ImprovedErrorFrame":http://www.wowinterface.com/downloads/info4333-ImprovedErrorFrame.html and add any error message related to Inline Aura in your bug report. Incomplete or unusuable reports will be ignored.
-
-*If Inline Aura seems to cause a big FPS loss*, please install one of the aforementioned error-catching addon and file a bug report with the errors. Blizzard default error handler is pretty CPU-intensive even if error reports are disabled. When something goes wrong, Inline Aura spits a lot of errors, causing the error handler to eat all CPU time, thus the FPS loss.
-
-You can submit bugs or suggestions using the "WowAce ticket system":http://www.wowace.com/addons/inline-aura/tickets/.
-
 h3. Known issues and limitations
 
 * Inline Aura does not work with non-standard action buttons, like those created by Macaroon.
@@ -45,9 +35,21 @@ h3. Known issues and limitations
 * Moreover all buttons use the same text position settings.
 * Inline Aura may have issue with some ButtonFacade skins. This depends on the skins and there is no way to fix them in Inline Aura.
 * Inline Aura does not play well with ElvUI.
-* They have been a lot of reports about Blocked Addon messages, related to call to protected functions :Show() or :Hide(). So far I have seen this error blaming Inline Aura, LibInternalCooldwon, Dominos or even Addon Control Panel (!). None of these addons directly call theses functions, so this seems to be a bug on Blizzard side. Right now, I suspect that it is related to "this post":http://us.battle.net/wow/en/forum/topic/1568016398#6.
+* They have been a lot of reports about *Blocked Addon messages*, related to call to protected functions :Show() or :Hide(). So far I have seen this error blaming Inline Aura, LibInternalCooldwon, Dominos or even Addon Control Panel (!). None of these addons directly call theses functions, so this seems to be a bug on Blizzard side. Right now, I suspect that it is related to "this post":http://us.battle.net/wow/en/forum/topic/1568016398#6.
+* *If Inline Aura seems to cause a big FPS loss*, please install an error-handler addon (see below).
+
+h2. Suggestions and feedback
+
+There is a "forum thread":http://forums.wowace.com/showthread.php?t=15753 for discussion ; please use the ticket system for bug reports (see below). You can help "localizing the configuration interface":http://www.wowace.com/addons/inline-aura/localization/. Your Curse account works on wowace.com.
+
+Bug reports or suggestions can be submitted using the "WowAce ticket system":http://www.wowace.com/addons/inline-aura/tickets/. However, while doing so, please :
+* Ensure you are using the latest available version of Inline Aura (including beta ones, available in the "Other downloads":http://www.curse.com/addons/wow/inline-aura#t1:other-downloads tab). If you are using an old version, update it to check if your problem has been fixed.
+* Check that your issue is not listed in the "Known issues and limitations" section above.
+* Use some kind of error handler: you can enable built-in Lua error display or install a error-handler addon, like the "BugGrabber":http://wow.curse.com/downloads/wow-addons/details/bug-grabber.aspx + "BugSack":http://wow.curse.com/downloads/wow-addons/details/bugsack.aspx couple, Swatter (shipped with any Norganna's addon) or "ImprovedErrorFrame":http://www.wowinterface.com/downloads/info4333-ImprovedErrorFrame.html. Join any error message related to Inline Aura in your bug report.
+* Submit a proper description. "This is not working anymore. Fix it !" is *not* a proper description.
+
+Any issue not respecting these conditions will be rejected without further notice.
 
 h2. Acknowledgements
 
-I would like to thanks Tuller for the original idea and Avitus, Contrebasse, Gaff3, Moozhe, brotherhobbes, Citlalin, Phanx, crymson , Thrael, FreakPsych, nulian and a lot of other people for testing and useful feedback.
-
+I would like to thanks Tuller for the original idea and Avitus, Contrebasse, Gaff3, Moozhe, brotherhobbes, Citlalin, Phanx, crymson, Thrael, FreakPsych, nulian and a lot of other people for testing and useful feedback.

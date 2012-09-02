@@ -5,6 +5,7 @@
 ## LoadOnDemand: 1
 ## Version: @project-version@
 ## X-Date: @project-date-iso@
+## X-Part-Of: InlineAura
 
 ..\InlineAura\Defaults.lua
 

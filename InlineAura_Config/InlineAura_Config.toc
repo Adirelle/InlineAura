@@ -8,6 +8,7 @@
 ## Version: @project-version@
 ## X-Date: @project-date-iso@
 ## X-Embeds: AceGUI-3.0-SharedMediaWidgets
+## X-Part-Of: InlineAura
 
 #@no-lib-strip@
 ..\InlineAura\libs\AceGUI-3.0\AceGUI-3.0.xml

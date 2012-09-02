@@ -187,7 +187,7 @@ function InlineAura_LoadDefaults()
 		"DEATH KNIGHT",  81328, -- Brittle Bones
 		"DEATH KNIGHT",  51160, -- Ebon Plaguebringer
 		"PALADIN",      111529, -- Judgments of the Bold
-		"WARRIOR",       86346, -- Colossus Smash
+		--"WARRIOR",       86346, -- Colossus Smash
 		"HUNTER",        35290, -- Gore (pet ability)
 		"HUNTER",        50518, -- Ravage (pet ability)
 		"HUNTER",        57386, -- Stampede (exotic pet ability)

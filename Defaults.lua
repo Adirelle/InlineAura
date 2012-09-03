@@ -127,6 +127,7 @@ function InlineAura_LoadDefaults()
 	-- Spell Damage Taken (5%)
 	SharedAuras(
 		"WARLOCK",      1490, -- Curse of the Elements
+		"WARLOCK",    116202, -- Aura of the Elements
 		"ROGUE",       58410, -- Master Poisoner (passive)
 		"HUNTER",      34889, -- Fire Breath (pet ability)
 		"HUNTER",      24844  -- Lightning Breath (pet ability)
@@ -135,6 +136,7 @@ function InlineAura_LoadDefaults()
 	-- Increasing Casting Time (50%)
 	SharedAuras(
 		"WARLOCK",     109466, -- Curse of Enfeeblement
+		"WARLOCK",     116198, -- Aura of Enfeeblement
 		"ROGUE",         5761, -- Mind-Numbing Poison
 		"DEATHKNIGHT",  73975, -- Necrotic Strike
 		"HUNTER",       90314, -- Tailspin (pet ability)
@@ -484,6 +486,8 @@ function InlineAura_LoadDefaults()
 		Spells(1120):Aliases('BELOW20'):Glowing() -- Drain Soul
 		Spells(17877):Aliases('BELOW20'):Glowing() -- Shadowburn
 
+		Spells(105174):Aliases(47960) -- Hand of Gul'dan => Shadowflame
+
 		-- Display soul shard count on Soulburn
 		ShowSpecial("SOUL_SHARDS", 74434):NoHighlight() -- Soulburn
 
@@ -504,6 +508,9 @@ function InlineAura_LoadDefaults()
 
 		-- Show nether ward on shadow ward
 		Spells(6229):Aliases(91711):OnSelf()
+		
+		-- Show Immolation Aura on Self
+		Spells(104025):OnSelf()
 
 		Spells(89808):Aliases("DISPELLABLE") -- Singe Magic (Imp)
 		Spells(19505):Aliases("DISPELLABLE") -- Devour Magic (Felhunter)

@@ -196,42 +196,48 @@ function InlineAura_LoadDefaults()
 		"HUNTER",        55749  -- Acid Spit (exotic pet ability)
 	)
 
-	-- CC and tactical debuffs --
+	-- Pulls CC and tactical debuffs from DRData-1.0
+	do
+		local DRData = LibStub('DRData-1.0')
 
-	-- Crowd control
-	SharedAuras(
-		"WARLOCK",   710, -- Banish
-		"SHAMAN",  76780, -- Bind Elemental
-		"DRUID",   33786, -- Cyclone
-		"DRUID",     339, -- Entangling Roots
-		"WARLOCK",  5782, -- Fear
-		"HUNTER",   3355, -- Freezing Trap
-		"SHAMAN",  51514, -- Hex
-		"DRUID",    2637, -- Hibernate
-		"MAGE",      118, -- Polymorph
-		"MAGE",    61305, -- Polymorph (Black Cat)
-		"MAGE",    28272, -- Polymorph (Pig)
-		"MAGE",    61721, -- Polymorph (Rabbit)
-		"MAGE",    61780, -- Polymorph (Turkey)
-		"MAGE",    28271, -- Polymorph (Turtle)
-		"PALADIN", 20066, -- Repentance
-		"ROGUE",    6770, -- Sap
-		"WARLOCK",  6358, -- Seduction
-		"PRIEST",   9484, -- Shackle Undead
-		"PALADIN", 10326, -- Turn Evil
-		"HUNTER",  19386  -- Wyvern Sting
-	)
+		-- Rename some categories
+		local catMap = {
+			charge        = "stun",
+			ctrlstun      = "stun",
+			rndstun       = "stun",
+			ctrlroot      = "root",
+			entrapment    = "root",
+			disarm        = "disarm",
+			disorient     = "disorient",
+			dragons       = "disorient",
+			scatters      = "disorient";
+			silence       = "silence",
+			taunt         = "taunt",
+			banish        = "banish",
+			cyclone       = "banish",
+			iceward       = "IGNORE",
+			mc            = "IGNORE",
+			bindelemental = "IGNORE",
+		}
 
-	-- Disarm
-	SharedAuras(
-		"HUNTER",   50541, -- Clench (Scorpid)
-		"HUNTER",   91644, -- Snatch (Bird of Prey)
-		"MONK",    117368, -- Grapple Weapon
-		"PRIEST",   64058, -- Psychic Horror (Disarm effect)
-		"ROGUE",    51722, -- Dismantle
-		"WARLOCK", 124539, -- Voidwalker: Disarm
-		"WARRIOR",    676  -- Disarm
-	)
+		-- Group by category
+		local byCat = {}
+		for id, cat in pairs(DRData:GetSpells()) do
+			cat = catMap[cat] or "generic"
+			if cat ~= "IGNORE" then
+				if byCat[cat] then
+					tinsert(byCat[cat], id)
+				else
+					byCat[cat] = { id }
+				end
+			end
+		end
+
+		-- Build the spell aliases
+		for cat, ids in pairs(byCat) do
+			GroupDebuffs(unpack(ids))
+		end
+	end
 
 	-- Snares and anti-snares
 	-- Note that some of these are talent procs or passive effects.
@@ -266,68 +272,6 @@ function InlineAura_LoadDefaults()
 		"WARLOCK",     18223, -- Curse of Exhaustion
 		"WARIROR",      1715, -- Piercing Howl
 		"WARRIOR",     12323  -- Hamstring
-	)
-
-	-- Stuns
-	SharedAuras(
-		"*",           20549, -- War Stomp (Tauren racial)
-		"DEATHKNIGHT", 91800, -- Gnaw (Ghoul)
-		"DRUID",        5211, -- Bash
-		"DRUID",        9005, -- Pounce
-		"DRUID",       22570, -- Maim
-		"HUNTER",      19577, -- Intimidation
-		"HUNTER",      50519, -- Sonic Blast (Bat)
-		"HUNTER",      56626, -- Sting (famous singer)
-		"MAGE",        44572, -- Deep Freeze
-		"MAGE",        82691, -- Ring of Frost
-		"PALADIN",       853, -- Hammer of Justice
-		"PALADIN",      2812, -- Holy Wrath
-		"PRIEST",      88625, -- Holy Word: Chastise
-		"ROGUE",         408, -- Kidney Shot
-		"ROGUE",        1833, -- Cheap Shot
-		"WARLOCK",     30283, -- Shadowfury
-		"WARLOCK",     89766, -- Axe Toss (Felguard)
-		"WARRIOR",     46968  -- Shockwave
-	)
-
-	-- Roots
-	SharedAuras(
-		"DEATHKNIGHT",  50041, -- Chilblains
-		"DRUID",          339, -- Entangling Roots
-		"DRUID",        16689, -- Nature's Grasp (spell)
-		"DRUID",        19975, -- Nature's Grasp (root effect)
-		"HUNTER",        4167, -- Web (Spider)
-		"HUNTER",       50245, -- Pin (Crab)
-		"HUNTER",       54706, -- Venom Web Spray (Silithid)
-		"HUNTER",       90327, -- Lock Jaw (Dog)
-		"MAGE",           122, -- Frost Nova
-		"MAGE",         33395, -- Freeze (Water Elemental)
-		"MONK",        116095, -- Disable
-		"PRIEST",      108920, -- Void Tendrils
-		"SHAMAN",       51485, -- Earth's Grasp
-		"SHAMAN",       63374, -- Frozen Power
-		"WARRIOR",     107566, -- Staggering Shout
-	)
-
-	-- Silences
-	SharedAuras(
-		"*",           25046, -- Arcane Torrent (Energy version)
-		"*",           28730, -- Arcane Torrent (Mana version)
-		"*",           50613, -- Arcane Torrent (Runic power version)
-		"*",           69179, -- Arcane Torrent (Rage version)
-		"*",           80483  -- Arcane Torrent (Focus version)
-		"DEATHKNIGHT", 47476, -- Strangulate
-		"DRUID",       78675, -- Solar Beam
-		"DRUID",       81261, -- Solar Beam -- FIXME: check id
-		"HUNTER",      34490, -- Silencing Shot
-		"HUNTER",      50479, -- Nether Shock (Nether ray)
-		"MAGE",        12598, -- Improved Counterspell
-		"MAGE",       102051, -- Frostjaw (talent)
-		"PALADIN",     31935, -- Avenger's Shield
-		"PRIEST",      15487, -- Silence
-		"ROGUE",        1330, -- Garrote
-		"WARLOCK",    103135, -- Spell Lock (Felhunter)
-		"WARRIOR",     18498, -- Glyph of Gag Order -- FIXME: check id
 	)
 
 	-- Interrupts

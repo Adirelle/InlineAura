@@ -33,6 +33,9 @@ externals:
   libs/AceGUI-3.0:
     url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceGUI-3.0
     tag: latest
+  libs/DRData-1.0:
+    url: git://git.wowace.com/wow/drdata-1-0/mainline.git
+    tag: latest
   libs/AceGUI-3.0-SharedMediaWidgets: svn://svn.wowace.com/wow/ace-gui-3-0-shared-media-widgets/mainline/trunk/AceGUI-3.0-SharedMediaWidgets
   libs/LibDispellable-1.0:
     url: git://git.wowace.com/wow/libdispellable-1-0/mainline.git

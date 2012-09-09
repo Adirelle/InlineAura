@@ -4,8 +4,11 @@
 ## Author: Adirelle
 ## LoadOnDemand: 1
 ## Version: @project-version@
+## OptionalDeps: DRData-1.0
 ## X-Date: @project-date-iso@
 ## X-Part-Of: InlineAura
 
 ..\InlineAura\Defaults.lua
-
+#@no-lib-strip@
+..\InlineAura\libs\DRData-1.0\DRData-1.0.lua
+#@end-no-lib-strip@

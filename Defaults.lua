@@ -224,17 +224,18 @@ function InlineAura_LoadDefaults()
 
 	-- Disarm
 	SharedAuras(
-		"WARRIOR",   676, -- Disarm
-		"HUNTER",  50541, -- Clench (Scorpid)
-		"ROGUE",   51722, -- Dismantle
-		"PRIEST",  64058, -- Psychic Horror
-		"HUNTER",  91644  -- Snatch (Bird of Prey)
+		"HUNTER",   50541, -- Clench (Scorpid)
+		"HUNTER",   91644, -- Snatch (Bird of Prey)
+		"MONK",    117368, -- Grapple Weapon
+		"PRIEST",   64058, -- Psychic Horror (Disarm effect)
+		"ROGUE",    51722, -- Dismantle
+		"WARLOCK", 124539, -- Voidwalker: Disarm
+		"WARRIOR",    676  -- Disarm
 	)
 
 	-- Snares and anti-snares
 	-- Note that some of these are talent procs or passive effects.
 	-- This is intended as they will show up on active spells anyway.
-
 	SharedAuras(
 		"*",            1604, -- Dazed,
 		"DEATHKNIGHT", 45524, -- Chains of Ice
@@ -291,29 +292,56 @@ function InlineAura_LoadDefaults()
 
 	-- Roots
 	SharedAuras(
-		"DRUID",     339, -- Entangling Roots
-		"HUNTER",   4167, -- Web (Spider)
-		"HUNTER",  50245, -- Pin (Crab)
-		"HUNTER",  54706, -- Venom Web Spray (Silithid)
-		"HUNTER",  90327, -- Lock Jaw (Dog)
-		"MAGE",      122, -- Frost Nova
-		"MAGE",    33395, -- Freeze (elementals)
-		"MAGE",    63685, -- Freeze
-		"SHAMAN",  64695  -- Earthgrab
+		"DEATHKNIGHT",  50041, -- Chilblains
+		"DRUID",          339, -- Entangling Roots
+		"DRUID",        16689, -- Nature's Grasp (spell)
+		"DRUID",        19975, -- Nature's Grasp (root effect)
+		"HUNTER",        4167, -- Web (Spider)
+		"HUNTER",       50245, -- Pin (Crab)
+		"HUNTER",       54706, -- Venom Web Spray (Silithid)
+		"HUNTER",       90327, -- Lock Jaw (Dog)
+		"MAGE",           122, -- Frost Nova
+		"MAGE",         33395, -- Freeze (Water Elemental)
+		"MONK",        116095, -- Disable
+		"PRIEST",      108920, -- Void Tendrils
+		"SHAMAN",       51485, -- Earth's Grasp
+		"SHAMAN",       63374, -- Frozen Power
+		"WARRIOR",     107566, -- Staggering Shout
+	)
+
+	-- Silences
+	SharedAuras(
+		"*",           25046, -- Arcane Torrent (Energy version)
+		"*",           28730, -- Arcane Torrent (Mana version)
+		"*",           50613, -- Arcane Torrent (Runic power version)
+		"*",           69179, -- Arcane Torrent (Rage version)
+		"*",           80483  -- Arcane Torrent (Focus version)
+		"DEATHKNIGHT", 47476, -- Strangulate
+		"DRUID",       78675, -- Solar Beam
+		"DRUID",       81261, -- Solar Beam -- FIXME: check id
+		"HUNTER",      34490, -- Silencing Shot
+		"HUNTER",      50479, -- Nether Shock (Nether ray)
+		"MAGE",        12598, -- Improved Counterspell
+		"MAGE",       102051, -- Frostjaw (talent)
+		"PALADIN",     31935, -- Avenger's Shield
+		"PRIEST",      15487, -- Silence
+		"ROGUE",        1330, -- Garrote
+		"WARLOCK",    103135, -- Spell Lock (Felhunter)
+		"WARRIOR",     18498, -- Glyph of Gag Order -- FIXME: check id
 	)
 
 	-- Interrupts
 	SpellsByClass(
-		"DEATHKNIGHT", 47528, -- Mind Freeze
 		"DEATHKNIGHT", 47476, -- Strangulate
+		"DEATHKNIGHT", 47528, -- Mind Freeze
 		"DEATHKNIGHT", 91802, -- Shambling Rush (Ghoul)
+		"DRUID",       78675, -- Solar Beam
 		"DRUID",       80964, -- Skull Bash (bear)
 		"DRUID",       80965, -- Skull Bash (cat)
-		"DRUID",       78675, -- Solar Beam
-		"HUNTER",      34490, -- Silencing Shot
-		"HUNTER",      50479, -- Nether Shock (Nether Ray)
 		"HUNTER",      26090, -- Pummel (Gorilla)
+		"HUNTER",      34490, -- Silencing Shot
 		"HUNTER",      50318, -- Serenity Dust (Moth)
+		"HUNTER",      50479, -- Nether Shock (Nether Ray)
 		"MAGE",         2139, -- Counterspell
 		"PALADIN",     96231, -- Rebuke
 		"PRIEST",      15487, -- Silence
@@ -508,7 +536,7 @@ function InlineAura_LoadDefaults()
 
 		-- Show nether ward on shadow ward
 		Spells(6229):Aliases(91711):OnSelf()
-		
+
 		-- Show Immolation Aura on Self
 		Spells(104025):OnSelf()
 
@@ -623,7 +651,7 @@ function InlineAura_LoadDefaults()
 			52610, -- Savage Roar
 			61336  -- Survival Instincts
 		)
-		
+
 		-- Incarnation and its spec variantes
 		Aliases(106731, 102560, 102543, 102558, 33891):OnSelf():OnlyMine()
 

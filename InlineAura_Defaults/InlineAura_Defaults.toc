@@ -8,7 +8,9 @@
 ## X-Date: @project-date-iso@
 ## X-Part-Of: InlineAura
 
-..\InlineAura\Defaults.lua
 #@no-lib-strip@
+..\InlineAura\libs\LibStub\LibStub.lua
 ..\InlineAura\libs\DRData-1.0\DRData-1.0.lua
 #@end-no-lib-strip@
+
+..\InlineAura\Defaults.lua

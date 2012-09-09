@@ -161,6 +161,7 @@ local function BuildEnv(self, presets, statuses)
 				return obj
 			end
 
+			-- Apply a func to every spells of the lsit
 			function proto:ForEach(func, ...)
 				for id, spell in pairs(self.spells) do
 					func(spell, ...)
@@ -168,13 +169,30 @@ local function BuildEnv(self, presets, statuses)
 				return self
 			end
 
-			function proto:AreMutualAliases()
-				return self:Aliases(unpack(self.ids))
+			-- "Simple" aliases
+			local function Aliases(spell, ...)
+				for i = 1, select('#', ...) do
+					local id = select(i, ...)
+					if id ~= spell.id then
+						local name = GetSpellName(id, 1, true)
+						if name then
+							if not spell.aliases then
+								spell.aliases = {}
+							end
+							if not spell.aliases[name] then
+								tinsert(spell.aliases, name)
+								spell.aliases[name] = true
+							end
+						end
+					end
+				end
 			end
 
-			local singleMethods
 
-			singleMethods = {
+			local singleMethods = {
+				-- Aliases handling
+				Aliases = Aliases,
+				OnlyAliases = OnlyAliases,
 				-- Stack display
 				WithStack = function(spell) spell.hideStack = false end,
 				NoStack = function(spell) spell.hideStack = true end,
@@ -198,29 +216,17 @@ local function BuildEnv(self, presets, statuses)
 				NoHighlight = function(spell) spell.highlight = "none" end,
 			}
 
-			-- Aliases
-			function singleMethods.Aliases(spell, ...)
-				for i = 1, select('#', ...) do
-					local id = select(i, ...)
-					if id ~= spell.id then
-						local name = GetSpellName(id, 1, true)
-						if name then
-							if not spell.aliases then
-								spell.aliases = {}
-							end
-							if not spell.aliases[name] then
-								tinsert(spell.aliases, name)
-								spell.aliases[name] = true
-							end
-						end
-					end
-				end
-			end
-
+			-- Allow "single methods" to work on spell list
 			for name, func in pairs(singleMethods) do
 				local func = func
 				proto[name] = function(self, ...) return self:ForEach(func, ...) end
 			end
+
+			-- Every spells are aliases of the other ones
+			function proto:AreMutualAliases()
+				return self:Aliases(unpack(self.ids))
+			end
+
 		end
 
 		-- GLOBALS: Aliases

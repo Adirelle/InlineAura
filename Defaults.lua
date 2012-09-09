@@ -623,6 +623,9 @@ function InlineAura_LoadDefaults()
 			52610, -- Savage Roar
 			61336  -- Survival Instincts
 		)
+		
+		-- Incarnation and its spec variantes
+		Aliases(106731, 102560, 102543, 102558, 33891):OnSelf():OnlyMine()
 
 		Spells(2782, 2908):Aliases("DISPELLABLE") -- Remove Corruption, Soothe
 	end

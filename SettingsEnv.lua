@@ -188,6 +188,13 @@ local function BuildEnv(self, presets, statuses)
 				end
 			end
 
+			-- Display only specified aliases
+			local function OnlyAliases(spell, ...)
+				if select('#', ...) > 0 then
+					Aliases(spell, ...)
+				end
+				spell.onlyAliases = true
+			end
 
 			local singleMethods = {
 				-- Aliases handling

@@ -421,7 +421,12 @@ local function GetAuraToDisplay(spell, target, specific)
 
 			if specific.aliases then
 				-- Has aliases: we need to test them all and combine the results
-				hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(specific.aliases))
+				if specific.onlyAliases then
+					-- Do not want to watch the spell itself
+					hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, unpack(specific.aliases))
+				else
+					hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = AuraLookup(target, onlyMyBuffs, onlyMyDebuffs, spell, unpack(specific.aliases))
+				end
 			else
 				-- No alias: simple test
 				hasCount, count, hasCountdown, expirationTime, hasHighlight, highlight = CheckAura(spell, target, onlyMyBuffs, onlyMyDebuffs)

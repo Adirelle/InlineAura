@@ -968,6 +968,13 @@ local spellOptions = {
 			hidden = function(info) return info.handler:IsNotViewable() or info.handler:IsSpecial() end,
 			order = 65,
 		},
+		onlyAliases = {
+			name = L['Show only aliases'],
+			desc = L[''],
+			type = 'toggle',
+			disabled = 'IsReadOnly',
+			order = 75,
+		},
 		hideCountdown = {
 			name = L['No countdown'],
 			desc = L['Hide the countdown text for this spell.'],

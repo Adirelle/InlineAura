@@ -664,7 +664,7 @@ function InlineAura_LoadDefaults()
 
 		SelfTalentProc(86698, 86659, 86669) -- Guardian of Ancient Kings and its 3 variants
 
-		SelfTalentProc(20271, 94686) -- Holy Light => Crusader
+		SelfTalentProc(19750, 94686) -- Flash of Light => Supplication
 
 		Aliases(642, 25771) -- Divine Shield / Forbearance
 		Aliases(1022, 25771) -- Hand of Protection / Forbearance

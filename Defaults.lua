@@ -153,6 +153,7 @@ function InlineAura_LoadDefaults()
 		"WARRIOR",  20243, -- Devastate
 		"ROGUE",     8647, -- Expose Armor
 		"DRUID",      770, -- Faerie Fire
+		"DRUID",   102355, -- Faerie Swarm
 		"HUNTER",   50285, -- Dust Cloud (pet ability)
 		"HUNTER",   50498  -- Tear Armor (pet ability)
 	):WithStack()
@@ -572,6 +573,9 @@ function InlineAura_LoadDefaults()
 
 		-- Show combo points on Maim, Ferocious Bite, Savage Roar and Rip
 		Spells(22568, 22570, 1079):Aliases("COMBO_POINTS"):WithStack()
+
+		-- Only show aliases (e.g. weakened armor debuff) on Faerie Fire/
+		Spells(770, 102355):OnlyAliases()
 
 		-- Show combo points on Savage Roar
 		Spells(52610):OnSelf():Aliases("COMBO_POINTS"):WithStack()

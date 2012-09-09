@@ -152,7 +152,7 @@ local function BuildEnv(self, presets, statuses)
 				for i = 1, select('#', ...), 2 do
 					local spellClass, id = select(i, ...)
 					if GetSpellName(id, 1) then
-						if (spellClass == class or IsSpellKnown(id)) and not IsPassiveSpell(id) then
+						if (spellClass == class or IsSpellKnown(id) or IsPlayerSpell(id)) and not IsPassiveSpell(id) then
 							obj.spells[id] = GetSpell(id)
 						end
 						tinsert(obj.ids, id)

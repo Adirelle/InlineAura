@@ -81,9 +81,10 @@ L["HOLY_POWER"] = HOLY_POWER
 --------------------------------------------------------------------------------
 
 -- %Localization: inline-aura
--- THE END OF THE FILE IS UPDATED BY A SCRIPT
--- ANY CHANGE BELOW THESES LINES WILL BE LOST
--- CHANGES SHOULD BE MADE USING http://www.wowace.com/addons/inline-aura/localization/
+-- THE END OF THE FILE IS UPDATED BY https://github.com/Adirelle/wowaceTools/#updatelocalizationphp.
+-- ANY CHANGE BELOW THESES LINES WILL BE LOST.
+-- UPDATE THE TRANSLATIONS AT http://www.wowace.com/addons/inline-aura/localization/
+-- AND ASK THE AUTHOR TO UPDATE THIS FILE.
 
 -- @noloc[[
 
@@ -188,6 +189,7 @@ L["Should the module be used ?"] = true
 L["Should the stack count provided by this module be displayed ?"] = true
 L["Should this module highlight the button ?"] = true
 L["Show countdown"] = true
+L["Show only aliases"] = true
 L["Show stack count"] = true
 L["Single value position"] = true
 L["Size of large text"] = true
@@ -253,6 +255,7 @@ if locale == 'frFR' then
 L["ABOVExx"] = "Plus de %d%% de %s"
 L["Additional (de)buffs"] = "(Dé)buffs supplémentaires"
 L["Adjust the font size of countdown and application count texts."] = "Ajuster la taille des polices du texte des comptes à rebours et du nombre d'application."
+L["Allow you to disable glowing highlight in certain situations."] = "Vous permet de désactiver la surbrillance dans certaines situations." -- Needs review
 L["Application count position"] = "Position du nombre de charges"
 L["Application text color"] = "Couleur du nombre d'applications"
 L[ [=[Behave as if the interface option "Auto self cast" was enabled, e.g. test helpful spells on yourself when you are not targeting a friendly unit.
@@ -325,6 +328,7 @@ L["My buffs"] = "Mes buffs"
 L["My debuffs"] = "Mes debuffs"
 L["No application count"] = "Cacher le nombre d'applications"
 L["No countdown"] = "Cacher le compte à rebours"
+L["On cooldown"] = "En cooldown" -- Needs review
 L["Only display the (de)buff if it has been applied by yourself, your pet or your vehicle."] = "N'afficher le (dé)buff que si il a été lancé par vous, votre familier ou votre véhicule."
 L["Only my buffs"] = "Seulement mes buffs"
 L["Only my debuffs"] = "Seulement mes debuffs"
@@ -333,6 +337,7 @@ L["Options related to the units to watch and the way to select them depending on
 L["Others' buffs"] = "Les buffs des autres"
 L["Others' debuffs"] = "Les debuffs des autres"
 L["Outline"] = "Bordure"
+L["Out of combat"] = "Hors de combat" -- Needs review
 L["Power threshold"] = "Seuil de resource"
 L["Precise countdown"] = "Compte à rebours précis"
 L["Preset"] = "Préréglé" -- Needs review
@@ -358,27 +363,43 @@ L["Select which special value should be displayed."] = "Sélectionnez la valeur 
 L["Self"] = "Soi-même"
 L["Should the countdown provided by this module be displayed ?"] = "Est-ce que le compte à rebours de ce module sera affiché ?" -- Needs review
 L["Should the module be used ?"] = "Est-ce que le module doit-être utilisé ?" -- Needs review
+L["Should the stack count provided by this module be displayed ?"] = "Le compte à rebours de ce module doit-il être affiché ?" -- Needs review
+L["Should this module highlight the button ?"] = "Ce module doit-il mettre le bouton en surbrillance ?" -- Needs review
+L["Show countdown"] = "Afficher le compte à rebours." -- Needs review
+L["Show stack count"] = "Afficher le nombre d'applications." -- Needs review
 L["Single value position"] = "Position d'une valeur seule"
 L["Size of large text"] = "Taille du grand texte"
 L["Size of small text"] = "Taille du petit texte"
 L["SOUL_SHARDS"] = "Fragments d'âme"
+L["Sources of spells to show in the \"Current spell\" dropdown. Use this to reduce that list of spells."] = "Source de sorts à afficher dans le menu \"sort courant\". Utiliser ceci pour réduire cette liste." -- Needs review
 L["Special"] = "Spécial"
 L["Spells"] = "Sorts"
 L["Targeting settings"] = "Réglages de ciblage"
 L["Text appearance"] = "Apparence du texte"
 L["Text Position"] = "Position des textes"
+L["The kind of settings to use for the spell."] = "Le type de réglage à utiliser pour ce sort." -- Needs review
 L["The large font is used to display countdowns."] = "La grande police est utilisée pour afficher les comptes à rebours."
 L["The small font is used to display application count."] = "La petite police est utilisée pour afficher le nombre d'application"
 L["Thick outline"] = "Bordure épaisse"
+L["This is the threshold under which tenths of second are displayed."] = "Ceci est le seuil en-dessous duquel les dixièmes de seconde sont affichés." -- Needs review
+L["This module only cause highlighting if the stack count is equal or above this threshold."] = "Ce module met en surbrillance uniquement si le nombre d'applications est égal ou supérieur à ce seuil." -- Needs review
+L["This module provides the following keyword(s) for use as an alias: %s."] = "Ce module fournit le(s) mot(s)-clef(s) suivant(s) à utiliser comme alias : %s." -- Needs review
 L["Top"] = "Haut"
 L["Top left"] = "En haut à gauche"
 L["Top right"] = "En haut à droite"
+L["Totem timers"] = "Chronomètres de totem" -- Needs review
 L["Type of settings"] = "Type de réglages"
+L["Unusable"] = "Inutilisable" -- Needs review
 L["Use global setting"] = "Utiliser le réglage global"
 L["User-defined"] = "Défini par l'utilisateur"
+L["use the predefined settings shipped with Inline Aura."] = "utilise les réglages prédéfinies founirs par Inline Aura." -- Needs review
+L["use your own settings."] = "utilise vos propres réglages." -- Needs review
 L["Value to display"] = "Valeur à afficher"
 L["Watch focus"] = "Surveiller la focalisation"
+L["watch hostile units for harmful spells and friendly units for helpful spells."] = "considère les ennemis pour les sorts offensifs et les alliés pour les sorts bénéfiques." -- Needs review
+L["watch pet (de)buffs in any case."] = "surveille les (de)buffs du familier dans tous les cas." -- Needs review
 L["Watch unit under mouse cursor"] = "Surveiller l'unité sous la souris"
+L["watch your (de)buffs in any case."] = "surveille vos (de)buffs dans tous les cas." -- Needs review
 
 ------------------------ deDE ------------------------
 elseif locale == 'deDE' then

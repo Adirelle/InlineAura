@@ -189,7 +189,8 @@ if IsClass("DRUID") then
 	end
 
 	function eclipseState:PLAYER_TALENT_UPDATE(event)
-		local newIsMoonkin = (GetSpecializationInfo(GetSpecialization()) == 102) -- see SpellBookFrame.lua
+		local spec = GetSpecialization()
+		local newIsMoonkin = spec and (GetSpecializationInfo(spec) == 102) -- see SpellBookFrame.lua
 		if isMoonkin ~= newIsMoonkin then
 			isMoonkin = newIsMoonkin
 			if isMoonkin then

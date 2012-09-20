@@ -412,6 +412,19 @@ local function GetNormalTexture(button)
 	return button:GetNormalTexture()
 end
 
+-- ElvUI compatibility
+function addon:HasElvUI()
+	SetCheckedTextureColor = function(button, r, g, b, a)
+		if r == nil then
+			button.checked:SetTexture(1, 1, 1, 1)
+			button.checked:SetBlendMode("BLEND")
+		else
+			button.checked:SetTexture(r, g, b, (a or 1))
+			button.checked:SetBlendMode("ADD")
+		end
+	end
+end
+
 -- Masque compatibility
 function addon:HasMasque(lib)
 	local WHITE = {1, 1, 1, 1}

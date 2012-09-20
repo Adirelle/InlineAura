@@ -1120,6 +1120,9 @@ local addonSupport = {
 		-- GLOBALS: tullaRange
 		hooksecurefunc(tullaRange, "SetButtonColor", ActionButton_UpdateUsable_Hook)
 	end,
+	ElvUI = function(self)
+		return self:HasElvUI()
+	end,
 }
 addonSupport.CooldownCount = addonSupport.OmniCC
 addonSupport.tullaCC = addonSupport.OmniCC

@@ -1126,11 +1126,20 @@ addonSupport.tullaCC = addonSupport.OmniCC
 
 local librarySupport = {
 	["LibButtonFacade"] = function(self, lib, minor)
-		self:HasLibButtonFacade(lib)
+		-- Since 40200 LibButtonFacade is a facade for Masque
+		if minor >= 40200 then return end
+		self:HasLibButtonFacade()
 		local callback = function()	return self:RequireUpdate(true)	end
 		lib:RegisterSkinCallback("Blizzard", callback)
 		lib:RegisterSkinCallback("Dominos", callback)
 		lib:RegisterSkinCallback("Bartender4", callback)
+	end,
+	["Masque"] = function(self, lib, minor)
+		self:HasLibButtonFacade()
+		local callback = function()	return self:RequireUpdate(true)	end
+		lib:Register("Blizzard", callback)
+		lib:Register("Dominos", callback)
+		lib:Register("Bartender4", callback)
 	end,
 	["LibActionButton-1.0"] = function(self, lib, minor)
 		if minor >= 11 then -- Callbacks and GetAllButtons() are supported since minor 11

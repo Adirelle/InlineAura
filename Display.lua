@@ -404,13 +404,14 @@ local function SetVertexColor(texture, r, g, b, a)
 	return texture:SetVertexColor(r, g, b, a)
 end
 
--- LibButtonFacade compatibility
+-- LibButtonFacade/Masque compatibility
 function addon:HasLibButtonFacade()
 	SetVertexColor = function(texture, r, g, b, a)
 		local R, G, B, A = texture:GetVertexColor()
 		return texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
 	end
 end
+
 
 ------------------------------------------------------------------------------
 -- Highlight feedback

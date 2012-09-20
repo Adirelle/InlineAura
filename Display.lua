@@ -400,18 +400,46 @@ end
 -- Vertex color setter
 ------------------------------------------------------------------------------
 
-local function SetVertexColor(texture, r, g, b, a)
-	return texture:SetVertexColor(r, g, b, a)
-end
-
--- LibButtonFacade/Masque compatibility
-function addon:HasLibButtonFacade()
-	SetVertexColor = function(texture, r, g, b, a)
-		local R, G, B, A = texture:GetVertexColor()
-		return texture:SetVertexColor(r*R, g*G, b*B, a*(A or 1))
+local function SetCheckedTextureColor(button, r, g, b, a)
+	if r == nil then
+		return button:GetCheckedTexture():SetVertexColor(1, 1, 1, 1)
+	else
+		return button:GetCheckedTexture():SetVertexColor(r, g, b, a)
 	end
 end
 
+local function GetNormalTexture(button)
+	return button:GetNormalTexture()
+end
+
+-- Masque compatibility
+function addon:HasMasque(lib)
+	local WHITE = {1, 1, 1, 1}
+	local groups = {}
+
+	SetCheckedTextureColor = function(button, r, g, b, a)
+		if r == nil then
+			local group = groups[button]
+			r, g, b, a = unpack(group and group:GetColor("Checked") or WHITE)
+		end
+		return button:GetCheckedTexture():SetVertexColor(r, g, b, a or 1)
+	end
+
+	GetNormalTexture = function(button)
+		return lib:GetNormal(button)
+	end
+
+	local callback = function(addonName, groupName)
+		local group = lib:Group(addonName, groupName)
+		for i, button in pairs(obj.Buttons) do
+			groups[button] = group
+		end
+		return addon:RequireUpdate(true)
+	end
+	lib:Register("Blizzard", callback, "Blizzard")
+	lib:Register("Dominos", callback, "Dominos")
+	lib:Register("Bartender4", callback, "Bartender4")
+end
 
 ------------------------------------------------------------------------------
 -- Highlight feedback
@@ -459,9 +487,8 @@ function addon:UpdateButtonUsable(state)
 	if state.highlight == "glowing" and not profile.glowUnusable then
 		return self:UpdateButtonGlowing(state)
 	elseif state.highlight == "dim" then
-		local name = state.button:GetName()
-		_G[name.."Icon"]:SetVertexColor(0.4, 0.4, 0.4)
-		_G[name.."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0)
+		state.button.icon:SetVertexColor(0.4, 0.4, 0.4)
+		GetNormalTexture(state.button):SetVertexColor(1.0, 1.0, 1.0)
 	end
 end
 
@@ -470,9 +497,9 @@ function addon:UpdateButtonState(state)
 	local color = profile["color"..state.highlightBorder]
 	if color then
 		state.button:SetChecked(true)
-		SetVertexColor(state.button:GetCheckedTexture(), unpack(color))
+		SetCheckedTextureColor(state.button, unpack(color))
 	else
-		state.button:GetCheckedTexture():SetVertexColor(1, 1, 1)
+		SetCheckedTextureColor(state.button)
 	end
 end
 

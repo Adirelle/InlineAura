@@ -33,8 +33,8 @@ h3. Known issues and limitations
 * Inline Aura uses spell names instead of numerical spell IDs since not all Blizzard API works with spell IDs. Sometimes it may detect the wrong spell. 
 * Inline Aura cannot display different (de)buffs with different settings (e.g. different highlight effect or text position) in the same button.
 * Moreover all buttons use the same text position settings.
-* Inline Aura may have issue with some ButtonFacade skins. This depends on the skins and there is no way to fix them in Inline Aura.
-* Inline Aura does not play well with ElvUI.
+* Inline Aura may have issue with some ButtonFacade/Masque skins. This depends on the skins and there is no way to fix them in Inline Aura.
+* Inline Aura has a limited support of ElvUI buttons.
 * They have been a lot of reports about *Blocked Addon messages*, related to call to protected functions :Show() or :Hide(). So far I have seen this error blaming Inline Aura, LibInternalCooldwon, Dominos or even Addon Control Panel (!). None of these addons directly call theses functions, so this seems to be a bug on Blizzard side. Right now, I suspect that it is related to "this post":http://us.battle.net/wow/en/forum/topic/1568016398#6.
 * *If Inline Aura seems to cause a big FPS loss*, please install an error-handler addon (see below).
 

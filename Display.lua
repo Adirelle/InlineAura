@@ -401,11 +401,10 @@ end
 ------------------------------------------------------------------------------
 
 local function SetCheckedTextureColor(button, r, g, b, a)
-	if r == nil then
-		return button:GetCheckedTexture():SetVertexColor(1, 1, 1, 1)
-	else
-		return button:GetCheckedTexture():SetVertexColor(r, g, b, a)
-	end
+	local texture = button:GetCheckedTexture()
+	local oR, oG, oB, oA = texture:GetVertexColor()
+	texture:SetVertexColor(r, g, b, a or 1)
+	return oR, oG, oB, oA
 end
 
 local function GetNormalTexture(button)
@@ -414,44 +413,23 @@ end
 
 -- ElvUI compatibility
 function addon:HasElvUI()
-	SetCheckedTextureColor = function(button, r, g, b, a)
-		if r == nil then
-			button.checked:SetTexture(1, 1, 1, 1)
-			button.checked:SetBlendMode("BLEND")
-		else
-			button.checked:SetTexture(r, g, b, (a or 1))
-			button.checked:SetBlendMode("ADD")
-		end
+	SetCheckedTextureColor = function(button, r, g, b, a, blendMode)
+		local texture = button:GetCheckedTexture()
+		local oR, oG, oB, oA = texture:GetTexture()
+		local oBlendMode =  texture:GetBlendMode()
+		texture:SetTexture(r, g, b, a or 1)
+		texture:SetBlendMode(blendMode or "ADD")
+		return oR, oG, oB, oA, oBlendMode
 	end
 end
 
 -- Masque compatibility
 function addon:HasMasque(lib)
-	local WHITE = {1, 1, 1, 1}
-	local groups = {}
-
-	SetCheckedTextureColor = function(button, r, g, b, a)
-		if r == nil then
-			local group = groups[button]
-			r, g, b, a = unpack(group and group:GetColor("Checked") or WHITE)
-		end
-		return button:GetCheckedTexture():SetVertexColor(r, g, b, a or 1)
-	end
-
-	GetNormalTexture = function(button)
-		return lib:GetNormal(button)
-	end
-
-	local callback = function(addonName, groupName)
-		local group = lib:Group(addonName, groupName)
-		for i, button in pairs(obj.Buttons) do
-			groups[button] = group
-		end
-		return addon:RequireUpdate(true)
-	end
-	lib:Register("Blizzard", callback, "Blizzard")
-	lib:Register("Dominos", callback, "Dominos")
-	lib:Register("Bartender4", callback, "Bartender4")
+	GetNormalTexture = function(button) return lib:GetNormal(button) end
+	local callback = function() return addon:RequireUpdate(true) end
+	lib:Register("Blizzard", callback)
+	lib:Register("Dominos", callback)
+	lib:Register("Bartender4", callback)
 end
 
 ------------------------------------------------------------------------------
@@ -506,13 +484,21 @@ function addon:UpdateButtonUsable(state)
 end
 
 function addon:UpdateButtonState(state)
-	if state.highlight ~= "border" then return end
-	local color = profile["color"..state.highlightBorder]
-	if color then
-		state.button:SetChecked(true)
-		SetCheckedTextureColor(state.button, unpack(color))
-	else
-		SetCheckedTextureColor(state.button)
+	if state.highlight == "border" then
+		local color = profile["color"..state.highlightBorder]
+		if color then
+			state.button:SetChecked(true)
+			if not state.previousCheckedColors then
+				state.previousCheckedColors = { SetCheckedTextureColor(state.button, unpack(color)) }
+			else
+				SetCheckedTextureColor(state.button, unpack(color))
+			end
+			return
+		end
+	end
+	if state.previousCheckedColors then
+		SetCheckedTextureColor(state.button, unpack(state.previousCheckedColors))
+		state.previousCheckedColors = nil
 	end
 end
 

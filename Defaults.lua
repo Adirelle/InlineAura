@@ -541,6 +541,9 @@ function InlineAura_LoadDefaults()
 		PetBuffs(63560):WithStack() -- Dark Transformation
 
 		Spells(49998):Aliases(77535):OnSelf() -- Blood Shield (thanks to twistdshade)
+
+		-- Soul Reaper
+		Spells(114866):Aliases('BELOW35'):Glowing()
 	end
 
 	------------------------------------------------------------------------------

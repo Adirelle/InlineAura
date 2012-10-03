@@ -276,7 +276,7 @@ local healthThresholds = {}
 if IsClass("PRIEST") or IsClass("WARLOCK") or IsClass("WARRIOR") or IsClass("HUNTER") or IsClass("PALADIN") then
 	tinsert(healthThresholds, 20)
 end
-if IsClass("PALADIN") or IsClass("ROGUE") then
+if IsClass("PALADIN") or IsClass("ROGUE") or IsClass("DEATHKNIGHT") then
 	tinsert(healthThresholds, 35)
 end
 if IsClass("DRUID") then

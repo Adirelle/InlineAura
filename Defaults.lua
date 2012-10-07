@@ -288,6 +288,7 @@ function InlineAura_LoadDefaults()
 		"HUNTER",      50318, -- Serenity Dust (Moth)
 		"HUNTER",      50479, -- Nether Shock (Nether Ray)
 		"MAGE",         2139, -- Counterspell
+		"MONK",       116705, -- Spear Hand Strike
 		"PALADIN",     96231, -- Rebuke
 		"PRIEST",      15487, -- Silence
 		"ROGUE",        1766, -- Kick
@@ -503,6 +504,18 @@ function InlineAura_LoadDefaults()
 		Spells(30451):Aliases(36032):OnSelf() -- Arcane Blast => Arcane Blast debuff
 
 		Spells(475):Aliases("DISPELLABLE") -- Remove Curse
+	end
+
+	------------------------------------------------------------------------------
+	if IsClass('MONK') then
+	------------------------------------------------------------------------------
+
+		-- Tiger Palm => Tiger Power
+		Spells(100787):Aliases(125359):OnSelf()
+
+		-- Blackout Kick => Serpent's Zeal (mistweavers), Shuffle (brewmasters)
+		Spells(100784):Aliases(115307, 127722):OnSelf()
+
 	end
 
 	------------------------------------------------------------------------------

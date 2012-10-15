@@ -263,6 +263,7 @@ function InlineAura_LoadDefaults()
 		"MAGE",         6136, -- Chilled
 		"MAGE",         7321, -- Chilled (bis)
 		"MAGE",        11113, -- Blast Wave
+		"MONK",       116095, -- Disable (1 stack)
 		"PALADIN",      1044, -- Hand of Freedom
 		"ROGUE",        3409, -- Crippling Poison
 		"ROGUE",       26679, -- Deadly Throw
@@ -515,6 +516,9 @@ function InlineAura_LoadDefaults()
 
 		-- Blackout Kick => Serpent's Zeal (mistweavers), Shuffle (brewmasters)
 		Spells(100784):Aliases(115307, 127722):OnSelf()
+
+		-- Detox
+		Spells(115450):Aliases("DISPELLABLE")
 
 	end
 

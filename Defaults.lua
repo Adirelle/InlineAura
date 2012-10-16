@@ -517,6 +517,9 @@ function InlineAura_LoadDefaults()
 		-- Blackout Kick => Serpent's Zeal (mistweavers), Shuffle (brewmasters)
 		Spells(100784):Aliases(115307, 127722):OnSelf()
 
+		-- Guard => Power Guard
+		Spells(115295):Aliases(118636):OnSelf()
+
 		-- Detox
 		Spells(115450):Aliases("DISPELLABLE")
 

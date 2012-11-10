@@ -36,25 +36,28 @@ local overlayedSpells = addon.overlayedSpells
 local _G = _G
 local ActionButton_HideOverlayGlow = _G.ActionButton_HideOverlayGlow
 local ActionButton_ShowOverlayGlow = _G.ActionButton_ShowOverlayGlow
-local GetActionCooldown = _G.GetActionCooldown
 local assert = _G.assert
 local ceil = _G.ceil
 local CreateFrame = _G.CreateFrame
 local floor = _G.floor
 local format = _G.format
+local GetActionCooldown = _G.GetActionCooldown
 local GetSpellCooldown = _G.GetSpellCooldown
 local GetTime = _G.GetTime
 local IsSpellOverlayed = _G.IsSpellOverlayed
 local IsUsableAction = _G.IsUsableAction
 local IsUsableSpell = _G.IsUsableSpell
-local min = _G.min
 local max = _G.max
+local min = _G.min
 local next = _G.next
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
 local strmatch = _G.strmatch
+local tinsert = _G.tinsert
 local tostring = _G.tostring
+local tremove = _G.tremove
 local type = _G.type
+local UIParent = _G.UIParent
 local unpack = _G.unpack
 --GLOBALS>
 
@@ -436,6 +439,78 @@ end
 -- Highlight feedback
 ------------------------------------------------------------------------------
 
+local ShowOverlayGlow, HideOverlayGlow
+do
+	local serial = 1
+	local heap = {}
+
+	local OnHide, AnimOutFinished
+
+	local function CreateOverlayGlow()
+		serial = serial + 1
+		local overlay = CreateFrame("Frame", addonName.."ButtonOverlay"..serial, UIParent, "ActionBarButtonSpellActivationAlert")
+		overlay.animOut:SetScript("OnFinished", AnimOutFinished)
+		overlay:SetScript("OnHide", OnHide)
+		return overlay
+	end
+
+	function AnimOutFinished(animGroup)
+		local overlay = animGroup:GetParent()
+		overlay:Hide()
+		overlay:ClearAllPoints()
+		overlay:SetParent(nil)
+		overlay.state.overlay, overlay.state = nil, nil
+		tinsert(heap, overlay)
+	end
+
+	function OnHide(button)
+		if button.animOut:IsPlaying() then
+			button.animOut:Stop()
+			return AnimOutFinished(button.animOut)
+		end
+	end
+
+	function ShowOverlayGlow(state)
+		local overlay = state.overlay
+		if overlay then
+			if overlay.animOut:IsPlaying() then
+				overlay.animOut:Stop()
+				overlay.animIn:Play()
+			end
+		else
+			overlay = tremove(heap) or CreateOverlayGlow()
+			local button = state.button
+			local width, height = button:GetSize()
+			overlay:SetParent(button)
+			overlay:ClearAllPoints()
+			overlay:SetSize(width * 1.4, height * 1.4)
+			overlay:SetPoint("TOPLEFT", button, "TOPLEFT", -width * 0.2, height * 0.2)
+			overlay:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", width * 0.2, -height * 0.2)
+			overlay:Show()
+			overlay.animIn:Play()
+			overlay.state, state.overlay = state, overlay
+		end
+	end
+
+	function HideOverlayGlow(state)
+		local overlay = state.overlay
+		if overlay then
+			if overlay.animIn:IsPlaying() then
+				overlay.animIn:Stop()
+			end
+			if overlay:IsVisible() then
+				overlay.animOut:Play()
+			else
+				AnimOutFinished(overlay.animOut)
+			end
+		end
+	end
+end
+
+------------------------------------------------------------------------------
+-- Updating
+------------------------------------------------------------------------------
+
 local function IsUsable(state)
 	local usable, noPower = state:IsUsable()
 	return usable or noPower
@@ -446,37 +521,26 @@ local function IsOnCooldown(state)
 	return enable ~= 0 and start ~= 0 and duration > 1.5
 end
 
+local function CanShowGlow(state)
+	return (profile.glowOutOfCombat or addon.inCombat)
+		and (profile.glowUnusable or IsUsable(state))
+		and (profile.glowOnCooldown or not IsOnCooldown(state))
+		and not (state.spellId and IsSpellOverlayed(state.spellId))
+end
+
 function addon:UpdateButtonGlowing(state)
-	if (state.spellId and IsSpellOverlayed(state.spellId)) or state.highlight ~= "glowing" then
-		return
-	end
-
-	local button = state.button
-	if (profile.glowOutOfCombat or addon.inCombat)
-			and (profile.glowUnusable or IsUsable(state))
-			and (profile.glowOnCooldown or not IsOnCooldown(state))
-	then
-		if button.overlay then
-			if button.overlay.animOut:IsPlaying() then
-				button.overlay.animOut:Stop()
-			end
-		else
-			ActionButton_ShowOverlayGlow(button)
-		end
-		-- Small hack to prevent ugly glitches
-		local animIn = button.overlay.animIn
-		if not animIn:IsPlaying() then
-			animIn:GetScript('OnFinished')(animIn)
-		end
-
-	elseif button.overlay and not button.overlay.animOut:IsPlaying() then
-		ActionButton_HideOverlayGlow(button)
+	if state.highlight == "glowing" and CanShowGlow(state) then
+		ShowOverlayGlow(state)
+	else
+		HideOverlayGlow(state)
 	end
 end
 
 function addon:UpdateButtonUsable(state)
-	if state.highlight == "glowing" and not profile.glowUnusable then
-		return self:UpdateButtonGlowing(state)
+	if state.highlight == "glowing" then
+		if not profile.glowUnusable then
+			return self:UpdateButtonGlowing(state)
+		end
 	elseif state.highlight == "dim" then
 		state.button.icon:SetVertexColor(0.4, 0.4, 0.4)
 		GetNormalTexture(state.button):SetVertexColor(1.0, 1.0, 1.0)

@@ -46,11 +46,10 @@ local tokenUnits = {}
 local needUpdate = false
 local configUpdated = false
 
-local buttons = {}
-local newButtons = {}
-local activeButtons = {}
-local blizzardButtons = {}
-addon.buttons = buttons
+local buttonRegistry = {}
+addon.buttonRegistry = buttonRegistry
+local activeButtonStates = {}
+local blizzardButtonStates = {}
 
 ------------------------------------------------------------------------------
 -- Make often-used globals local
@@ -624,17 +623,28 @@ local function GetMacroAction(index)
 	end
 end
 
-local function UpdateButtonAura(self, force)
-	local state = buttons[self]
-	if not state then return end
+------------------------------------------------------------------------------
+-- Generic button state prototype
+------------------------------------------------------------------------------
 
-	local spell, targetHint, specific = state.spell, state.targetHint, state.specific
+local buttonStateProto = {}
+local buttonStateMeta = { __index = buttonStateProto }
+addon.buttonStateProto = buttonStateProto
+
+if AdiDebug then
+	AdiDebug:Embed(buttonStateProto, 'InlineAura')
+else
+	buttonStateProto.Debug = function() end
+end
+
+function buttonStateProto:UpdateStatus(force)
+	local spell, targetHint, specific = self.spell, self.targetHint, self.specific
 	local target
 	if targetHint == "friend" or targetHint == "foe" then
-		if state.action == "macro" then
-			target = GuessMacroTarget(state.param)
+		if self.action == "macro" then
+			target = GuessMacroTarget(self.param)
 		else
-			target = FilterEmpty(SecureButton_GetModifiedUnit(self))
+			target = FilterEmpty(SecureButton_GetModifiedUnit(self.button))
 		end
 	end
 	if not target then
@@ -644,11 +654,11 @@ local function UpdateButtonAura(self, force)
 	-- Get the GUID
 	local guid = target and UnitGUID(target)
 
-	if force or guid ~= state.guid or auraChanged[guid or state.guid or false] then
+	if force or guid ~= self.guid or auraChanged[guid or self.guid or false] then
 		--@debug@
-		-- self:Debug("UpdateButtonAura: updating because", (force and "forced") or (guid ~= state.guid and "guid changed") or "aura changed", "|", spell, target, specific, guid)
+		-- self:Debug("UpdateButtonAura: updating because", (force and "forced") or (guid ~= self.guid and "guid changed") or "aura changed", "|", spell, target, specific, guid)
 		--@end-debug@
-		state.guid = guid
+		self.guid = guid
 
 		local count, expirationTime, highlight
 		if spell and target and (targetHint ~= "foe" or UnitIsDebuffable(target)) and (targetHint ~= "friend" or UnitIsBuffable(target)) and UnitExists(target) and UnitIsVisible(target) and UnitIsConnected(target) and not UnitIsDeadOrGhost(target) then
@@ -664,34 +674,28 @@ local function UpdateButtonAura(self, force)
 			highlight = 'border'
 		end
 
-		if force or state.highlight ~= highlight or state.highlightBorder ~= highlightBorder then
+		if force or self.highlight ~= highlight or self.highlightBorder ~= highlightBorder then
 			--@debug@
 			self:Debug("GetAuraToDisplay: updating highlight")
 			--@end-debug@
-			state.highlight, state.highlightBorder = highlight, highlightBorder
-			state:UpdateAll()
+			self.highlight, self.highlightBorder = highlight, highlightBorder
+			self:UpdateHighlight()
 		end
 
-		if force or state.count ~= count or state.expirationTime ~= expirationTime then
+		if force or self.count ~= count or self.expirationTime ~= expirationTime then
 			--@debug@
 			self:Debug("GetAuraToDisplay: updating countdown and/or stack", expirationTime, count)
 			--@end-debug@
-			state.count, state.expirationTime = count, expirationTime
-			addon.ShowCountdownAndStack(self, expirationTime, count)
+			self.count, self.expirationTime = count, expirationTime
+			addon.ShowCountdownAndStack(self.button, expirationTime, count)
 		end
 	end
 end
 
-------------------------------------------------------------------------------
--- Action handling
-------------------------------------------------------------------------------
-
-local function UpdateAction_Hook(self, forceUpdate)
-	local state = buttons[self]
-	if not state then return end
+function buttonStateProto:UpdateAction(force)
 	local action, param
-	if self:IsVisible() then
-		action, param = state:GetAction()
+	if self.button:IsVisible() then
+		action, param = self:GetAction()
 		if action == 'action' then
 			local actionAction, actionParam, _, spellId = GetActionInfo(param)
 			if actionAction == 'companion' then
@@ -702,10 +706,10 @@ local function UpdateAction_Hook(self, forceUpdate)
 				action, param = nil, nil
 			end
 		end
-		state.spellId = (action == "spell") and tonumber(param)
+		self.spellId = (action == "spell") and tonumber(param)
 	end
-	if forceUpdate or action == "macro" or action ~= state.action or param ~= state.param then
-		state.action, state.param = action, param
+	if force or action == "macro" or action ~= self.action or param ~= self.param then
+		self.action, self.param = action, param
 		local spell, targetHint, specific, active
 		if action and param then
 			if action == "macro" then
@@ -714,7 +718,7 @@ local function UpdateAction_Hook(self, forceUpdate)
 					spell, targetHint, specific = AnalyzeAction(macroAction, macroParam)
 					active = "*"
 					if macroAction == "spell" and type(macroParam) == "number" then
-						state.spellId = macroParam
+						self.spellId = macroParam
 					end
 				end
 			else
@@ -722,103 +726,109 @@ local function UpdateAction_Hook(self, forceUpdate)
 				active = targetHint
 			end
 		end
-		activeButtons[self] = active
-		if state.spell ~= spell or state.targetHint ~= targetHint or state.specific ~= specific then
-			state.spell, state.targetHint, state.specific = spell, targetHint, specific
-			forceUpdate = true
+		activeButtonStates[self] = active
+		if self.spell ~= spell or self.targetHint ~= targetHint or self.specific ~= specific then
+			self.spell, self.targetHint, self.specific = spell, targetHint, specific
+			force = true
 		end
-		--@debug@
-		--self:Debug("UpdateAction_Hook: action changed =>", action, param, "static:", spell, targetHint, specific, forceUpdate and "| forcing update")
-		--@end-debug@
-		return UpdateButtonAura(self, forceUpdate)
+		return self:UpdateStatus(force)
 	end
+end
+
+------------------------------------------------------------------------------
+-- Hooks
+------------------------------------------------------------------------------
+
+local function ForceUpdateHook(button)
+	return buttonRegistry[button]:UpdateAction(true)
+end
+
+local function UpdateHook(button)
+	return buttonRegistry[button]:UpdateAction()
+end
+
+local function UpdateStateHook(button)
+	return buttonRegistry[button]:UpdateState()
+end
+
+local function UpdateUsableHook(button)
+	return buttonRegistry[button]:UpdateUsable()
+end
+
+local function UpdateGlowingHook(button)
+	return buttonRegistry[button]:UpdateGlowing()
 end
 
 ------------------------------------------------------------------------------
 -- Button initializing
 ------------------------------------------------------------------------------
 
-local buttonClasses = {
-	Blizzard = {
-		__index = {
-			GetAction = function(self) return 'action', self.button.action end,
-			GetCooldown = function(self) return GetActionCooldown(self.button.action) end,
-			IsUsable = function(self) return IsUsableAction(self.button.action) end,
-			UpdateAll = function(self)
-				ActionButton_UpdateUsable(self.button)
-				ActionButton_UpdateState(self.button)
-				ActionButton_UpdateCooldown(self.button)
-				ActionButton_UpdateOverlayGlow(self.button)
-			end,
-		}
-	},
-	LibActionButton = {
-		__index = {
-			GetAction = function(self) return self.button:GetAction() end,
-			GetCooldown = function(self) return self.button:GetCooldown() end,
-			IsUsable = function(self) return self.button:IsUsable() end,
-			UpdateAll = function(self) return self.button:UpdateAction(true) end,
-		}
-	}
-}
+local blizzardButtonProto = setmetatable({
+	__type = "Blizzard",
+	Initialize = function(self)
+		blizzardButtonStates[self] = true
+	end,
+	GetAction = function(self)
+		return 'action', self.button.action
+	end,
+	GetCooldown = function(self)
+		return GetActionCooldown(self.button.action)
+	end,
+	IsUsable = function(self)
+		return IsUsableAction(self.button.action)
+	end,
+	UpdateHighlight = function(self)
+		ActionButton_UpdateState(self.button)
+		ActionButton_UpdateUsable(self.button)
+		self:UpdateGlowing()
+	end,
+}, buttonStateMeta)
 
-local function NOOP() end
-local function InitializeButton(self)
-	if buttons[self] then return end
-	local state = { button = self }
-	buttons[self] = state
-	if AdiDebug then
-		AdiDebug:Embed(self, 'InlineAura')
-	elseif not self.Debug then
-		self.Debug = NOOP
+local libActionButtonProto = setmetatable({
+	__type = "LibActionButton",
+	Initialize = function(self)
+		self.button:HookScript('OnShow', ForceUpdateHook)
+	end,
+	GetAction = function(self)
+		return self.button:GetAction()
+	end,
+	GetCooldown = function(self)
+		return self.button:GetCooldown()
+	end,
+	IsUsable = function(self)
+		return self.button:IsUsable()
+	end,
+	UpdateAction = function(self, force)
+		-- Avoid infinite recursion when called from UpdateHighlight
+		if not self.updating then
+			self.updating = true
+			buttonStateProto.UpdateAction(self, force)
+			self.updating = nil
+		end
+	end,
+	UpdateHighlight = function(self)
+		-- This is the only to force the refresh of state and usable feedbacks
+		self.button:UpdateAction(true)
+		-- Now refresh our feedback
+		self:UpdateState()
+		self:UpdateUsable()
+		self:UpdateGlowing()
+	end,
+}, buttonStateMeta)
+
+local blizzardButtonMeta = { __index = blizzardButtonProto }
+local libActionButtonMeta = { __index = libActionButtonProto }
+
+setmetatable(buttonRegistry, {
+	__index = function(registry, button)
+		if not button then return end
+		local meta = button.__LAB_Version and libActionButtonMeta or blizzardButtonMeta
+		local state = setmetatable({button = button}, meta)
+		state:Initialize()
+		registry[button] = state
+		return state
 	end
-	if AdiProfiler then
-		AdiProfiler:RegisterFrame(self, "ia:ActionButton")
-	end
-	if self.__LAB_Version then
-		setmetatable(state, buttonClasses.LibActionButton)
-		self:HookScript('OnShow', UpdateAction_Hook)
-	else
-		setmetatable(state, buttonClasses.Blizzard)
-		blizzardButtons[self] = state
-	end
-	return UpdateAction_Hook(self)
-end
-
-------------------------------------------------------------------------------
--- Blizzard button hooks
-------------------------------------------------------------------------------
-
-local function ActionButton_OnLoad_Hook(self)
-	if not buttons[self] and not newButtons[self] then
-		newButtons[self] = true
-		return true
-	end
-end
-
-local function ActionButton_Update_Hook(self)
-	return ActionButton_OnLoad_Hook(self) or UpdateAction_Hook(self)
-end
-
-local function ActionButton_UpdateState_Hook(self)
-	local state = buttons[self]
-	return state and addon:UpdateButtonState(state)
-end
-
-local function ActionButton_UpdateUsable_Hook(self)
-	local state = buttons[self]
-	return state and addon:UpdateButtonUsable(state)
-end
-
-local function ActionButton_UpdateCooldown_Hook(self)
-	local state = buttons[self]
-	return state and addon:UpdateButtonCooldown(state)
-end
-
-local function ActionButton_UpdateOverlayGlow_Hook(self)
-	local state = buttons[self]
-	return state and addon:UpdateButtonGlowing(state)
-end
+})
 
 ------------------------------------------------------------------------------
 -- Event listener stuff
@@ -858,27 +868,20 @@ local function UpdateMouseover(elapsed)
 	end
 end
 
-local function InitializeNewButtons()
-	-- Initializing any pending buttons
-	for button in pairs(newButtons) do
-		InitializeButton(button)
-	end
-end
-
 local function UpdateButtons()
 	-- Update all buttons
 	if configUpdated then
-		for button in pairs(buttons) do
-			UpdateAction_Hook(button, true)
+		for button, state in pairs(buttonRegistry) do
+			state:UpdateAction(true)
 		end
 	elseif needUpdate then
-		for button in pairs(activeButtons) do
-			UpdateButtonAura(button, true)
+		for state in pairs(activeButtonStates) do
+			state:UpdateStatus(true)
 		end
 	else
-		for button, hint in pairs(activeButtons) do
+		for state, hint in pairs(activeButtonStates) do
 			if hint == "*" or tokenChanged[hint] or auraChanged[tokenGUIDs[hint]] then
-				UpdateButtonAura(button)
+				state:UpdateStatus()
 			end
 		end
 	end
@@ -893,12 +896,6 @@ function addon:OnUpdate(elapsed)
 	-- Watch for mouseover aura if we can't get UNIT_AURA events
 	if tokenGUIDs['mouseover'] then
 		UpdateMouseover(elapsed)
-	end
-
-	-- Handle new buttons
-	if next(newButtons) then
-		InitializeNewButtons()
-		wipe(newButtons)
 	end
 
 	-- Update buttons
@@ -922,8 +919,8 @@ end
 function addon:RegisterButtons(prefix, count)
 	for id = 1, count do
 		local button = _G[prefix .. id]
-		if button and not buttons[button] and not newButtons[button] then
-			newButtons[button] = true
+		if button then
+			buttonRegistry[button]:UpdateAction(true)
 		end
 	end
 end
@@ -1074,23 +1071,23 @@ end
 function addon:PLAYER_REGEN_ENABLED(event)
 	addon.inCombat = (event == 'PLAYER_REGEN_DISABLED')
 	if not profile.glowOutOfCombat then
-		for button in pairs(activeButtons) do
-			self:UpdateButtonGlowing(buttons[button])
+		for state in pairs(activeButtonStates) do
+			state:UpdateGlowing()
 		end
 	end
 end
 
 function addon:ACTIONBAR_UPDATE_COOLDOWN(event)
 	if not profile.glowOnCooldown then
-		for button, state in pairs(blizzardButtons) do
-			self:UpdateButtonCooldown(state)
+		for state in pairs(blizzardButtonStates) do
+			state:UpdateGlowing()
 		end
 	end
 end
 
 function addon:ACTIONBAR_UPDATE_STATE(event)
-	for button, state in pairs(blizzardButtons) do
-		self:UpdateButtonState(state)
+	for state in pairs(blizzardButtonStates) do
+		state:UpdateState()
 	end
 end
 
@@ -1108,7 +1105,7 @@ local addonSupport = {
 	Dominos = function(self)
 		self:RegisterButtons("DominosActionButton", 120)
 		-- GLOBALS: Dominos
-		hooksecurefunc(Dominos.ActionButton, "Skin", ActionButton_OnLoad_Hook)
+		hooksecurefunc(Dominos.ActionButton, "Skin", ForceUpdateHook)
 	end,
 	OmniCC = function(self)
 		self.bigCountdown = false
@@ -1118,7 +1115,7 @@ local addonSupport = {
 	end,
 	tullaRange = function(self)
 		-- GLOBALS: tullaRange
-		hooksecurefunc(tullaRange, "SetButtonColor", ActionButton_UpdateUsable_Hook)
+		hooksecurefunc(tullaRange, "SetButtonColor", UpdateUsableHook)
 	end,
 	ElvUI = function(self)
 		return self:HasElvUI()
@@ -1133,12 +1130,12 @@ local librarySupport = {
 	end,
 	["LibActionButton-1.0"] = function(self, lib, minor)
 		if minor >= 11 then -- Callbacks and GetAllButtons() are supported since minor 11
-			lib.RegisterCallback(self, "OnButtonCreated", function(_, button) return InitializeButton(button) end)
-			lib.RegisterCallback(self, "OnButtonUpdate", function(_, button) return UpdateAction_Hook(button) end)
-			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return ActionButton_UpdateUsable_Hook(button) end)
-			lib.RegisterCallback(self, "OnButtonState", function(_, button) return ActionButton_UpdateState_Hook(button) end)
+			lib.RegisterCallback(self, "OnButtonCreate", function(_, button) return  buttonRegistry[button]:UpdateAction(true) end)
+			lib.RegisterCallback(self, "OnButtonUpdate", function(_, button) return  buttonRegistry[button]:UpdateAction() end)
+			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return  buttonRegistry[button]:UpdateUsable() end)
+			lib.RegisterCallback(self, "OnButtonState", function(_, button) return buttonRegistry[button]:UpdateState() end)
 			for button in pairs(lib:GetAllButtons()) do
-				newButtons[button] = true
+				buttonRegistry[button]:UpdateAction(true)
 			end
 		else
 			local _, loader = issecurevariable(lib, "CreateButton")
@@ -1377,12 +1374,11 @@ function addon:OnEnable()
 --@end-debug@
 
 		-- Secure hooks
-		hooksecurefunc('ActionButton_OnLoad', ActionButton_OnLoad_Hook)
-		hooksecurefunc('ActionButton_Update', ActionButton_Update_Hook)
-		hooksecurefunc('ActionButton_UpdateState', ActionButton_UpdateState_Hook)
-		hooksecurefunc('ActionButton_UpdateUsable', ActionButton_UpdateUsable_Hook)
-		hooksecurefunc('ActionButton_UpdateCooldown', ActionButton_UpdateCooldown_Hook)
-		hooksecurefunc('ActionButton_UpdateOverlayGlow', ActionButton_UpdateOverlayGlow_Hook)
+		hooksecurefunc('ActionButton_OnLoad', ForceUpdateHook)
+		hooksecurefunc('ActionButton_Update', UpdateHook)
+		hooksecurefunc('ActionButton_UpdateState', UpdateStateHook)
+		hooksecurefunc('ActionButton_UpdateUsable', UpdateUsableHook)
+		hooksecurefunc('ActionButton_UpdateOverlayGlow', UpdateGlowingHook)
 
 		-- Our bucket thingy
 		local delay = 0
@@ -1467,28 +1463,3 @@ end
 
 -- InterfaceOptionsFrame spy
 CreateFrame("Frame", nil, InterfaceOptionsFrameAddOns):SetScript('OnShow', LoadConfigGUI)
-
-------------------------------------------------------------------------------
--- Profiling stuff
-------------------------------------------------------------------------------
-
-if AdiProfiler then
-	-- "Interesting functions"
-	AdiProfiler:RegisterFunction(CheckAura, "ia:CheckAura")
-	AdiProfiler:RegisterFunction(AuraLookup, "ia:AuraLookup")
-	AdiProfiler:RegisterFunction(UpdateButtons, "ia:UpdateButtons")
-	AdiProfiler:RegisterFunction(UpdateButtonAura, "ia:UpdateButtonAura")
-	AdiProfiler:RegisterFunction(GetMacroAction, "ia:GetMacroAction")
-	AdiProfiler:RegisterFunction(AnalyzeAction, "ia:AnalyzeAction")
-	AdiProfiler:RegisterFunction(GuessMacroTarget, "ia:GuessMacroTarget")
-	AdiProfiler:RegisterFunction(FilterEmpty, "ia:FilterEmpty")
-	AdiProfiler:RegisterFunction(SecureButton_GetModifiedUnit, "ia:SecureButton_GetModifiedUnit")
-	AdiProfiler:RegisterFunction(UnitIsDebuffable, "ia:UnitIsDebuffable")
-	AdiProfiler:RegisterFunction(UnitIsBuffable, "ia:UnitIsBuffable")
-	AdiProfiler:RegisterFunction(GetAuraToDisplay, "ia:GetAuraToDisplay")
-	AdiProfiler:RegisterFunction(addon.UpdateTokens, "ia:UpdateTokens")
-	AdiProfiler:RegisterFunction(addon.UpdateToken, "ia:UpdateToken")
-
-	-- Hooks
-	AdiProfiler:RegisterFunction(UpdateAction_Hook, "ia:UpdateAction_Hook")
-end

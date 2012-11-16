@@ -505,7 +505,7 @@ function spellSpecificHandler:GetSpellList()
 	local pref = profile.configSpellSources
 	if pref.actionbars then
 		-- Scan action buttons for spells and items
-		for button, state in pairs(addon.buttons) do
+		for button, state in pairs(addon.buttonRegistry) do
 			local action, param = state.action, state.param
 			if action == "macro" then
 				local macro = param

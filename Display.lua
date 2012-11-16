@@ -25,8 +25,7 @@ local addonName, addon = ...
 
 local L = addon.L
 local dprint = addon.dprint
-local buttons = addon.buttons
-local overlayedSpells = addon.overlayedSpells
+local buttonStateProto = addon.buttonStateProto
 
 ------------------------------------------------------------------------------
 -- Make often-used globals local
@@ -34,8 +33,6 @@ local overlayedSpells = addon.overlayedSpells
 
 --<GLOBALS
 local _G = _G
-local ActionButton_HideOverlayGlow = _G.ActionButton_HideOverlayGlow
-local ActionButton_ShowOverlayGlow = _G.ActionButton_ShowOverlayGlow
 local assert = _G.assert
 local ceil = _G.ceil
 local CreateFrame = _G.CreateFrame
@@ -149,12 +146,6 @@ function baseProto:Initialize(button)
 	return self:ApplySettings()
 end
 
---@debug@
-function baseProto:Debug(...)
-	return self.button:Debug(...)
-end
---@end-debug@
-
 function baseProto:SetPosition(position)
 	if position ~= self.position then
 		self.position = position
@@ -179,9 +170,6 @@ end
 function baseProto:SetValue(value)
 	if value ~= self.value then
 		self.value = value
-		--@debug@
-		self:Debug('SetValue', value)
-		--@end-debug@
 		return self:_SetValue(value)
 	end
 end
@@ -316,9 +304,6 @@ end
 ------------------------------------------------------------------------------
 
 local overlays = setmetatable({}, { __index = function(t, button)
-	--@debug@
-	button:Debug("Spawning overlay")
-	--@end-debug@
 	local overlay = CreateFrame("Frame", nil, button)
 	local cooldown = _G[button:GetName()..'Cooldown']
 	overlay:SetFrameLevel(cooldown:GetFrameLevel() + 5)
@@ -333,9 +318,6 @@ local stacks = {}
 local function GetWidget(button, spawn, registry, key, meta)
 	local widget = registry[button]
 	if not widget and spawn then
-		--@debug@
-		button:Debug("Spawning", key)
-		--@end-debug@
 		local overlay = overlays[button]
 		widget = setmetatable(overlay:CreateFontString(nil, "OVERLAY"), meta)
 		widget:Initialize(button)
@@ -381,7 +363,6 @@ function addon.ShowCountdownAndStack(button, expirationTime, count)
 	if stack then
 		stack:SetValue(count)
 	end
-	button:Debug("ShowCountdownAndStack", expirationTime, count, "=>", countdown, stack)
 	if stack or countdown then
 		return UpdateTextLayout(countdown, stack)
 	end
@@ -439,7 +420,6 @@ end
 -- Highlight feedback
 ------------------------------------------------------------------------------
 
-local ShowOverlayGlow, HideOverlayGlow
 do
 	local serial = 1
 	local heap = {}
@@ -459,7 +439,8 @@ do
 		overlay:Hide()
 		overlay:ClearAllPoints()
 		overlay:SetParent(nil)
-		overlay.state.overlay, overlay.state = nil, nil
+		overlay.state.overlay = nil
+		overlay.state = nil
 		tinsert(heap, overlay)
 	end
 
@@ -470,8 +451,8 @@ do
 		end
 	end
 
-	function ShowOverlayGlow(state)
-		local overlay = state.overlay
+	function buttonStateProto:ShowOverlayGlow()
+		local overlay = self.overlay
 		if overlay then
 			if overlay.animOut:IsPlaying() then
 				overlay.animOut:Stop()
@@ -479,7 +460,7 @@ do
 			end
 		else
 			overlay = tremove(heap) or CreateOverlayGlow()
-			local button = state.button
+			local button = self.button
 			local width, height = button:GetSize()
 			overlay:SetParent(button)
 			overlay:ClearAllPoints()
@@ -488,12 +469,12 @@ do
 			overlay:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", width * 0.2, -height * 0.2)
 			overlay:Show()
 			overlay.animIn:Play()
-			overlay.state, state.overlay = state, overlay
+			overlay.state, self.overlay = self, overlay
 		end
 	end
 
-	function HideOverlayGlow(state)
-		local overlay = state.overlay
+	function buttonStateProto:HideOverlayGlow()
+		local overlay = self.overlay
 		if overlay then
 			if overlay.animIn:IsPlaying() then
 				overlay.animIn:Stop()
@@ -511,64 +492,57 @@ end
 -- Updating
 ------------------------------------------------------------------------------
 
-local function IsUsable(state)
-	local usable, noPower = state:IsUsable()
+function buttonStateProto:IsUsableAtAll()
+	local usable, noPower = self:IsUsable()
 	return usable or noPower
 end
 
-local function IsOnCooldown(state)
-	local start, duration, enable = state:GetCooldown()
+function buttonStateProto:IsOnCooldown()
+	local start, duration, enable = self:GetCooldown()
 	return enable ~= 0 and start ~= 0 and duration > 1.5
 end
 
-local function CanShowGlow(state)
+function buttonStateProto:CanShowGlow()
 	return (profile.glowOutOfCombat or addon.inCombat)
-		and (profile.glowUnusable or IsUsable(state))
-		and (profile.glowOnCooldown or not IsOnCooldown(state))
-		and not (state.spellId and IsSpellOverlayed(state.spellId))
+		and (profile.glowUnusable or self:IsUsableAtAll())
+		and (profile.glowOnCooldown or not self:IsOnCooldown())
+		and not (self.spellId and IsSpellOverlayed(self.spellId))
 end
 
-function addon:UpdateButtonGlowing(state)
-	if state.highlight == "glowing" and CanShowGlow(state) then
-		ShowOverlayGlow(state)
+function buttonStateProto:UpdateGlowing()
+	if self.highlight == "glowing" and self:CanShowGlow() then
+		self:ShowOverlayGlow()
 	else
-		HideOverlayGlow(state)
+		self:HideOverlayGlow()
 	end
 end
 
-function addon:UpdateButtonUsable(state)
-	if state.highlight == "glowing" then
+function buttonStateProto:UpdateUsable()
+	if self.highlight == "glowing" then
 		if not profile.glowUnusable then
-			return self:UpdateButtonGlowing(state)
+			return self:UpdateGlowing()
 		end
-	elseif state.highlight == "dim" then
-		state.button.icon:SetVertexColor(0.4, 0.4, 0.4)
-		GetNormalTexture(state.button):SetVertexColor(1.0, 1.0, 1.0)
+	elseif self.highlight == "dim" then
+		self.button.icon:SetVertexColor(0.4, 0.4, 0.4)
+		GetNormalTexture(self.button):SetVertexColor(1.0, 1.0, 1.0)
 	end
 end
 
-function addon:UpdateButtonState(state)
-	if state.highlight == "border" then
-		local color = profile["color"..state.highlightBorder]
+function buttonStateProto:UpdateState()
+	if self.highlight == "border" then
+		local color = profile["color"..self.highlightBorder]
 		if color then
-			state.button:SetChecked(true)
-			if not state.previousCheckedColors then
-				state.previousCheckedColors = { SetCheckedTextureColor(state.button, unpack(color)) }
+			self.button:SetChecked(true)
+			if not self.previousCheckedColors then
+				self.previousCheckedColors = { SetCheckedTextureColor(self.button, unpack(color)) }
 			else
-				SetCheckedTextureColor(state.button, unpack(color))
+				SetCheckedTextureColor(self.button, unpack(color))
 			end
 			return
 		end
 	end
-	if state.previousCheckedColors then
-		SetCheckedTextureColor(state.button, unpack(state.previousCheckedColors))
-		state.previousCheckedColors = nil
+	if self.previousCheckedColors then
+		SetCheckedTextureColor(self.button, unpack(self.previousCheckedColors))
+		self.previousCheckedColors = nil
 	end
 end
-
-function addon:UpdateButtonCooldown(state)
-	if state.highlight == "glowing" and not profile.glowOnCooldown then
-		return self:UpdateButtonGlowing(state)
-	end
-end
-

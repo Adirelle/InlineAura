@@ -687,7 +687,7 @@ function buttonStateProto:UpdateStatus(force)
 			self:Debug("GetAuraToDisplay: updating countdown and/or stack", expirationTime, count)
 			--@end-debug@
 			self.count, self.expirationTime = count, expirationTime
-			addon.ShowCountdownAndStack(self.button, expirationTime, count)
+			self:UpdateTextOverlay()
 		end
 	end
 end
@@ -1433,6 +1433,8 @@ function addon:OnEnable()
 	self:RegisterEvent('PLAYER_REGEN_DISABLED', 'PLAYER_REGEN_ENABLED')
 	--self:RegisterEvent('ACTIONBAR_UPDATE_USABLE')
 	self:RegisterEvent('ACTIONBAR_UPDATE_COOLDOWN')
+
+	addon:UpdateWidgets()
 
 	-- Refresh everything
 	self:RequireUpdate(true)

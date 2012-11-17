@@ -35,15 +35,12 @@ local buttonStateProto = addon.buttonStateProto
 local _G = _G
 local assert = _G.assert
 local ceil = _G.ceil
+local CreateFont = _G.CreateFont
 local CreateFrame = _G.CreateFrame
 local floor = _G.floor
 local format = _G.format
-local GetActionCooldown = _G.GetActionCooldown
-local GetSpellCooldown = _G.GetSpellCooldown
 local GetTime = _G.GetTime
 local IsSpellOverlayed = _G.IsSpellOverlayed
-local IsUsableAction = _G.IsUsableAction
-local IsUsableSpell = _G.IsUsableSpell
 local max = _G.max
 local min = _G.min
 local next = _G.next
@@ -67,7 +64,7 @@ local LSM = LibStub('LibSharedMedia-3.0')
 -- Local reference to addon settings
 ------------------------------------------------------------------------------
 local profile = addon.db and addon.db.profile
-LibStub('AceEvent-3.0').RegisterMessage('InlineAura/Display.lua', 'InlineAura_ProfileChanged',function() profile = addon.db.profile end)
+LibStub('AceEvent-3.0').RegisterMessage('InlineAura/Display.lua', 'InlineAura_ProfileChanged', function() profile = addon.db.profile end)
 
 ------------------------------------------------------------------------------
 -- Home-made bucketed timers
@@ -134,108 +131,52 @@ do
 end
 
 ------------------------------------------------------------------------------
--- Base fontstring widget
+-- Local values
 ------------------------------------------------------------------------------
 
-local baseProto = setmetatable({}, { __index = CreateFrame("Frame"):CreateFontString() })
-local baseMeta = { __index = baseProto }
-
-function baseProto:Initialize(button)
-	self.button = button
-	self:SetAllPoints(button)
-	return self:ApplySettings()
-end
-
-function baseProto:SetPosition(position)
-	if position ~= self.position then
-		self.position = position
-		self:SetJustifyH(strmatch(position, 'LEFT') or strmatch(position, 'RIGHT') or 'MIDDLE')
-		self:SetJustifyV(strmatch(position, 'TOP') or strmatch(position, 'BOTTOM') or 'CENTER')
-	end
-end
-
-function baseProto:ApplySettings()
-	self.font = LSM:Fetch(LSM.MediaType.FONT, profile.fontName)
-	self.fontFlag = profile.fontFlag
-	self.fontSize = profile[self.sizeKey]
-	self.fontColor = profile[self.colorKey]
-	return self:UpdateFont()
-end
-
-function baseProto:UpdateFont()
-	self:SetFont(self.font, self.fontSize, self.fontFlag)
-	self:SetTextColor(unpack(self.fontColor))
-end
-
-function baseProto:SetValue(value)
-	if value ~= self.value then
-		self.value = value
-		return self:_SetValue(value)
-	end
-end
+local countFont = CreateFont(addonName.."CountFont")
+local fontFile, countdownFontSize = NumberFontNormalLarge:GetFont()
 
 ------------------------------------------------------------------------------
--- Countdown text widget
+-- Dynamic countdown font
 ------------------------------------------------------------------------------
 
-local countdownProto = setmetatable({}, baseMeta)
-local countdownMeta = { __index = countdownProto }
+-- Size and color modifiers
+local dynamicModifiers = {
+	-- { font scale, r, g, b }
+	{ 1.3, 1, 0, 0 }, -- soon
+	{ 1.0, 1, 1, 0 }, -- in less than a minute
+	{ 0.8, 1, 1, 1 }, -- in more than a minute
+}
 
-countdownProto.colorKey = "colorCountdown"
-countdownProto.sizeKey = "largeFontSize"
-
-function countdownProto:UpdateFont()
-	local fontSize, r, g, b = self:getFontSize()
-	self:SetTextColor(r, g, b)
-	self:SetFont(self.font, fontSize, self.fontFlag)
-	local overflowRatio = self:GetStringWidth() / (self:GetParent():GetWidth()-4)
-	if overflowRatio > 1 then
-		return self:SetFont(self.font, max(5, fontSize / overflowRatio), self.fontFlag)
-	end
+local function GetCountdownStaticFont()
+	return countdownFontSize, unpack(profile.colorCountdown)
 end
 
-function countdownProto:ApplySettings()
-	self.sizeKey = addon.bigCountdown and "largeFontSize" or "smallFontSize"
-	self.getCountdownText = profile.preciseCountdown and self.GetPreciseCountdownText or self.GetImpreciseCountdownText
-	self.decimalThreshold = profile.decimalCountdownThreshold
-	self.getFontSize = profile.dynamicCountdownColor and self.GetDynamicFontSize or self.GetStaticFontSize
-	return baseProto.ApplySettings(self)
-end
-
-function countdownProto:_SetValue(value)
-	if not value then
-		self:Hide()
-		CancelTimer(self)
-		self.timeLeft = nil
+local function GetCountdownDynamicFont(timeLeft)
+	if timeLeft then
+		local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
+		local scale, r, g, b = unpack(dynamicModifiers[phase])
+		return countdownFontSize * scale, r, g, b
 	else
-		self:Show()
-		self:OnUpdate(GetTime())
+		return GetCountdownStaticFont()
 	end
 end
 
-function countdownProto:OnUpdate(now)
-	local timeLeft = self.value - now
-	if timeLeft <= 0 then
-		return self:SetValue(nil)
-	end
-	self.timeLeft = timeLeft
-	local displayTime, delay = self:getCountdownText()
-	self:SetText(displayTime)
-	self:UpdateFont()
-	ScheduleTimer(self, min(delay, timeLeft))
-end
+local GetCountdownFont = GetCountdownStaticFont
 
+------------------------------------------------------------------------------
 -- Countdown formatting
+------------------------------------------------------------------------------
 
-function countdownProto:GetPreciseCountdownText()
-	local timeLeft = self.timeLeft
+local function FormatPreciseCountdown(timeLeft)
 	if timeLeft >= 3600 then
 		return format(L["%dh"], floor(timeLeft/3600)), 1 + floor(timeLeft) % 3600
 	elseif timeLeft >= 600 then
 		return format(L["%dm"], floor(timeLeft/60)), 1 + floor(timeLeft) % 60
 	elseif timeLeft >= 60 then
 		return format("%d:%02d", floor(timeLeft/60), floor(timeLeft%60)), timeLeft % 1
-	elseif timeLeft >= self.decimalThreshold then
+	elseif timeLeft >= profile.decimalCountdownThreshold then
 		return tostring(floor(timeLeft)), timeLeft % 1
 	elseif timeLeft > 0 then
 		return format("%.1f", floor(timeLeft*10)/10), 0
@@ -244,8 +185,7 @@ function countdownProto:GetPreciseCountdownText()
 	end
 end
 
-function countdownProto:GetImpreciseCountdownText()
-	local timeLeft = self.timeLeft
+local function FormatImpreciseCountdown(timeLeft)
 	if timeLeft >= 3600 then
 		return format(L["%dh"], ceil(timeLeft/3600)), ceil(timeLeft) % 3600
 	elseif timeLeft >= 60 then
@@ -257,126 +197,201 @@ function countdownProto:GetImpreciseCountdownText()
 	end
 end
 
--- Size and color modifiers
-
-local dynamicModifiers = {
-	-- { font scale, r, g, b }
-	{ 1.3, 1, 0, 0 }, -- soon
-	{ 1.0, 1, 1, 0 }, -- in less than a minute
-	{ 0.8, 1, 1, 1 }, -- in more than a minute
-}
-
-function countdownProto:GetDynamicFontSize()
-	local timeLeft = self.timeLeft
-	if timeLeft then
-		local phase = (timeLeft <= 5 and 1) or (timeLeft <= 60 and 2) or 3
-		local scale, r, g, b = unpack(dynamicModifiers[phase])
-		return self.fontSize * scale, r, g, b
-	end
-	return self:GetStaticFontSize()
-end
-
-function countdownProto:GetStaticFontSize()
-	return self.fontSize, unpack(self.fontColor)
-end
+local FormatCountdown = FormatImpreciseCountdown
 
 ------------------------------------------------------------------------------
--- Stack text widget
+-- Countdown text widget
 ------------------------------------------------------------------------------
 
-local stackProto = setmetatable({}, baseMeta)
-local stackMeta = { __index = stackProto }
+local textOverlayProto = setmetatable({}, { __index = CreateFrame("Frame") })
+local textOverlayMeta = { __index = textOverlayProto }
 
-stackProto.colorKey = "colorStack"
-stackProto.sizeKey = "smallFontSize"
+if AdiDebug then
+	AdiDebug:Embed(textOverlayProto, 'InlineAura')
+else
+	textOverlayProto.Debug = function() end
+end
 
-function stackProto:_SetValue(value)
-	if value then
-		self:SetFormattedText("%d", value)
-		return self:Show()
+function textOverlayProto:Initialize()
+	local countdownText = self:CreateFontString(nil, "OVERLAY")
+	countdownText = self:CreateFontString(nil, "OVERLAY")
+	countdownText:SetAllPoints(self)
+	self.countdownText = countdownText
+
+	local countText = self:CreateFontString(nil, "OVERLAY")
+	countText = self:CreateFontString(nil, "OVERLAY")
+	countText:SetFontObject(countFont)
+	countText:SetAllPoints(self)
+	self.countText = countText
+
+	self:Debug('Initialize')
+end
+
+function textOverlayProto:ApplySettings()
+	self:Debug('ApplySettings')
+	self:UpdateLayout()
+	self:UpdateCountdownFont()
+end
+
+function textOverlayProto:AttachTo(button)
+	local cooldown = _G[button:GetName().."Cooldown"]
+	self:Debug('AttachTo', button)
+	self:SetParent(button)
+	self:SetAllPoints(cooldown)
+	self:SetFrameLevel(cooldown:GetFrameLevel() + 5)
+	self.countText:Hide()
+	self.countdownText:Hide()
+	self:Show()
+	self:ApplySettings()
+end
+
+function textOverlayProto:Detach()
+	self:Debug('Detach')
+	self:SetExpirationTime(nil)
+	self:SetCount(nil)
+	self:ClearAllPoints()
+	self:Hide()
+end
+
+function textOverlayProto:SetExpirationTime(expirationTime)
+	if expirationTime == self.expirationTime then return end
+	self:Debug("SetExpirationTime", expirationTime)
+	self.expirationTime = expirationTime
+	if expirationTime then
+		expirationTime = floor(expirationTime * 10 + 0.5) / 10.0
+		if not self.countdownText:IsShown() then
+			self.countdownText:Show()
+			self:UpdateLayout()
+		end
+		self:OnUpdate(GetTime())
 	else
-		return self:Hide()
+		CancelTimer(self)
+		if self.countdownText:IsShown() then
+			self.countdownText:Hide()
+			self:UpdateLayout()
+		end
+	end
+end
+
+function textOverlayProto:OnUpdate(now)
+	self:Debug('OnUpdate', now)
+	local timeLeft = self.expirationTime - now
+	if timeLeft <= 0 then
+		return self:SetExpirationTime(nil)
+	end
+	local text, delay = FormatCountdown(timeLeft)
+	if text ~= self.countdownText:GetText() then
+		self.timeLeft = timeLeft
+		self.countdownText:SetText(text)
+		self:UpdateCountdownFont()
+	end
+	ScheduleTimer(self, min(delay, timeLeft))
+end
+
+function textOverlayProto:SetCount(count)
+	if count == self.count then return end
+	self:Debug("SetCount", count)
+	self.count = count
+	if count then
+		self.countText:SetFormattedText("%d", count)
+		if not self.countText:IsShown() then
+			self.countText:Show()
+			self:UpdateLayout()
+		end
+	elseif self.countText:IsShown() then
+		self.countText:Hide()
+		self:UpdateLayout()
+	end
+end
+
+local function SetTextPosition(fontstring, position)
+	if position ~= fontstring.position then
+		fontstring.position = position
+		fontstring:SetJustifyH(strmatch(position, 'LEFT') or strmatch(position, 'RIGHT') or 'MIDDLE')
+		fontstring:SetJustifyV(strmatch(position, 'TOP') or strmatch(position, 'BOTTOM') or 'CENTER')
+	end
+end
+
+function textOverlayProto:UpdateLayout()
+	self:Debug("UpdateLayout", self.expirationTime, self.count)
+	if self.expirationTime and self.count then
+		SetTextPosition(self.countdownText, profile.twoTextFirstPosition)
+		SetTextPosition(self.countText, profile.twoTextSecondPosition)
+	elseif self.count then
+		SetTextPosition(self.countText, profile.singleTextPosition)
+	elseif self.expirationTime then
+		SetTextPosition(self.countdownText, profile.singleTextPosition)
+	end
+end
+
+function textOverlayProto:UpdateCountdownFont()
+	local size, r, g, b = GetCountdownFont(self.timeLeft)
+	local countdownText = self.countdownText
+	countdownText:SetTextColor(r, g, b)
+	countdownText:SetFont(fontFile, size, profile.fontFlag)
+	local overflowRatio = countdownText:GetStringWidth() / (self:GetParent():GetWidth()-4)
+	if overflowRatio > 1 then
+		return countdownText:SetFont(fontFile, max(5, size / overflowRatio), profile.fontFlag)
 	end
 end
 
 ------------------------------------------------------------------------------
--- Widget registries
+-- Countdown and stack feedback
 ------------------------------------------------------------------------------
 
-local overlays = setmetatable({}, { __index = function(t, button)
-	local overlay = CreateFrame("Frame", nil, button)
-	local cooldown = _G[button:GetName()..'Cooldown']
-	overlay:SetFrameLevel(cooldown:GetFrameLevel() + 5)
-	overlay:SetAllPoints(cooldown)
-	t[button] = overlay
-	return overlay
-end})
+do
+	local heap = {}
+	local active = {}
+	local serial = 0
 
-local countdowns = {}
-local stacks = {}
-
-local function GetWidget(button, spawn, registry, key, meta)
-	local widget = registry[button]
-	if not widget and spawn then
-		local overlay = overlays[button]
-		widget = setmetatable(overlay:CreateFontString(nil, "OVERLAY"), meta)
-		widget:Initialize(button)
-		overlay[key] = widget
-		registry[button] = widget
+	local function CreateTextOverlay()
+		serial = serial + 1
+		local overlay = setmetatable(CreateFrame("Frame", addonName.."TextOverlay"..serial, UIParent), textOverlayMeta)
+		overlay:Hide()
+		overlay:Initialize()
+		return overlay
 	end
-	return widget
-end
 
-local function GetCountdown(button, spawn)
-	return GetWidget(button, spawn, countdowns, "countdown", countdownMeta)
-end
-
-local function GetStack(button, spawn)
-	return GetWidget(button, spawn, stacks, "stack", stackMeta)
-end
-
-------------------------------------------------------------------------------
--- Text feedback
-------------------------------------------------------------------------------
-
-local function UpdateTextLayout(countdown, stack)
-	if countdown and not countdown:IsShown() then
-		countdown = nil
+	function buttonStateProto:ShowTextOverlay()
+		if not self.textOverlay then
+			local overlay = tremove(heap) or CreateTextOverlay()
+			overlay:AttachTo(self.button)
+			active[overlay] = true
+			self.textOverlay = overlay
+		end
+		return self.textOverlay
 	end
-	if stack and not stack:IsShown() then
-		stack = nil
+
+	function buttonStateProto:HideTextOverlay()
+		local overlay = self.textOverlay
+		if overlay then
+			overlay:Detach()
+			active[overlay] = nil
+			tinsert(heap, overlay)
+			self.textOverlay = nil
+		end
 	end
-	if countdown and stack then
-		countdown:SetPosition(profile.twoTextFirstPosition)
-		stack:SetPosition(profile.twoTextSecondPosition)
-	elseif countdown or stack then
-		(countdown or stack):SetPosition(profile.singleTextPosition)
+
+	function addon:UpdateWidgets()
+		fontFile = LSM:Fetch(LSM.MediaType.FONT, profile.fontName)
+		countdownFontSize = addon.bigCountdown and profile.largeFontSize or profile.smallFontSize
+		countFont:SetFont(fontFile, profile.smallFontSize, profile.fontFlag)
+		countFont:SetTextColor(unpack(profile.colorStack))
+		GetCountdownFont = profile.dynamicCountdownColor and GetCountdownDynamicFont or GetCountdownStaticFont
+		FormatCountdown = profile.preciseCountdown and FormatPreciseCountdown or FormatImpreciseCountdown
+		for overlay in pairs(active) do
+			overlay:ApplySettings()
+		end
 	end
 end
 
-function addon.ShowCountdownAndStack(button, expirationTime, count)
-	local countdown = GetCountdown(button, expirationTime)
-	if countdown then
-		countdown:SetValue(expirationTime)
-	end
-	local stack = GetStack(button, count)
-	if stack then
-		stack:SetValue(count)
-	end
-	if stack or countdown then
-		return UpdateTextLayout(countdown, stack)
-	end
-end
-
-function addon:UpdateWidgets()
-	for button, widget in pairs(countdowns) do
-		widget:ApplySettings()
-	end
-	for button, widget in pairs(stacks) do
-		widget:ApplySettings()
-	end
-	for button, overlay in pairs(overlays) do
-		UpdateTextLayout(overlay.countdown, overlay.stack)
+function buttonStateProto:UpdateTextOverlay()
+	if self.expirationTime or self.count then
+		local overlay = self:ShowTextOverlay()
+		overlay:SetExpirationTime(self.expirationTime)
+		overlay:SetCount(self.count)
+	else
+		self:HideTextOverlay()
 	end
 end
 

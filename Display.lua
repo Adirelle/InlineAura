@@ -24,7 +24,6 @@ local addonName, addon = ...
 ------------------------------------------------------------------------------
 
 local L = addon.L
-local dprint = addon.dprint
 local buttonStateProto = addon.buttonStateProto
 
 ------------------------------------------------------------------------------
@@ -206,11 +205,8 @@ local FormatCountdown = FormatImpreciseCountdown
 local textOverlayProto = setmetatable({}, { __index = CreateFrame("Frame") })
 local textOverlayMeta = { __index = textOverlayProto }
 
-if AdiDebug then
-	AdiDebug:Embed(textOverlayProto, 'InlineAura')
-else
-	textOverlayProto.Debug = function() end
-end
+LibStub('AceEvent-3.0'):Embed(textOverlayProto)
+textOverlayProto.Debug = addon.Debug
 
 function textOverlayProto:Initialize()
 	local countdownText = self:CreateFontString(nil, "OVERLAY")

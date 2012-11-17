@@ -131,13 +131,11 @@ local xpcall = _G.xpcall
 
 local LSM = LibStub('LibSharedMedia-3.0')
 
-local function dprint() end
---@debug@
 if AdiDebug then
-	dprint = AdiDebug:GetSink('InlineAura')
+	AdiDebug:Embed(addon, addonName)
+else
+	addon.Debug = function() end
 end
---@end-debug@
-addon.dprint = dprint
 
 ------------------------------------------------------------------------------
 -- Constants
@@ -227,16 +225,12 @@ local GetBorderHighlight = addon.GetBorderHighlight
 local stateModules = {}
 local stateKeywords = {}
 
-local statePrototype = {}
-statePrototype.auraType = "special"
-statePrototype.specialTarget = "player"
-statePrototype.keywords = {}
-
-if AdiDebug then
-	AdiDebug:Embed(statePrototype, "InlineAura")
-else
-	function statePrototype.Debug() end
-end
+local statePrototype = {
+	Debug         = addon.Debug,
+	auraType      = "special",
+	specialTarget = "player",
+	keywords      = {}
+}
 
 addon.allKeywords = {}
 
@@ -301,7 +295,7 @@ function addon:NewStateModule(name, ...)
 	assert(not stateModules[name], format("State module %q already defined", name))
 	local special = self:NewModule(name, statePrototype, 'AceEvent-3.0', ...)
 	stateModules[name] = special
-	dprint("New state module:", name)
+	self:Debug("New state module:", name)
 	return special
 end
 
@@ -341,7 +335,7 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 		if module and module:CanTestUnit(unit, aura, spell) then
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority = module:Test(aura, unit, onlyMyBuffs, onlyMyDebuffs, spell)
 			if not newPriority then newPriority = 30 end
-			-- dprint("AuraLookup", aura, module, "=>", hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight)
+			-- addon:Debug("AuraLookup", aura, module, "=>", hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight)
 		else
 			hasNewCount, newCount, hasNewCountdown, newExpiratiomTime, hasNewHighlight, newHighlight, newPriority = CheckAura(aura, unit, onlyMyBuffs, onlyMyDebuffs)
 			if not newPriority then newPriority = 0 end
@@ -368,7 +362,7 @@ local function AuraLookup(unit, onlyMyBuffs, onlyMyDebuffs, ...)
 			else
 				--[[
 				if strmatch(aura, "ENERGY") then
-					dprint("AuraLookup(count)", aura, "current=", hasCount, count, "new=", hasNewCount, newCount)
+					addon:Debug("AuraLookup(count)", aura, "current=", hasCount, count, "new=", hasNewCount, newCount)
 				end
 				]]
 				if hasNewCount and newCount > (hasCount and count or 0) then
@@ -576,7 +570,7 @@ local function AnalyzeAction(action, param)
 		module = specific.special and stateKeywords[specific.special]
 		if not module then
 			--@debug@
-			dprint("Unknown module for", specific.special)
+			addon:Debug("Unknown module for", specific.special)
 			--@end-debug@
 			return
 		end
@@ -587,7 +581,7 @@ local function AnalyzeAction(action, param)
 
 	--@debug@
 	if specific and specific.auraType == "special" then
-		dprint(id, "special", specific.special, module, '=>', auraType, module.specialTarget)
+		addon:Debug(id, "special", specific.special, module, '=>', auraType, module.specialTarget)
 	end
 	--@end-debug@
 
@@ -627,15 +621,9 @@ end
 -- Generic button state prototype
 ------------------------------------------------------------------------------
 
-local buttonStateProto = {}
+local buttonStateProto = { Debug = addon.Debug }
 local buttonStateMeta = { __index = buttonStateProto }
 addon.buttonStateProto = buttonStateProto
-
-if AdiDebug then
-	AdiDebug:Embed(buttonStateProto, 'InlineAura')
-else
-	buttonStateProto.Debug = function() end
-end
 
 function buttonStateProto:UpdateStatus(force)
 	local spell, targetHint, specific = self.spell, self.targetHint, self.specific
@@ -939,7 +927,7 @@ function addon:UpdateToken(token, unitHint)
 	local oldGUID = tokenGUIDs[token]
 	if guid ~= oldGUID then
 		--@debug@
-		dprint(token, "changed:", oldGUID, "=>", guid)
+		addon:Debug(token, "changed:", oldGUID, "=>", guid)
 		--@end-debug@
 		tokenGUIDs[token] = guid
 		tokenChanged[token] = true
@@ -1006,7 +994,7 @@ function addon:AuraChanged(unit)
 	if guid then
 		--@debug@
 		if not auraChanged[guid] then
-			dprint(unit, "aura changed", guid)
+			self:Debug(unit, "aura changed", guid)
 		end
 		--@end-debug@
 		auraChanged[guid] = true
@@ -1130,9 +1118,9 @@ local librarySupport = {
 	end,
 	["LibActionButton-1.0"] = function(self, lib, minor)
 		if minor >= 11 then -- Callbacks and GetAllButtons() are supported since minor 11
-			lib.RegisterCallback(self, "OnButtonCreate", function(_, button) return  buttonRegistry[button]:UpdateAction(true) end)
-			lib.RegisterCallback(self, "OnButtonUpdate", function(_, button) return  buttonRegistry[button]:UpdateAction() end)
-			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return  buttonRegistry[button]:UpdateUsable() end)
+			lib.RegisterCallback(self, "OnButtonCreate", function(_, button) return buttonRegistry[button]:UpdateAction(true) end)
+			lib.RegisterCallback(self, "OnButtonUpdate", function(_, button) return buttonRegistry[button]:UpdateAction() end)
+			lib.RegisterCallback(self, "OnButtonUsable", function(_, button) return buttonRegistry[button]:UpdateUsable() end)
 			lib.RegisterCallback(self, "OnButtonState", function(_, button) return buttonRegistry[button]:UpdateState() end)
 			for button in pairs(lib:GetAllButtons()) do
 				buttonRegistry[button]:UpdateAction(true)
@@ -1204,7 +1192,7 @@ end
 -- GLOBALS: InlineAura_LoadDefaults InlineAura_LoadCustomDefaults
 function addon:LoadSpellDefaults(event)
 	--@debug@
-	dprint('Loaded default settings on', event)
+	self:Debug('Loaded default settings on', event)
 	--@end-debug@
 
 	-- Remove current defaults
@@ -1362,16 +1350,6 @@ function addon:OnEnable()
 			self.defaultsLoaded = true
 			self:UpgradeProfile()
 		end
-
---@debug@
-		-- GLOBALS: debugstack
-		local debug_hooksecurefunc = function(funcname, hook)
-			hooksecurefunc(funcname, function(button, ...)
-				(button.Debug or dprint)(button, funcname, debugstack(3, 3, 0), ...)
-				return hook(button, ...)
-			end)
-		end
---@end-debug@
 
 		-- Secure hooks
 		hooksecurefunc('ActionButton_OnLoad', ForceUpdateHook)

@@ -43,7 +43,7 @@ local L = setmetatable({}, {__index = function(self, key)
 	local value = tostring(key)
 	if key ~= nil then self[key] = value end
 	--@debug@
-	addon.dprint("Missing locale:", value)
+	addon:Debug("Missing locale:", value)
 	--@end-debug@
 	return value
 end})

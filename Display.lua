@@ -325,7 +325,10 @@ function textOverlayProto:UpdateCountdownFont()
 	local countdownText = self.countdownText
 	countdownText:SetTextColor(r, g, b)
 	countdownText:SetFont(fontFile, size, profile.fontFlag)
-	local overflowRatio = countdownText:GetStringWidth() / (self:GetParent():GetWidth()-4)
+	local overflowRatio = max(
+		countdownText:GetStringWidth() / (self:GetParent():GetWidth()-8),
+		countdownText:GetStringHeight() / (self:GetParent():GetHeight()-8)
+	)
 	if overflowRatio > 1 then
 		return countdownText:SetFont(fontFile, max(5, size / overflowRatio), profile.fontFlag)
 	end

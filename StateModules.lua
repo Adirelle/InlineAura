@@ -279,8 +279,14 @@ end
 if IsClass("PALADIN") or IsClass("ROGUE") or IsClass("DEATHKNIGHT") then
 	tinsert(healthThresholds, 35)
 end
+if IsClass("DEATHKNIGHT") then
+	tinsert(healthThresholds, 45) -- T15 4p bonus
+end
 if IsClass("DRUID") then
 	tinsert(healthThresholds, 80)
+end
+if IsClass("MONK") then
+	tinsert(healthThresholds, 10) -- PvP Touch of Death
 end
 
 if #healthThresholds > 0 then

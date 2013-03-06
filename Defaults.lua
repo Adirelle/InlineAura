@@ -118,7 +118,6 @@ function InlineAura_LoadDefaults()
 	SharedAuras(
 		"PRIEST",   21562, -- Power Word: Fortitude
 		"WARRIOR",    469, -- Commanding Shout
-		"WARLOCK", 103127, -- Blood Pact (imp ability)
 		"HUNTER",   90364  -- Qiraji Fortitude (exotic pet ability)
 	):OnSelf()
 

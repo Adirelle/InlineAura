@@ -374,8 +374,7 @@ function InlineAura_LoadDefaults()
 			18499, -- Berserker Rage
 			23920, -- Spell Reflection
 			46924, -- Bladestorm
-			55694, -- Enraged Regeneration
-			85730  -- Deadly Calm
+			55694  -- Enraged Regeneration
 		)
 
 		-- Execute
@@ -383,13 +382,11 @@ function InlineAura_LoadDefaults()
 
 		SelfTalentProc( 20243, 122013):Glowing() -- Devestate => Incite
 		SelfTalentProc(100130,  46916):Glowing() -- Wild Strike => Bloodsurge
-		SelfTalentProc(  7384,  56638):Glowing() -- Overpower => Taste For Blood
+		SelfTalentProc(  7384,  60503):Glowing() -- Overpower => Taste For Blood
 		SelfTalentProc( 34428,  32216):Glowing() -- Victory Rush => Victorious
 
 		-- Self Buffs with Stacks: Recklessness, Retaliation
 		Spells(1719):OnSelf()
-		-- Self Buff deadly calm with heroic strike and cleave
-		Spells(845, 78):Aliases(85730):OnSelf():WithStack()
 		-- Cleave & Whirlwind & Raging Blow => Meat Cleaver
 		Spells(845, 1680, 96103):Aliases(12950):OnSelf():WithStack()
 

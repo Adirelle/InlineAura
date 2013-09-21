@@ -285,6 +285,7 @@ function InlineAura_LoadDefaults()
 		"DRUID",       80965, -- Skull Bash (cat)
 		"HUNTER",      26090, -- Pummel (Gorilla)
 		"HUNTER",      34490, -- Silencing Shot
+		"HUNTER",     147362, -- Counter Shot
 		"HUNTER",      50318, -- Serenity Dust (Moth)
 		"HUNTER",      50479, -- Nether Shock (Nether Ray)
 		"MAGE",         2139, -- Counterspell

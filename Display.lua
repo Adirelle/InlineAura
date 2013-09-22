@@ -209,16 +209,10 @@ LibStub('AceEvent-3.0'):Embed(textOverlayProto)
 textOverlayProto.Debug = addon.Debug
 
 function textOverlayProto:Initialize()
-	local countdownText = self:CreateFontString(nil, "OVERLAY")
-	countdownText = self:CreateFontString(nil, "OVERLAY")
-	countdownText:SetAllPoints(self)
-	self.countdownText = countdownText
+	self.countdownText = self:CreateFontString(nil, "OVERLAY")
 
-	local countText = self:CreateFontString(nil, "OVERLAY")
-	countText = self:CreateFontString(nil, "OVERLAY")
-	countText:SetFontObject(countFont)
-	countText:SetAllPoints(self)
-	self.countText = countText
+	self.countText = self:CreateFontString(nil, "OVERLAY")
+	self.countText:SetFontObject(countFont)
 
 	self:Debug('Initialize')
 end
@@ -303,8 +297,8 @@ end
 local function SetTextPosition(fontstring, position)
 	if position ~= fontstring.position then
 		fontstring.position = position
-		fontstring:SetJustifyH(strmatch(position, 'LEFT') or strmatch(position, 'RIGHT') or 'MIDDLE')
-		fontstring:SetJustifyV(strmatch(position, 'TOP') or strmatch(position, 'BOTTOM') or 'CENTER')
+		fontstring:ClearAllPoints()
+		fontstring:SetPoint(position)
 	end
 end
 

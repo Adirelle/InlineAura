@@ -381,7 +381,6 @@ function InlineAura_LoadDefaults()
 		-- Execute
 		Spells(5308):Aliases('BELOW20'):Glowing()
 
-		SelfTalentProc( 20243, 122013):Glowing() -- Devestate => Incite
 		SelfTalentProc(100130,  46916):Glowing() -- Wild Strike => Bloodsurge
 		SelfTalentProc(  7384,  60503):Glowing() -- Overpower => Taste For Blood
 		SelfTalentProc( 34428,  32216):Glowing() -- Victory Rush => Victorious

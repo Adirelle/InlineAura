@@ -380,6 +380,9 @@ function InlineAura_LoadDefaults()
 
 		-- Execute
 		Spells(5308):Aliases('BELOW20'):Glowing()
+		
+		-- T16 4p effect (Death Sentence) on Execute
+		Spells(5308):Aliases(144442):OnSelf():Glowing()
 
 		SelfTalentProc(100130,  46916):Glowing() -- Wild Strike => Bloodsurge
 		SelfTalentProc(  7384,  60503):Glowing() -- Overpower => Taste For Blood

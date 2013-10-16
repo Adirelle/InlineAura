@@ -295,6 +295,8 @@ function InlineAura_LoadDefaults()
 		"ROGUE",        1766, -- Kick
 		"SHAMAN",      57994, -- Wind Shear
 		"WARLOCK",     19647, -- Spell Lock (Felhunter)
+		"WARLOCK",    103967, -- Carrion Swarm (demon form)
+		"WARLOCK",    119911, -- Optical Blast (Observer special ability)
 		"WARRIOR",      6552  -- Pummel
 	):ShowSpecial('INTERRUPTIBLE'):Glowing()
 
@@ -467,6 +469,10 @@ function InlineAura_LoadDefaults()
 
 		SelfBuffs(
 			  7812, -- Sacrifice (voidwalker buff)
+			119839, -- Fury Ward (Dark Apotheosis)
+			116198, -- Aura of Enfeeblement (Metamorphosis/Dark Apotheosis)
+			104025, -- Immolation Aura (Metamorphosis/Dark Apotheosis)
+			132413, -- Shadow Bulwark (Grimoire of Sacrifice)
 			108415  -- Soul Link
 		)
 
@@ -482,9 +488,6 @@ function InlineAura_LoadDefaults()
 
 		-- Show nether ward on shadow ward
 		Spells(6229):Aliases(91711):OnSelf()
-
-		-- Show Immolation Aura on Self
-		Spells(104025):OnSelf()
 
 		Spells(89808):Aliases("DISPELLABLE") -- Singe Magic (Imp)
 		Spells(19505):Aliases("DISPELLABLE") -- Devour Magic (Felhunter)

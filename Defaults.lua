@@ -382,7 +382,7 @@ function InlineAura_LoadDefaults()
 
 		-- Execute
 		Spells(5308):Aliases('BELOW20'):Glowing()
-		
+
 		-- T16 4p effect (Death Sentence) on Execute
 		Spells(5308):Aliases(144442):OnSelf():Glowing()
 
@@ -467,24 +467,35 @@ function InlineAura_LoadDefaults()
 		-- Display soul shard count on Soulburn
 		ShowSpecial("SOUL_SHARDS", 74434):NoHighlight() -- Soulburn
 
+		-- Display Burning Embers on Shadowburn, Ember Tap and Fire and Brimstone
+		ShowSpecial("BURNING_EMBERS", 17877, 114635, 108683):NoHighlight()
+
+		-- Highlight Chaos Bolt when reaching 4 Burning Embers
+		ShowSpecial("BURNING_EMBERS", 116858):Glowing()
+
 		SelfBuffs(
 			  7812, -- Sacrifice (voidwalker buff)
-			119839, -- Fury Ward (Dark Apotheosis)
-			116198, -- Aura of Enfeeblement (Metamorphosis/Dark Apotheosis)
 			104025, -- Immolation Aura (Metamorphosis/Dark Apotheosis)
-			132413, -- Shadow Bulwark (Grimoire of Sacrifice)
-			108415  -- Soul Link
+			108415, -- Soul Link
+			113858, -- Dark Soul: Instability
+			113860, -- Dark Soul: Misery
+			113861, -- Dark Soul: Knowledge
+			116198, -- Aura of Enfeeblement (Metamorphosis/Dark Apotheosis)
+			119839, -- Fury Ward (Dark Apotheosis)
+			132413  -- Shadow Bulwark (Grimoire of Sacrifice)
 		)
 
-		SelfTalentProc(29722, 122351, 117896):WithStack() -- Incinerate => Molten Core, Backdraft
-		SelfTalentProc( 6353, 108869) -- Soul Fire => Decimation
-		SelfTalentProc(  686, 108563) -- Shadow Bolt => Backlash
+		-- Immolate seems to always have one stack. Do not show it.
+		Spells(348):NoStack()
 
-		SelfBuffs(
-			113860, -- Misery
-			113861, -- Knowledge
-			113858  -- Instability
-		)
+		-- Incinerate => Backlash & Backdraft
+		SelfTalentProc( 29722, 108563, 117896):WithStack():NoHighlight()
+
+		-- Chaos Bolt => Backdraft -- should only happen with 3 or more charges
+		-- SelfTalentProc(116858, 117896):WithStack()
+
+		-- Soul Fire => Molten Core
+		SelfTalentProc(  6353, 122351)
 
 		-- Show nether ward on shadow ward
 		Spells(6229):Aliases(91711):OnSelf()

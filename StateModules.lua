@@ -103,6 +103,31 @@ if IsClass("WARLOCK") then
 		end
 	end
 
+	local burningEmberState = addon:NewStateModule("BURNING_EMBERS")
+	burningEmberState.keywords = { "BURNING_EMBERS" }
+	burningEmberState.features = {
+		stacks = true,
+		highlight = true,
+		highlightThreshold = true,
+		highlightMaxThreshold = 4
+	}
+	burningEmberState.defaults = { highlightThreshold = 4 }
+
+	function burningEmberState:PostEnable()
+		self:RegisterEvent("UNIT_POWER")
+	end
+
+	function burningEmberState:Test(aura)
+		local pref = self.db.profile
+		local power = UnitPower("player", SPELL_POWER_BURNING_EMBERS)
+		return pref.stacks, power, false, nil, pref.highlight and power >= pref.highlightThreshold, true
+	end
+
+	function burningEmberState:UNIT_POWER(event, unit, type)
+		if unit == "player" and type == "BURNING_EMBERS" then
+			addon:AuraChanged("player")
+		end
+	end
 end
 
 ------------------------------------------------------------------------------

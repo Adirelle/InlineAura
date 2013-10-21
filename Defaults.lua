@@ -456,13 +456,15 @@ function InlineAura_LoadDefaults()
 	if IsClass('WARLOCK') then
 	------------------------------------------------------------------------------
 
-		-- Soul link
-		Spells(108415):OnPet()
-
+		-- Execute-style spells
 		Spells(1120):Aliases('BELOW20'):Glowing() -- Drain Soul
 		Spells(17877):Aliases('BELOW20'):Glowing() -- Shadowburn
 
-		Spells(105174):Aliases(47960) -- Hand of Gul'dan => Shadowflame
+		-- Hand of Gul'dan => Shadowflame
+		Spells(105174):Aliases(47960)
+
+		-- Display dispellable debuffs on Singe Magic (sacrified Imp)
+		Spells(132411):Aliases("DISPELLABLE")
 
 		-- Display soul shard count on Soulburn
 		ShowSpecial("SOUL_SHARDS", 74434):NoHighlight() -- Soulburn

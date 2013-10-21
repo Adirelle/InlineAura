@@ -456,9 +456,7 @@ function InlineAura_LoadDefaults()
 	if IsClass('WARLOCK') then
 	------------------------------------------------------------------------------
 
-		-- Soul link
-		Spells(108415):OnPet()
-
+		-- Execute-style spells
 		Spells(1120):Aliases('BELOW20'):Glowing() -- Drain Soul
 		Spells(17877):Aliases('BELOW20'):Glowing() -- Shadowburn
 

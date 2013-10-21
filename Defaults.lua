@@ -501,6 +501,7 @@ function InlineAura_LoadDefaults()
 		Spells(6229):Aliases(91711):OnSelf()
 
 		Spells(89808):Aliases("DISPELLABLE") -- Singe Magic (Imp)
+		Spells(132411):Aliases("DISPELLABLE") -- Singe Magic (sacrified Imp)
 		Spells(19505):Aliases("DISPELLABLE") -- Devour Magic (Felhunter)
 	end
 

@@ -535,6 +535,9 @@ function InlineAura_LoadDefaults()
 
 		-- Detox
 		Spells(115450):Aliases("DISPELLABLE")
+		
+		-- Jab, Soothing Mist, Spinning Crane Kick, Expel Harm, Crackling Jade Lightning => Power Strikes
+		Spells(100780, 115175, 101546, 115072, 117952):Aliases(129914):OnSelf()
 
 	end
 

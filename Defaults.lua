@@ -463,9 +463,6 @@ function InlineAura_LoadDefaults()
 		-- Hand of Gul'dan => Shadowflame
 		Spells(105174):Aliases(47960)
 
-		-- Display dispellable debuffs on Singe Magic (sacrified Imp)
-		Spells(132411):Aliases("DISPELLABLE")
-
 		-- Display soul shard count on Soulburn
 		ShowSpecial("SOUL_SHARDS", 74434):NoHighlight() -- Soulburn
 

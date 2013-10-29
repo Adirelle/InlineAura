@@ -117,6 +117,7 @@ function InlineAura_LoadDefaults()
 	-- Stamina Bonus
 	SharedAuras(
 		"PRIEST",   21562, -- Power Word: Fortitude
+		"WARLOCK", 109773, -- Dark Intent
 		"WARRIOR",    469, -- Commanding Shout
 		"HUNTER",   90364  -- Qiraji Fortitude (exotic pet ability)
 	):OnSelf()
